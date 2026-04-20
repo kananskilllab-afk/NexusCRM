@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production build
+client/build/
+dist/
+*.pyc
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.log
+
+# Project specific
+travoCRM_Requirement_Document.docx
+test.docx
+diagram.html
+implementation_plan.md
+task.md
+walkthrough.md

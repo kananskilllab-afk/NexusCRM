@@ -1,0 +1,32 @@
+.main-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  flex: 1;
+  margin-left: 260px;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.content-wrapper.collapsed {
+  margin-left: 80px;
+}
+
+.main-content {
+  padding: 2rem;
+  flex: 1;
+  overflow-x: hidden;
+}
+
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .content-wrapper {
+    margin-left: 0;
+  }
+}
