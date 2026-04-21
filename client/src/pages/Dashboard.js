@@ -1,96 +1,81 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUsers, FiStar, FiCheckCircle, FiXCircle, FiTrendingUp } from 'react-icons/fi';
+import { 
+  FiUsers, FiStar, FiRotateCw, FiCalendar, FiClock, FiCheckSquare, 
+  FiGift, FiCheckCircle, FiBarChart2, FiPlus
+} from 'react-icons/fi';
 import { useLeads } from '../context/LeadContext';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const { state } = useLeads();
   const navigate = useNavigate();
+  const [onlyAssigned, setOnlyAssigned] = useState(true);
   
-  const activeLeads = state.leads.length;
-  const hotLeads = state.leads.filter(l => l.priority === 'Hot').length;
-  const bookedLeads = state.leads.filter(l => l.status === 'Booked').length;
-  const lostLeads = state.leads.filter(l => l.status === 'Lost').length;
-  
-  const totalRevenue = state.leads.reduce((acc, lead) => {
-    const items = lead.billing?.items || [];
-    const leadTotal = items.reduce((iAcc, item) => iAcc + (item.qty * item.price), 0);
-    return acc + leadTotal;
-  }, 0);
+  // Dynamic Calculation
+  const activeLeads = state.leads?.filter(l => !['Booked', 'Lost'].includes(l.status)).length || 0;
+  const hotLeads = state.leads?.filter(l => l.priority === 'Hot').length || 0;
+  const bookedLeads = state.leads?.filter(l => l.status === 'Booked').length || 0;
+  const lostLeads = state.leads?.filter(l => l.status === 'Lost').length || 0;
 
   const kpis = [
-    { title: 'Active Leads', count: activeLeads, icon: <FiUsers />, color: 'var(--status-followup)', trend: '+12%' },
-    { title: 'Hot Leads', count: hotLeads, icon: <FiStar />, color: 'var(--status-hot)', trend: '+5%' },
-    { title: 'Booked', count: bookedLeads, icon: <FiCheckCircle />, color: 'var(--status-booked)', trend: '+18%' },
-    { title: 'Lost', count: lostLeads, icon: <FiXCircle />, color: 'var(--status-lost)', trend: '-2%' },
-    { title: 'Revenue', count: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: <FiTrendingUp />, color: 'var(--primary)', trend: '+24%' },
+    { title: 'Active Leads', count: activeLeads, icon: <FiCalendar className="red-icon" /> },
+    { title: 'Hot Leads', count: hotLeads, icon: <FiStar className="red-icon" /> },
+    { title: 'Booked', count: bookedLeads, icon: <FiRotateCw className="red-icon" /> },
+    { title: 'Lost', count: lostLeads, icon: <FiRotateCw className="red-icon" /> },
+  ];
+
+  const utilityCards = [
+    { title: 'Hot Leads', icon: <FiClock />, count: hotLeads, emptyMsg: 'No Hot Leads', color: '#ff5757' },
+    { title: 'Reminder', icon: <FiCalendar />, emptyMsg: 'No Reminders', color: '#ff5757' },
+    { title: 'To do list', icon: <FiCalendar />, emptyMsg: 'No Todo Task', hasAdd: true, color: '#ff5757' },
+    { title: 'Upcoming Travel', icon: <FiGift />, emptyMsg: 'No Upcoming Travels', subtitle: 'Based on Vouchers Issued', color: '#ff5757' },
+    { title: 'Birthday/Anniversary', icon: <FiCalendar />, emptyMsg: 'No Birthday /Anniversary', color: '#ff5757' },
+    { title: 'Upcoming Bookings', icon: <FiCalendar />, emptyMsg: 'No Upcoming Travel', subtitle: 'Based on Leads Status Booked for Flight, Hotel, Other, Custom, Package & Transport', color: '#ff5757' },
   ];
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Dashboard Overview</h1>
-        <p className="text-muted">Welcome back, Bhargav! Here's what's happening today.</p>
-      </div>
-
-      <div className="kpi-grid">
-        {kpis.map((kpi, index) => (
-          <div key={index} className="card kpi-card">
-            <div className="kpi-icon" style={{ backgroundColor: `${kpi.color}15`, color: kpi.color }}>
-              {kpi.icon}
-            </div>
-            <div className="kpi-content">
-              <span className="kpi-label">{kpi.title}</span>
-              <h3 className="kpi-value">{kpi.count}</h3>
-            </div>
-            <div className={`kpi-trend ${kpi.trend.startsWith('+') ? 'up' : 'down'}`}>
-              {kpi.trend}
-            </div>
+    <div className="dashboard-container">
+      {/* Top Stats */}
+      <div className="kpi-grid-modern">
+        {kpis.map((kpi, idx) => (
+          <div key={idx} className="card kpi-card-modern">
+            <div className="icon-wrapper">{kpi.icon} <span className="kpi-num">{kpi.count}</span></div>
+            <div className="kpi-label-modern">{kpi.title}</div>
           </div>
         ))}
       </div>
 
-      <div className="dashboard-grid">
-        <div className="card chart-section">
-          <div className="section-header">
-            <h3>Lead Distribution</h3>
-            <button className="btn btn-outline" onClick={() => navigate('/reports')}>View Reports</button>
-          </div>
-          <div className="chart-placeholder">
-             <FiTrendingUp size={48} color="var(--primary)" style={{ opacity: 0.2 }} />
-             <p className="text-muted">Real-time distribution charts are active.</p>
-          </div>
-        </div>
+      <div className="dashboard-actions">
+         <button className="btn btn-primary btn-load">Load User</button>
+         <button className="btn btn-primary btn-load" style={{ marginLeft: 'auto' }}>Load Chart</button>
+      </div>
 
-        <div className="card recent-leads">
-          <div className="section-header">
-            <h3>Recent Active Leads</h3>
-            <button className="btn-link" onClick={() => navigate('/leads')}>View All</button>
-          </div>
-          <table className="dashboard-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Destination</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.leads.slice(0, 5).map(lead => (
-                <tr key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className="clickable-row">
-                  <td>{lead.first_name} {lead.last_name}</td>
-                  <td>{lead.destination}</td>
-                  <td>
-                    <span className={`badge ${lead.status.toLowerCase()}`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="dashboard-filters-row card" style={{ padding: '10px 20px', display: 'flex', alignItems: 'center' }}>
+         <label className="checkbox-custom">
+            <input type="checkbox" checked={onlyAssigned} onChange={() => setOnlyAssigned(!onlyAssigned)} />
+            <span className="checkmark"></span>
+            Only show assign to you
+         </label>
+      </div>
+
+      {/* Utility Grid */}
+      <div className="utility-grid">
+         {utilityCards.map((card, idx) => (
+           <div key={idx} className="card utility-card">
+              <div className="util-head">
+                 <div className="util-title" style={{ color: card.color }}>
+                    {card.icon} {card.title}
+                 </div>
+                 {card.hasAdd && <button className="add-purple-btn">Add</button>}
+              </div>
+              <div className="util-body">
+                 {card.subtitle && <p className="util-subtitle">{card.subtitle}</p>}
+                 <div className="util-view-more">View More</div>
+                 <div className="empty-msg">{card.emptyMsg}</div>
+              </div>
+           </div>
+         ))}
       </div>
     </div>
   );

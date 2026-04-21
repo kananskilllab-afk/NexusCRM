@@ -1,16 +1,42 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLeads } from '../../context/LeadContext';
-import { FiSend, FiMail, FiMessageCircle, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiSend, FiMail, FiMessageCircle, FiCheck, FiAlertCircle, FiPlus, FiArrowRight } from 'react-icons/fi';
 
 const QuoteTab = ({ lead }) => {
-  const { dispatch } = useLeads();
+  const { state, dispatch } = useLeads();
+  const [markup, setMarkup] = useState(10); // 10% default
+  const [showRateSelector, setShowRateSelector] = useState(false);
+  
   const billing = lead.billing || { items: [], payments: [] };
   const items = billing.items || [];
   const enquiry = lead.enquiry_data || {};
+  const supplierRates = state.supplierRates || [];
 
   const subtotal = items.reduce((acc, i) => acc + (i.qty * i.price), 0);
   const totalTax = items.reduce((acc, i) => acc + (i.qty * i.price * (i.tax || 0) / 100), 0);
   const grandTotal = subtotal + totalTax;
+
+  const addFromRate = (rate) => {
+    const markupAmount = rate.rate * (markup / 100);
+    const finalPrice = rate.rate + markupAmount;
+    
+    const newItem = {
+      id: Date.now(),
+      description: `${rate.service}: ${rate.details}`,
+      qty: 1,
+      price: finalPrice,
+      tax: 5
+    };
+
+    dispatch({ 
+      type: 'UPDATE_BILLING', 
+      payload: { 
+        leadId: lead.id, 
+        billingData: { items: [...items, newItem] } 
+      } 
+    });
+    setShowRateSelector(false);
+  };
 
   const sendQuote = (method) => {
     dispatch({
@@ -29,6 +55,38 @@ const QuoteTab = ({ lead }) => {
 
   return (
     <div className="tab-content">
+      {/* Auto-Quote Bar */}
+      <div className="card" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--primary)' }}>
+        <div className="section-header">
+           <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><FiCheck /> Smart Quote Engine</h3>
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Markup (%):</label>
+                 <input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value))} style={{ width: '60px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowRateSelector(!showRateSelector)}><FiPlus /> Compare Rates</button>
+           </div>
+        </div>
+
+        {showRateSelector && (
+           <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-main)', borderRadius: '8px' }}>
+              <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>Comparative Supplier Rates (Real-time)</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                 {supplierRates.map(r => (
+                    <div key={r.id} className="rate-card" style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <div>
+                          <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.service}: {r.details}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Supplier: {state.suppliers?.find(s => s.id === r.supplierId)?.name || r.supplierId}</p>
+                          <p style={{ fontWeight: 700, color: 'var(--primary)', marginTop: 4 }}>₹{r.rate.toLocaleString()} <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+ {markup}% markup</span></p>
+                       </div>
+                       <button className="btn-icon" onClick={() => addFromRate(r)} title="Apply to Quotation"><FiArrowRight /></button>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        )}
+      </div>
+
       <div className="card">
         <div className="section-header">
           <h3>Quotation Preview</h3>

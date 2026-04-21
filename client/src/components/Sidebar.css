@@ -1,116 +1,98 @@
-.sidebar {
+.sidebar-red {
   width: 260px;
-  height: 100vh;
-  background-color: var(--bg-sidebar);
-  color: #CBD5E1;
-  transition: var(--transition);
+  background-color: #ffffff; /* Keeping main bar white but accents red as per premium CRM style */
+  border-right: 1px solid #eee;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
+  height: 100vh;
+  position: sticky;
   top: 0;
-  z-index: 100;
-  box-shadow: var(--shadow-lg);
+  transition: all 0.3s;
+  z-index: 1100;
 }
 
-.sidebar.collapsed {
+.sidebar-red.collapsed {
   width: 80px;
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 70px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 20px;
+  background-color: var(--primary); /* Header of sidebar is Red */
+  color: white;
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: white;
   letter-spacing: -0.5px;
 }
 
-.logo-text .highlight {
-  color: var(--primary);
+.highlight {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
 }
 
 .toggle-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: white;
   cursor: pointer;
   font-size: 1.2rem;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-}
-
-.toggle-btn:hover {
-  color: white;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 1rem 0;
+  padding: 15px 10px;
   overflow-y: auto;
-}
-
-.nav-item-wrapper {
-  margin-bottom: 4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 0.8rem 1.5rem;
-  color: #94A3B8;
+  padding: 12px 15px;
+  color: #555;
   text-decoration: none;
-  transition: var(--transition);
+  border-radius: 8px;
+  margin-bottom: 4px;
   cursor: pointer;
-  position: relative;
-  font-size: 0.95rem;
+  transition: all 0.2s;
   font-weight: 500;
 }
 
-.sidebar.collapsed .nav-item {
-  justify-content: center;
-  padding: 1rem;
-}
-
-.nav-item:hover, .nav-item.active {
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 15%;
-  height: 70%;
-  width: 4px;
-  background-color: var(--primary);
-  border-radius: 0 4px 4px 0;
-}
-
 .nav-item .icon {
-  font-size: 1.3rem;
+  margin-right: 12px;
+  font-size: 1.2rem;
   display: flex;
-  transition: var(--transition);
+  color: #777;
 }
 
-.nav-item .label {
-  margin-left: 1rem;
-  flex: 1;
+.nav-item:hover {
+  background-color: #fff1f1;
+  color: var(--primary);
+}
+
+.nav-item:hover .icon {
+  color: var(--primary);
+}
+
+.nav-item.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.nav-item.active .icon {
+  color: white;
 }
 
 .chevron {
-  font-size: 0.8rem;
-  transition: transform 0.3s ease;
+  margin-left: auto;
+  font-size: 0.9rem;
+  transition: transform 0.2s;
 }
 
 .chevron.rotate {
@@ -118,63 +100,31 @@
 }
 
 .submenu {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.5rem 0;
+  margin-left: 30px;
+  border-left: 2px solid #eee;
+  padding: 5px 0 5px 15px;
 }
 
 .submenu-item {
   display: block;
-  padding: 0.6rem 1.5rem 0.6rem 3.8rem;
-  color: #64748B;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  color: #666;
   text-decoration: none;
-  font-size: 0.85rem;
-  transition: var(--transition);
+  transition: color 0.2s;
 }
 
 .submenu-item:hover, .submenu-item.active {
-  color: white;
-}
-
-/* Custom Scrollbar for Sidebar */
-.sidebar-nav::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Sidebar Footer */
-.sidebar-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255,255,255,0.05);
-}
-
-.user-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-avatar-sm {
-  width: 34px;
-  height: 34px;
-  background: var(--primary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1rem;
-}
-
-.user-name-sm {
-  font-size: 0.85rem;
+  color: var(--primary);
   font-weight: 600;
-  color: white;
 }
 
-.user-role-sm {
-  font-size: 0.7rem;
-  color: #64748B;
+@media (max-width: 1024px) {
+  .sidebar-red {
+    position: fixed;
+    left: -260px;
+  }
+  .sidebar-red.mobile-open {
+    left: 0;
+  }
 }

@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { FiPlus, FiFilter, FiDownload, FiSearch, FiEye, FiAlertCircle } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FiPlus, FiSearch, FiLayers, FiList, FiChevronDown, FiChevronUp, 
+  FiFilter, FiMapPin, FiEye, FiEdit2, FiTrash2, FiClock,
+  FiUserPlus, FiGrid, FiPrinter
+} from 'react-icons/fi';
 import { useLeads } from '../context/LeadContext';
 import AddLeadModal from '../components/AddLeadModal';
 import './LeadList.css';
@@ -8,152 +12,232 @@ import './LeadList.css';
 const LeadList = () => {
   const { state, dispatch } = useLeads();
   const navigate = useNavigate();
-  const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(true);
 
-  // Sync search from URL query params (for global search support)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const searchParam = params.get('search');
-    const statusParam = params.get('status');
-    const priorityParam = params.get('priority');
-    
-    if (searchParam) setSearch(searchParam);
-    if (statusParam) setStatusFilter(statusParam);
-    if (priorityParam) setPriorityFilter(priorityParam);
-  }, [location.search]);
+  // Massive Filter State
+  const [filters, setFilters] = useState({
+    from: '27-3-2026',
+    to: '21-4-2026',
+    priority: 'All',
+    status: 'All',
+    subStatus: 'All',
+    source: 'All',
+    assignedTo: 'All',
+    enquiryType: '',
+    leadNumber: '',
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    emailId: '',
+    tags: 'All',
+    limit: 10,
+    searchTable: ''
+  });
 
-  const handleAddLead = (newData) => {
-    const newLead = {
-      ...newData,
-      id: `L-${1000 + state.leads.length + 1}`,
-      status: 'New',
-      created_at: new Date().toISOString(),
-      activities: [{ id: `act-${Date.now()}`, date: new Date().toISOString(), text: `Lead created via ${newData.lead_source || 'Manual'}`, user: 'Admin' }],
-      notes: [], reminders: [], files: [], travellers: [],
-      followUps: [], assignedSuppliers: [], bookings: [],
-      billing: { items: [], payments: [], paymentSchedule: [] },
-      enquiry_data: {},
-      communications: []
-    };
-    dispatch({ type: 'ADD_LEAD', payload: newLead });
-    setIsModalOpen(false); // Fix: Ensure modal closes
+  const handleInputChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
   };
 
   const leads = state.leads || [];
-  const filtered = leads.filter(lead => {
-    const matchSearch = `${lead.first_name} ${lead.last_name} ${lead.mobile} ${lead.destination}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || lead.status === statusFilter;
-    const matchPriority = priorityFilter === 'All' || lead.priority === priorityFilter;
-    return matchSearch && matchStatus && matchPriority;
-  });
 
-  const exportLeads = () => {
-    dispatch({ type: 'LOG_EXPORT', payload: { type: 'Leads Export', count: filtered.length } });
-    const csvHeader = 'Lead ID,Name,Mobile,Email,Status,Priority,Destination,Created\n';
-    const csvRows = filtered.map(l => `${l.id},"${l.first_name} ${l.last_name}",${l.mobile},${l.email},${l.status},${l.priority},${l.destination},${new Date(l.created_at).toLocaleDateString()}`).join('\n');
-    const blob = new Blob([csvHeader + csvRows], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const statusColors = { 
+    New: '#10B981', 
+    Working: '#3B82F6', 
+    'Proposal Sent': '#8B5CF6', 
+    Negotiating: '#F59E0B', 
+    Booked: '#0D9488', 
+    Lost: '#6B7280' 
   };
 
-  const statusColors = { New: 'new', Working: 'working', 'Proposal Sent': 'proposal-sent', Negotiating: 'negotiating', Booked: 'booked', Lost: 'lost', Unqualified: 'unqualified' };
-  const priorityColor = { Hot: '#EF4444', Normal: '#3B82F6', Cold: '#94A3B8' };
-
   return (
-    <div className="lead-list-page">
-      <div className="page-header">
-        <div className="header-left">
-          <h1>All Leads</h1>
-          <p className="text-secondary">{filtered.length} of {leads.length} leads shown</p>
+    <div className="lead-list-container">
+      {/* Top Action Header */}
+      <div className="lead-list-header card">
+        <div className="header-title">
+          <FiRocket size={24} style={{ color: 'var(--primary)' }} />
+          <div>
+            <h3>All Leads</h3>
+            <p>View All leads and apply various filters.</p>
+          </div>
         </div>
         <div className="header-actions">
-          <button className="btn btn-outline" onClick={exportLeads}><FiDownload /> Export CSV</button>
-          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}><FiPlus /> Add Lead</button>
+           <button className="btn btn-outline btn-icon-label"><FiSearch /> Search</button>
+           <button className="btn btn-outline">Bulk Change Lead User</button>
+           <button className="btn btn-outline btn-icon-label"><FiList /> Follow Up Lead List</button>
+           <button className="btn btn-outline btn-icon-label" onClick={() => setIsModalOpen(true)}><FiPlus /> Add Lead</button>
         </div>
       </div>
 
-      <AddLeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleAddLead} />
+      <AddLeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={(data) => {
+          dispatch({ type: 'ADD_LEAD', payload: { ...data, id: `L-${Date.now()}`, created_at: new Date().toISOString() } });
+          setIsModalOpen(false);
+      }} />
 
-      <div className="filter-bar card">
-        <div className="filter-group">
-          <FiSearch className="icon" />
-          <input type="text" placeholder="Search by name, phone, destination..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="filter-group" style={{ maxWidth: '200px' }}>
-          <FiFilter className="icon" />
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="All">All Statuses</option>
-            {['Unqualified', 'New', 'Working', 'Proposal Sent', 'Negotiating', 'Booked', 'Lost'].map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <div className="filter-group" style={{ maxWidth: '180px' }}>
-          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
-            <option value="All">All Priorities</option>
-            <option>Hot</option><option>Normal</option><option>Cold</option>
-          </select>
-        </div>
+      {/* Advanced Filter Section */}
+      <div className="filter-section card">
+         <div className="filter-toggle" onClick={() => setIsFilterExpanded(!isFilterExpanded)}>
+            <button className="btn btn-outline btn-sm">
+              Advanced Filter {isFilterExpanded ? <FiChevronUp /> : <FiChevronDown />}
+            </button>
+         </div>
+
+         {isFilterExpanded && (
+           <div className="filter-grid">
+              <div className="filter-item">
+                <label>From</label>
+                <input type="text" value={filters.from} onChange={e => handleInputChange('from', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>To</label>
+                <input type="text" value={filters.to} onChange={e => handleInputChange('to', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Lead Priority</label>
+                <select value={filters.priority} onChange={e => handleInputChange('priority', e.target.value)}>
+                  <option>All</option><option>Hot</option><option>Normal</option><option>Cold</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <label>Lead Status</label>
+                <select value={filters.status} onChange={e => handleInputChange('status', e.target.value)}>
+                  <option>All</option><option>New</option><option>Working</option><option>Proposal Sent</option><option>Booked</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <label>Lead Sub Status</label>
+                <select value={filters.subStatus} onChange={e => handleInputChange('subStatus', e.target.value)}>
+                  <option>All</option><option>Awaiting Response</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <label>Lead Source</label>
+                <select value={filters.source} onChange={e => handleInputChange('source', e.target.value)}>
+                  <option>All</option><option>Website</option><option>Referral</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <label>Assigned To</label>
+                <select value={filters.assignedTo} onChange={e => handleInputChange('assignedTo', e.target.value)}>
+                  <option>All</option><option>Admin</option>
+                </select>
+              </div>
+              <div className="filter-item">
+                <label>Enquiry Type</label>
+                <input type="text" value={filters.enquiryType} onChange={e => handleInputChange('enquiryType', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Lead Number</label>
+                <input type="text" placeholder="Lead Number" value={filters.leadNumber} onChange={e => handleInputChange('leadNumber', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Firstname</label>
+                <input type="text" placeholder="Firstname" value={filters.firstName} onChange={e => handleInputChange('firstName', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Lastname</label>
+                <input type="text" placeholder="Lastname" value={filters.lastName} onChange={e => handleInputChange('lastName', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Mobile Number</label>
+                <input type="text" placeholder="Mobile Number" value={filters.mobileNumber} onChange={e => handleInputChange('mobileNumber', e.target.value)} />
+              </div>
+              <div className="filter-item" style={{ gridColumn: 'span 2' }}>
+                <label>Email Id</label>
+                <input type="text" placeholder="Enter Email Id" value={filters.emailId} onChange={e => handleInputChange('emailId', e.target.value)} />
+              </div>
+              <div className="filter-item">
+                <label>Tags</label>
+                <select value={filters.tags} onChange={e => handleInputChange('tags', e.target.value)}>
+                  <option>All</option>
+                </select>
+              </div>
+              <div className="filter-actions">
+                 <button className="btn btn-primary" style={{ height: '38px', marginTop: '1.4rem' }}>Search</button>
+              </div>
+           </div>
+         )}
       </div>
 
-      <div className="table-container card">
-        <table className="data-table">
+      <div className="table-controls card">
+         <div className="limit-box">
+            <label>Limit</label>
+            <select value={filters.limit} onChange={e => handleInputChange('limit', e.target.value)}>
+              <option>10</option><option>25</option><option>50</option>
+            </select>
+         </div>
+         <div className="search-table-box">
+            <label>Search</label>
+            <input type="text" placeholder="Search.." value={filters.searchTable} onChange={e => handleInputChange('searchTable', e.target.value)} />
+         </div>
+      </div>
+
+      {/* Leads Table */}
+      <div className="leads-table-wrapper card">
+        <table className="leads-table">
           <thead>
             <tr>
-              <th>Lead ID</th>
-              <th>Customer</th>
-              <th>Contact</th>
-              <th>Destination</th>
-              <th>Status</th>
-              <th>Priority</th>
-              <th>Travel Date</th>
-              <th>Created</th>
+              <th>Lead No. <FiLayers size={12}/></th>
+              <th>Contact Name <FiUserPlus size={12}/></th>
+              <th>Phone <FiSearch size={12}/></th>
+              <th>Lead Source <FiSearch size={12}/></th>
+              <th>Lead Status <FiSearch size={12}/></th>
+              <th>Assigned <FiSearch size={12}/></th>
+              <th>Current <FiSearch size={12}/></th>
+              <th>Destination <FiMapPin size={12}/></th>
+              <th>Trip Type <FiSearch size={12}/></th>
+              <th>Enquiry Type <FiSearch size={12}/></th>
+              <th>Tags <FiSearch size={12}/></th>
+              <th>Tour Start <FiClock size={12}/></th>
+              <th>Created <FiClock size={12}/></th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((lead) => (
+            {leads.map(lead => (
               <tr key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className="clickable-row">
-                <td><strong style={{ color: 'var(--primary)' }}>{lead.id}</strong></td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: 30, height: 30, background: 'var(--primary-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
-                      {lead.first_name?.charAt(0)}
-                    </div>
-                    <span>{lead.first_name} {lead.last_name}</span>
-                  </div>
-                </td>
-                <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{lead.mobile}</td>
+                <td className="lead-no">{lead.id}</td>
+                <td className="contact-name">{lead.first_name} {lead.last_name}</td>
+                <td>{lead.mobile}</td>
+                <td>{lead.lead_source}</td>
+                <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span></td>
+                <td>{lead.assigned_to}</td>
+                <td>{lead.assigned_to}</td>
                 <td>{lead.destination}</td>
-                <td><span className={`badge ${statusColors[lead.status] || 'working'}`}>{lead.status}</span></td>
+                <td>Other</td>
+                <td>—</td>
+                <td>—</td>
+                <td>{lead.travel_start_date || '—'}</td>
                 <td>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 600, color: priorityColor[lead.priority] }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: priorityColor[lead.priority] || '#94A3B8', display: 'inline-block' }} />
-                    {lead.priority}
-                  </span>
+                  <div style={{ fontSize: '0.75rem' }}>{new Date(lead.created_at).toLocaleDateString()}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#999' }}>{new Date(lead.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </td>
-                <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{lead.travel_start_date || '—'}</td>
-                <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{new Date(lead.created_at).toLocaleDateString()}</td>
-                <td onClick={e => e.stopPropagation()}>
-                  <button className="btn-icon" onClick={() => navigate(`/leads/${lead.id}`)} title="View Lead"><FiEye /></button>
-                  {lead.isDuplicate && <FiAlertCircle style={{ color: '#EF4444', marginLeft: 4 }} title="Possible duplicate" />}
+                <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                   <div className="action-icons-grid">
+                      <div className="icon-box purple" title="Gift"><FiPlus size={12}/></div>
+                      <div className="icon-box cyan" title="Documents"><FiPlus size={12}/></div>
+                      <div className="icon-box orange" title="Tickets"><FiPlus size={12}/></div>
+                      <div className="icon-box green" title="View"><FiEye size={12}/></div>
+                      <div className="icon-box yellow" title="Edit"><FiEdit2 size={12}/></div>
+                      <div className="icon-box red" title="Delete"><FiTrash2 size={12}/></div>
+                   </div>
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No leads found matching your filters.</td></tr>
-            )}
           </tbody>
         </table>
+        
+        <div className="table-footer">
+           <p>Total Number Of Leads based on Above Search: {leads.length}</p>
+           <div className="pagination">
+              <span className="page-item active">1</span>
+           </div>
+        </div>
       </div>
     </div>
   );
 };
+
+const FiRocket = ({ size, style }) => <FiLayers size={size} style={style} />; // Placeholder icon shift
 
 export default LeadList;

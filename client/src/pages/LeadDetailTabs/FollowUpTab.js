@@ -9,9 +9,31 @@ const FollowUpTab = ({ lead }) => {
 
   const handleAdd = () => {
     if (!form.notes) return;
-    dispatch({ type: 'ADD_FOLLOWUP', payload: { leadId: lead.id, followUp: form } });
+    dispatch({ type: 'ADD_FOLLOWUP', payload: { leadId: lead.id, followUp: { ...form, id: Date.now(), date: new Date().toISOString() } } });
     setForm({ method: 'Phone', notes: '', outcome: 'Interested', nextDate: '' });
     setShowForm(false);
+  };
+
+  const handleStartSequence = () => {
+    const sequence = [
+      { id: Date.now()+1, method: 'WhatsApp', notes: 'Day 1 Sequence: Quote Feedback request', outcome: 'Pending', date: new Date().toISOString(), nextDate: new Date(Date.now() + 86400000).toISOString() },
+      { id: Date.now()+2, method: 'Email', notes: 'Day 3 Sequence: Gentle trip reminder', outcome: 'Pending', date: new Date(Date.now() + 259200000).toISOString(), nextDate: new Date(Date.now() + 345600000).toISOString() },
+      { id: Date.now()+3, method: 'Phone', notes: 'Day 7 Sequence: Final conversion call / offer', outcome: 'Pending', date: new Date(Date.now() + 604800000).toISOString() }
+    ];
+    
+    sequence.forEach(f => {
+      dispatch({ type: 'ADD_FOLLOWUP', payload: { leadId: lead.id, followUp: f } });
+    });
+
+    dispatch({
+      type: 'ADD_ACTIVITY',
+      payload: {
+        leadId: lead.id,
+        activity: { id: Date.now(), date: new Date().toISOString(), text: 'Automated conversion sequence initiated (7 Days)', user: 'System' }
+      }
+    });
+
+    alert('7-Day conversion sequence has been scheduled and added to the timeline.');
   };
 
   const followUps = lead.followUps || [];
@@ -22,7 +44,10 @@ const FollowUpTab = ({ lead }) => {
       <div className="card">
         <div className="section-header">
           <h3>Follow-Up Log ({followUps.length})</h3>
-          <button className="btn-text" onClick={() => setShowForm(!showForm)}><FiPlus /> Log Follow-Up</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+             <button className="btn btn-outline btn-sm" onClick={handleStartSequence} style={{ color: 'var(--primary)' }}>Start Smart Sequence</button>
+             <button className="btn-text" onClick={() => setShowForm(!showForm)}><FiPlus /> Log Follow-Up</button>
+          </div>
         </div>
 
         {showForm && (

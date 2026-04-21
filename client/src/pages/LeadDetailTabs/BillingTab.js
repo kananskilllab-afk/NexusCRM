@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { FiPlus, FiTrash2, FiFileText, FiDollarSign, FiCalendar } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiFileText, FiDollarSign, FiCalendar, FiPrinter, FiTruck } from 'react-icons/fi';
 import { useLeads } from '../../context/LeadContext';
+import Receipt from '../../components/Receipt';
 
 const BillingTab = ({ lead }) => {
   const { dispatch } = useLeads();
   const [isAdding, setIsAdding] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
   const [newItem, setNewItem] = useState({ description: '', qty: 1, price: 0, tax: 5 });
   const [payForm, setPayForm] = useState({ amount: '', method: 'Bank Transfer', reference: '', note: '' });
 
@@ -13,11 +15,14 @@ const BillingTab = ({ lead }) => {
   const items = billing.items || [];
   const payments = billing.payments || [];
   const schedule = billing.paymentSchedule || [];
+  const assignedSuppliers = lead.assignedSuppliers || [];
 
   const subtotal = items.reduce((acc, item) => acc + (item.qty * item.price), 0);
   const totalTax = items.reduce((acc, item) => acc + (item.qty * item.price * (item.tax || 0) / 100), 0);
   const grandTotal = subtotal + totalTax;
   const totalPaid = payments.reduce((acc, p) => acc + Number(p.amount), 0);
+  const totalCost = assignedSuppliers.reduce((acc, s) => acc + Number(s.rate || 0), 0);
+  const netProfit = grandTotal - totalCost;
   const balanceDue = grandTotal - totalPaid;
 
   const updateItems = (newItems) => {
@@ -42,6 +47,7 @@ const BillingTab = ({ lead }) => {
 
   return (
     <div className="tab-content billing-tab">
+      {showReceipt && <Receipt lead={lead} onClose={() => setShowReceipt(false)} />}
       {/* Financial Summary */}
       <div className="billing-header">
         <div className="billing-stats">
@@ -50,8 +56,9 @@ const BillingTab = ({ lead }) => {
             <h3>₹{grandTotal.toLocaleString()}</h3>
           </div>
           <div className="stat-box">
-            <label>Paid Amount</label>
-            <h3 className="text-success">₹{totalPaid.toLocaleString()}</h3>
+            <label>Net Profit (P&L)</label>
+            <h3 className={netProfit >= 0 ? 'text-success' : 'text-danger'}>₹{netProfit.toLocaleString()}</h3>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Margin: {grandTotal > 0 ? ((netProfit/grandTotal)*100).toFixed(1) : 0}%</span>
           </div>
           <div className="stat-box">
             <label>Balance Due</label>
@@ -59,7 +66,7 @@ const BillingTab = ({ lead }) => {
           </div>
         </div>
         <div className="billing-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => window.print()}><FiFileText /> Print Invoice</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowReceipt(true)}><FiFileText /> View & Print Receipt</button>
           <button className="btn btn-outline btn-sm" onClick={() => setShowPayForm(!showPayForm)}><FiDollarSign /> Record Payment</button>
         </div>
       </div>
@@ -152,6 +159,33 @@ const BillingTab = ({ lead }) => {
           </table>
         </div>
       )}
+
+      {/* Vendor Payout Tracker */}
+      <div className="card" style={{ marginTop: '1rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}><FiTruck /> Vendor Owed vs Profit</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr style={{ background: 'var(--bg-main)', textAlign: 'left' }}><th style={{ padding: 8 }}>Supplier</th><th style={{ padding: 8 }}>Service</th><th style={{ padding: 8 }}>Cost</th><th style={{ padding: 8 }}>Status</th></tr></thead>
+          <tbody>
+            {assignedSuppliers.map((s, idx) => (
+              <tr key={idx} style={{ borderBottom: '1px solid var(--divider)' }}>
+                <td style={{ padding: 8 }}>{s.supplierName}</td>
+                <td style={{ padding: 8, fontSize: '0.85rem' }}>{s.serviceType}</td>
+                <td style={{ padding: 8, fontWeight: 600 }}>₹{Number(s.rate).toLocaleString()}</td>
+                <td style={{ padding: 8 }}>
+                   <span className="badge working">Pending Payout</span>
+                </td>
+              </tr>
+            ))}
+            {assignedSuppliers.length === 0 && <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No supplier costs assigned yet.</td></tr>}
+          </tbody>
+          <tfoot style={{ background: 'var(--bg-main)', fontWeight: 700 }}>
+             <tr>
+                <td colSpan="2" style={{ padding: 8 }}>Total Supplier Cost</td>
+                <td colSpan="2" style={{ padding: 8 }}>₹{totalCost.toLocaleString()}</td>
+             </tr>
+          </tfoot>
+        </table>
+      </div>
 
       {/* Payment Schedule */}
       {schedule.length > 0 && (
