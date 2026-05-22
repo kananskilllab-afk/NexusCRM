@@ -73,5 +73,67 @@ export const api = {
     const res = await fetch(`${API_URL}/customers`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch customers');
     return res.json();
+  },
+
+  createCustomer: async (customerData) => {
+    const res = await fetch(`${API_URL}/customers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(customerData)
+    });
+    if (!res.ok) throw new Error('Failed to create customer');
+    return res.json();
+  },
+
+  updateCustomer: async (id, updates) => {
+    const res = await fetch(`${API_URL}/customers/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update customer');
+    return res.json();
+  },
+
+  deleteCustomer: async (id) => {
+    const res = await fetch(`${API_URL}/customers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete customer');
+    }
+    return res.json();
+  },
+
+  // Billing and Payments
+  addBillingItem: async (leadId, itemData) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/billing-items`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(itemData)
+    });
+    if (!res.ok) throw new Error('Failed to add billing item');
+    return res.json();
+  },
+
+  deleteBillingItem: async (leadId, itemId) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/billing-items/${itemId}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to delete billing item');
+    return res.json();
+  },
+
+  addPayment: async (leadId, paymentData) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/payments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(paymentData)
+    });
+    if (!res.ok) throw new Error('Failed to add payment');
+    return res.json();
   }
 };

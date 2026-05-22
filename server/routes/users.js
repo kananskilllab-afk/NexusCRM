@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { getDb } = require('../db/database');
+const CRMUser = require('../models/CRMUser');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 
 // All user routes require authentication and Super Admin (level 5) role
@@ -9,16 +9,17 @@ router.use(authenticate);
 router.use(requireRole(5));
 
 // GET /api/users - List all users
-router.get('/', (req, res) => {
-  const db = getDb();
-  // Don't return passwords
-  const users = db.prepare('SELECT id, name, email, role, status, area, mobile, assigned_to, created_at, updated_at FROM users ORDER BY created_at DESC').all();
-  res.json(users);
+router.get('/', async (req, res) => {
+  try {
+    const users = await CRMUser.find({}, '-password').sort({ created_at: -1 }).lean();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list users' });
+  }
 });
 
 // POST /api/users - Create a new user
-router.post('/', (req, res) => {
-  const db = getDb();
+router.post('/', async (req, res) => {
   const id = generateId('U');
   const { name, email, password, role = 'Viewer', status = 'Active', area, mobile, assigned_to } = req.body;
 
@@ -28,17 +29,25 @@ router.post('/', (req, res) => {
 
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    db.prepare(`
-      INSERT INTO users (id, name, email, password, role, status, area, mobile, assigned_to)
-      VALUES (@id, @name, @email, @password, @role, @status, @area, @mobile, @assigned_to)
-    `).run({ id, name, email, password: hashedPassword, role, status, area, mobile, assigned_to });
+    const newUser = await CRMUser.create({
+      id,
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role,
+      status,
+      area,
+      mobile,
+      assigned_to
+    });
 
-    auditLog(db, req, 'CREATE', 'users', id, `Created user: ${name} (${role})`);
+    auditLog(null, req, 'CREATE', 'users', id, `Created user: ${name} (${role})`);
     
-    const newUser = db.prepare('SELECT id, name, email, role, status, area, mobile, assigned_to, created_at FROM users WHERE id = ?').get(id);
-    res.status(201).json(newUser);
+    const userJson = newUser.toJSON();
+    delete userJson.password;
+    res.status(201).json(userJson);
   } catch (error) {
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already exists' });
     }
     res.status(500).json({ error: 'Failed to create user' });
@@ -46,52 +55,55 @@ router.post('/', (req, res) => {
 });
 
 // PATCH /api/users/:id - Update user
-router.patch('/:id', (req, res) => {
-  const db = getDb();
+router.patch('/:id', async (req, res) => {
   const userId = req.params.id;
   
-  // Verify user exists and isn't the last Super Admin being demoted
-  const currentUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (!currentUser) return res.status(404).json({ error: 'User not found' });
-
-  const { name, email, role, status, area, mobile, assigned_to, password } = req.body;
-  const updates = {};
-  
-  if (name !== undefined) updates.name = name;
-  if (email !== undefined) updates.email = email;
-  if (role !== undefined) {
-    // Basic protection against removing the last super admin
-    if (currentUser.role === 'Super Admin' && role !== 'Super Admin') {
-      const superAdminsCount = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'Super Admin' AND status = 'Active'`).get().count;
-      if (superAdminsCount <= 1) {
-        return res.status(400).json({ error: 'Cannot demote the last Active Super Admin' });
-      }
-    }
-    updates.role = role;
-  }
-  if (status !== undefined) updates.status = status;
-  if (area !== undefined) updates.area = area;
-  if (mobile !== undefined) updates.mobile = mobile;
-  if (assigned_to !== undefined) updates.assigned_to = assigned_to;
-  
-  if (password) {
-    updates.password = bcrypt.hashSync(password, 10);
-  }
-
-  if (Object.keys(updates).length === 0) return res.json({ message: 'No updates provided' });
-
-  const setClause = Object.keys(updates).map(k => `${k} = @${k}`).join(', ');
-  
   try {
-    db.prepare(`UPDATE users SET ${setClause}, updated_at = datetime('now') WHERE id = @id`)
-      .run({ ...updates, id: userId });
-      
-    auditLog(db, req, 'UPDATE', 'users', userId, `Updated user properties`);
+    const currentUser = await CRMUser.findOne({ id: userId });
+    if (!currentUser) return res.status(404).json({ error: 'User not found' });
+
+    const { name, email, role, status, area, mobile, assigned_to, password } = req.body;
+    const updates = {};
     
-    const updatedUser = db.prepare('SELECT id, name, email, role, status, area, mobile, assigned_to, updated_at FROM users WHERE id = ?').get(userId);
-    res.json(updatedUser);
+    if (name !== undefined) updates.name = name;
+    if (email !== undefined) updates.email = email.toLowerCase();
+    if (role !== undefined) {
+      if (currentUser.role === 'Super Admin' && role !== 'Super Admin') {
+        const superAdminsCount = await CRMUser.countDocuments({ role: 'Super Admin', status: 'Active' });
+        if (superAdminsCount <= 1) {
+          return res.status(400).json({ error: 'Cannot demote the last Active Super Admin' });
+        }
+      }
+      updates.role = role;
+    }
+    if (status !== undefined) updates.status = status;
+    if (area !== undefined) updates.area = area;
+    if (mobile !== undefined) updates.mobile = mobile;
+    if (assigned_to !== undefined) updates.assigned_to = assigned_to;
+    
+    if (password) {
+      updates.password = bcrypt.hashSync(password, 10);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      const userJson = currentUser.toJSON();
+      delete userJson.password;
+      return res.json(userJson);
+    }
+
+    const updatedUser = await CRMUser.findOneAndUpdate(
+      { id: userId },
+      { $set: updates },
+      { new: true }
+    );
+      
+    auditLog(null, req, 'UPDATE', 'users', userId, `Updated user properties`);
+    
+    const userJson = updatedUser.toJSON();
+    delete userJson.password;
+    res.json(userJson);
   } catch (error) {
-    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already exists' });
     }
     res.status(500).json({ error: 'Failed to update user' });
@@ -99,25 +111,27 @@ router.patch('/:id', (req, res) => {
 });
 
 // DELETE /api/users/:id - Delete user
-router.delete('/:id', (req, res) => {
-  const db = getDb();
+router.delete('/:id', async (req, res) => {
   const userId = req.params.id;
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  try {
+    const user = await CRMUser.findOne({ id: userId });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  if (user.role === 'Super Admin') {
-    const superAdminsCount = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'Super Admin' AND status = 'Active'`).get().count;
-    if (superAdminsCount <= 1) {
-      return res.status(400).json({ error: 'Cannot delete the last Super Admin' });
+    if (user.role === 'Super Admin') {
+      const superAdminsCount = await CRMUser.countDocuments({ role: 'Super Admin', status: 'Active' });
+      if (superAdminsCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the last Super Admin' });
+      }
     }
-  }
 
-  // Soft delete typically better for CRM to preserve history, but implementing hard delete as requested
-  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-  auditLog(db, req, 'DELETE', 'users', userId, `Deleted user: ${user.name}`);
-  
-  res.json({ message: 'User deleted successfully' });
+    await CRMUser.deleteOne({ id: userId });
+    auditLog(null, req, 'DELETE', 'users', userId, `Deleted user: ${user.name}`);
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
 });
 
 module.exports = router;

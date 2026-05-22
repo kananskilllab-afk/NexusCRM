@@ -1,10 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLeads } from '../context/LeadContext';
+import { api } from '../services/api';
 import { FiChevronLeft, FiChevronRight, FiClock, FiMapPin, FiCalendar } from 'react-icons/fi';
 
 const Scheduler = () => {
-  const { state } = useLeads();
+  const { state, dispatch } = useLeads();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Sync data on mount
+  useEffect(() => {
+    const syncData = async () => {
+      if (state.leads.length === 0) {
+        dispatch({ type: 'FETCH_START' });
+        try {
+          const leads = await api.getLeads();
+          dispatch({ type: 'SET_LEADS', payload: leads });
+        } catch (e) {
+          dispatch({ type: 'FETCH_ERROR', payload: e.message });
+        }
+      }
+      if (state.customers.length === 0) {
+        dispatch({ type: 'FETCH_START' });
+        try {
+          const customers = await api.getCustomers();
+          dispatch({ type: 'SET_CUSTOMERS', payload: customers });
+        } catch (e) {
+          dispatch({ type: 'FETCH_ERROR', payload: e.message });
+        }
+      }
+    };
+    syncData();
+  }, [dispatch, state.leads.length, state.customers.length]);
 
   const daysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (month, year) => new Date(year, month, 1).getDay();
@@ -28,7 +54,7 @@ const Scheduler = () => {
     
     const followUps = state.leads.flatMap(l => 
       (l.followUps || [])
-        .filter(f => f.nextDate?.startsWith(dateStr))
+        .filter(f => (f.next_date || f.nextDate || '').startsWith(dateStr))
         .map(f => ({ type: 'Follow-up', lead: `${l.first_name} ${l.last_name}`, color: 'var(--primary)', ...f }))
     );
 
@@ -37,8 +63,21 @@ const Scheduler = () => {
       .map(l => ({ type: 'Travel Start', lead: `${l.first_name} ${l.last_name}`, color: '#10B981', destination: l.destination }));
 
     const birthdays = (state.customers || [])
-      .filter(c => c.dob?.includes(`-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`))
-      .map(c => ({ type: 'Birthday', lead: c.name, color: '#F59E0B' }));
+      .filter(c => {
+        const dobVal = c.date_of_birth || c.dob;
+        if (!dobVal) return false;
+        try {
+          const dobStr = typeof dobVal === 'string' ? dobVal : new Date(dobVal).toISOString();
+          return dobStr.includes(`-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+        } catch (e) {
+          return false;
+        }
+      })
+      .map(c => ({ 
+        type: 'Birthday', 
+        lead: c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Valued Customer', 
+        color: '#F59E0B' 
+      }));
 
     return [...followUps, ...travelStarts, ...birthdays];
   };

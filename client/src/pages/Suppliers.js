@@ -75,7 +75,7 @@ const Suppliers = () => {
 
   const types = ['All', ...new Set(suppliers.map(s => s.type))];
 
-  const typeColor = { 'Hotel': '#0D9488', 'Flight Consolidator': '#3B82F6', 'Visa Agency': '#8B5CF6', 'Transport': '#F59E0B', 'Activity Provider': '#EF4444' };
+  const typeColor = { 'Hotel': 'var(--status-booked)', 'Flight Consolidator': 'var(--primary)', 'Visa Agency': 'var(--color-purple-bright)', 'Transport': 'var(--color-orange)', 'Activity Provider': 'var(--color-red)' };
 
   return (
     <div className="lead-list-page">

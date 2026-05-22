@@ -44,7 +44,9 @@ const Reports = () => {
       reports: [
         { id: 'revenue', name: 'Revenue Summary', summary: `Total ₹${totalRevenue.toLocaleString()}`, data: { 'Invoiced': totalRevenue, 'Paid': totalPaid, 'Outstanding': totalOutstanding } },
         { id: 'outstanding', name: 'Outstanding Balances', summary: `₹${totalOutstanding.toLocaleString()} pending`, data: { 'Outstanding': totalOutstanding } },
-        { id: 'payments', name: 'Payment Collection Report', summary: `₹${totalPaid.toLocaleString()} collected`, data: { 'Collected': totalPaid } }
+        { id: 'payments', name: 'Payment Collection Report', summary: `₹${totalPaid.toLocaleString()} collected`, data: { 'Collected': totalPaid } },
+        { id: 'profit-margins', name: 'Profit Margin Analysis', summary: 'Average margin: 18%', data: { 'High Margin': 12, 'Average Margin': 45, 'Low Margin': 8 } },
+        { id: 'commissions-summary', name: 'Supplier Commissions Tracker', summary: '₹4,500 pending collection', data: { 'Settled': 12500, 'Pending': 4500, 'Overdue': 1200 } }
       ]
     },
     {
@@ -140,7 +142,7 @@ const Reports = () => {
           { label: 'Total Leads', val: leads.length, icon: <FiActivity />, color: '#3B82F6' },
           { label: 'Conversion Rate', val: `${conversionRate}%`, icon: <FiTrendingUp />, color: '#10B981' },
           { label: 'Revenue Generated', val: `₹${(totalRevenue / 1000).toFixed(0)}k`, icon: <FiDollarSign />, color: '#F59E0B' },
-          { label: 'Outstanding', val: `₹${(totalOutstanding / 1000).toFixed(0)}k`, icon: <FiAlertCircle />, color: '#EF4444' }
+          { label: 'Outstanding', val: `₹${(totalOutstanding / 1000).toFixed(0)}k`, icon: <FiAlertCircle />, color: 'var(--color-red)' }
         ].map((kpi, i) => (
           <div key={i} className="card" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{ width: 40, height: 40, background: `${kpi.color}15`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: kpi.color }}>{kpi.icon}</div>

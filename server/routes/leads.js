@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { getDb } = require('../db/database');
+const Lead = require('../models/Lead');
+const Activity = require('../models/Activity');
+const FollowUp = require('../models/FollowUp');
+const BillingItem = require('../models/BillingItem');
+const Payment = require('../models/Payment');
+const AssignedSupplier = require('../models/AssignedSupplier');
+const Communication = require('../models/Communication');
+const Customer = require('../models/Customer');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 const { ROLE_HIERARCHY } = require('./auth');
 
@@ -8,61 +15,72 @@ const { ROLE_HIERARCHY } = require('./auth');
 router.use(authenticate);
 
 // GET /api/leads - list all leads (filtered by role)
-router.get('/', (req, res) => {
-  const db = getDb();
+router.get('/', async (req, res) => {
   const userLevel = ROLE_HIERARCHY[req.user.role] || 0;
   
-  let leads;
-  if (userLevel >= 3) {
-    // Ops Manager and above see all leads
-    leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
-  } else if (userLevel >= 1) {
-    // Ops Staff sees assigned leads only
-    leads = db.prepare('SELECT * FROM leads WHERE assigned_to = ? ORDER BY created_at DESC').all(req.user.name);
-  } else {
-    return res.status(403).json({ error: 'No lead access' });
+  try {
+    let leads;
+    if (userLevel >= 3) {
+      // Ops Manager and above see all leads
+      leads = await Lead.find({}).sort({ created_at: -1 }).lean();
+    } else if (userLevel >= 1) {
+      // Ops Staff sees assigned leads only
+      leads = await Lead.find({ assigned_to: req.user.name }).sort({ created_at: -1 }).lean();
+    } else {
+      return res.status(403).json({ error: 'No lead access' });
+    }
+
+    // Dynamic populate of follow-ups for each retrieved lead
+    const leadIds = leads.map(l => l.id);
+    const allFollowUps = await FollowUp.find({ lead_id: { $in: leadIds } }).lean();
+    
+    const followUpsMap = {};
+    allFollowUps.forEach(f => {
+      if (!followUpsMap[f.lead_id]) followUpsMap[f.lead_id] = [];
+      followUpsMap[f.lead_id].push(f);
+    });
+
+    const leadsWithFollowUps = leads.map(l => ({
+      ...l,
+      followUps: followUpsMap[l.id] || []
+    }));
+
+    res.json(leadsWithFollowUps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list leads' });
   }
-
-  // Parse JSON fields
-  leads = leads.map(l => ({
-    ...l,
-    enquiry_types: safeJson(l.enquiry_types, []),
-    enquiry_data: safeJson(l.enquiry_data, {}),
-    tags: safeJson(l.tags, [])
-  }));
-
-  res.json(leads);
 });
 
 // GET /api/leads/:id - single lead with full detail
-router.get('/:id', (req, res) => {
-  const db = getDb();
-  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
-  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+router.get('/:id', async (req, res) => {
+  const leadId = req.params.id;
 
-  const activities = db.prepare('SELECT * FROM activities WHERE lead_id = ? ORDER BY created_at DESC').all(req.params.id);
-  const followUps = db.prepare('SELECT * FROM follow_ups WHERE lead_id = ? ORDER BY date DESC').all(req.params.id);
-  const billingItems = db.prepare('SELECT * FROM billing_items WHERE lead_id = ?').all(req.params.id);
-  const payments = db.prepare('SELECT * FROM payments WHERE lead_id = ? ORDER BY date DESC').all(req.params.id);
-  const assignedSuppliers = db.prepare('SELECT * FROM assigned_suppliers WHERE lead_id = ?').all(req.params.id);
-  const communications = db.prepare('SELECT * FROM communications WHERE lead_id = ? ORDER BY sent_at DESC').all(req.params.id);
+  try {
+    const lead = await Lead.findOne({ id: leadId }).lean();
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  res.json({
-    ...lead,
-    enquiry_types: safeJson(lead.enquiry_types, []),
-    enquiry_data: safeJson(lead.enquiry_data, {}),
-    tags: safeJson(lead.tags, []),
-    activities,
-    followUps,
-    billing: { items: billingItems, payments },
-    assignedSuppliers,
-    communications
-  });
+    const activities = await Activity.find({ lead_id: leadId }).sort({ created_at: -1 }).lean();
+    const followUps = await FollowUp.find({ lead_id: leadId }).sort({ date: -1 }).lean();
+    const billingItems = await BillingItem.find({ lead_id: leadId }).lean();
+    const payments = await Payment.find({ lead_id: leadId }).sort({ date: -1 }).lean();
+    const assignedSuppliers = await AssignedSupplier.find({ lead_id: leadId }).lean();
+    const communications = await Communication.find({ lead_id: leadId }).sort({ sent_at: -1 }).lean();
+
+    res.json({
+      ...lead,
+      activities,
+      followUps,
+      billing: { items: billingItems, payments },
+      assignedSuppliers,
+      communications
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve lead details' });
+  }
 });
 
 // POST /api/leads - create lead
-router.post('/', requireRole(1), (req, res) => {
-  const db = getDb();
+router.post('/', requireRole(1), async (req, res) => {
   const id = generateId('L');
   const {
     first_name, last_name, email, mobile, status = 'New', priority = 'Normal',
@@ -71,181 +89,367 @@ router.post('/', requireRole(1), (req, res) => {
     enquiry_types = [], enquiry_data = {}, notes, tags = []
   } = req.body;
 
-  db.prepare(`
-    INSERT INTO leads (id, first_name, last_name, email, mobile, status, priority, no_adults, no_children, no_infants, destination, lead_source, assigned_to, travel_start_date, travel_end_date, enquiry_types, enquiry_data, notes, tags)
-    VALUES (@id, @first_name, @last_name, @email, @mobile, @status, @priority, @no_adults, @no_children, @no_infants, @destination, @lead_source, @assigned_to, @travel_start_date, @travel_end_date, @enquiry_types, @enquiry_data, @notes, @tags)
-  `).run({
-    id, first_name, last_name, email, mobile, status, priority,
-    no_adults, no_children, no_infants, destination, lead_source,
-    assigned_to: assigned_to || req.user.name, travel_start_date, travel_end_date,
-    enquiry_types: JSON.stringify(enquiry_types),
-    enquiry_data: JSON.stringify(enquiry_data),
-    notes, tags: JSON.stringify(tags)
-  });
+  try {
+    const newLead = await Lead.create({
+      id, first_name, last_name, email, mobile, status, priority,
+      no_adults, no_children, no_infants, destination, lead_source,
+      assigned_to: assigned_to || req.user.name, travel_start_date, travel_end_date,
+      enquiry_types, enquiry_data, notes, tags
+    });
 
-  // Auto-create activity
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(generateId('act'), id, 'System', `Lead created by ${req.user.name}`, req.user.name);
+    // Auto-create activity
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: id,
+      type: 'System',
+      text: `Lead created by ${req.user.name}`,
+      user_name: req.user.name
+    });
 
-  auditLog(db, req, 'CREATE', 'leads', id, `Lead created: ${first_name} ${last_name}`);
+    auditLog(null, req, 'CREATE', 'leads', id, `Lead created: ${first_name} ${last_name}`);
 
-  const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
-  res.status(201).json(newLead);
+    res.status(201).json(newLead);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create lead' });
+  }
 });
 
 // PATCH /api/leads/:id - update lead
-router.patch('/:id', requireRole(1), (req, res) => {
-  const db = getDb();
-  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
-  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+router.patch('/:id', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
 
-  const allowed = ['first_name','last_name','email','mobile','status','priority','destination',
-    'lead_source','assigned_to','travel_start_date','travel_end_date','enquiry_types',
-    'enquiry_data','no_adults','no_children','no_infants','notes','tags'];
+  try {
+    const lead = await Lead.findOne({ id: leadId });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  const updates = {};
-  allowed.forEach(key => {
-    if (req.body[key] !== undefined) {
-      updates[key] = typeof req.body[key] === 'object' ? JSON.stringify(req.body[key]) : req.body[key];
+    const allowed = ['first_name','last_name','email','mobile','status','priority','destination',
+      'lead_source','assigned_to','travel_start_date','travel_end_date','enquiry_types',
+      'enquiry_data','no_adults','no_children','no_infants','notes','tags'];
+
+    const updates = {};
+    allowed.forEach(key => {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
+    });
+
+    if (Object.keys(updates).length === 0) return res.json(lead);
+
+    const updated = await Lead.findOneAndUpdate(
+      { id: leadId },
+      { $set: updates },
+      { new: true }
+    );
+
+    // If status changed, log it
+    if (req.body.status && req.body.status !== lead.status) {
+      await Activity.create({
+        id: generateId('act'),
+        lead_id: leadId,
+        type: 'Status',
+        text: `Status changed: ${lead.status} → ${req.body.status}`,
+        user_name: req.user.name
+      });
     }
-  });
 
-  if (Object.keys(updates).length === 0) return res.json(lead);
-
-  const setClause = Object.keys(updates).map(k => `${k} = @${k}`).join(', ');
-  db.prepare(`UPDATE leads SET ${setClause}, updated_at = datetime('now') WHERE id = @id`)
-    .run({ ...updates, id: req.params.id });
-
-  // If status changed, log it
-  if (req.body.status && req.body.status !== lead.status) {
-    db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-      .run(generateId('act'), req.params.id, 'Status', `Status changed: ${lead.status} → ${req.body.status}`, req.user.name);
+    auditLog(null, req, 'UPDATE', 'leads', leadId, `Lead updated`);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update lead' });
   }
-
-  auditLog(db, req, 'UPDATE', 'leads', req.params.id, `Lead updated`);
-  const updated = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
-  res.json(updated);
 });
 
 // DELETE /api/leads/:id
-router.delete('/:id', requireRole(4), (req, res) => {
-  const db = getDb();
-  db.prepare('DELETE FROM leads WHERE id = ?').run(req.params.id);
-  auditLog(db, req, 'DELETE', 'leads', req.params.id, 'Lead deleted');
-  res.json({ message: 'Lead deleted' });
+router.delete('/:id', requireRole(4), async (req, res) => {
+  const leadId = req.params.id;
+
+  try {
+    await Lead.deleteOne({ id: leadId });
+    auditLog(null, req, 'DELETE', 'leads', leadId, 'Lead deleted');
+    res.json({ message: 'Lead deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete lead' });
+  }
+});
+
+// PUT /api/leads/:id/cancel - cancel booking and calculate refund
+router.put('/:id/cancel', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
+
+  try {
+    const lead = await Lead.findOne({ id: leadId });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Calculate refund (sum of all received payments)
+    const payments = await Payment.find({ lead_id: leadId, type: 'received' });
+    const refundAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Update status
+    await Lead.updateOne({ id: leadId }, { $set: { status: 'Cancelled' } });
+
+    // Log activity
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'Status',
+      text: `Booking Cancelled. Refund of ${refundAmount} calculated.`,
+      user_name: req.user.name
+    });
+
+    // Send notification log if customer exists
+    const customer = await Customer.findOne({ email: lead.email });
+    if (customer && customer.notification_enabled) {
+      // Create template-like communication log
+      await Communication.create({
+        id: generateId('comm'),
+        lead_id: leadId,
+        channel: 'email',
+        direction: 'outbound',
+        template_name: 'Booking Cancelled',
+        content: `Your booking ${leadId} has been cancelled. Refund of ${refundAmount} is being processed.`,
+        status: 'Sent',
+        sent_by: req.user.name
+      });
+    }
+
+    auditLog(null, req, 'CANCEL', 'leads', leadId, `Booking cancelled. Refund: ${refundAmount}`);
+    res.json({ success: true, refundAmount, status: 'Cancelled' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/leads/:id/activities - add activity note
-router.post('/:id/activities', (req, res) => {
-  const db = getDb();
+router.post('/:id/activities', async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('act');
   const { text, type = 'Note' } = req.body;
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, type, text, req.user.name);
-  res.status(201).json(db.prepare('SELECT * FROM activities WHERE id = ?').get(id));
+
+  try {
+    const newAct = await Activity.create({
+      id,
+      lead_id: leadId,
+      type,
+      text,
+      user_name: req.user.name
+    });
+    res.status(201).json(newAct);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create activity' });
+  }
 });
 
 // GET /api/leads/:id/activities
-router.get('/:id/activities', (req, res) => {
-  const db = getDb();
-  const activities = db.prepare('SELECT * FROM activities WHERE lead_id = ? ORDER BY created_at DESC').all(req.params.id);
-  res.json(activities);
+router.get('/:id/activities', async (req, res) => {
+  try {
+    const activities = await Activity.find({ lead_id: req.params.id }).sort({ created_at: -1 }).lean();
+    res.json(activities);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch activities' });
+  }
 });
 
 // POST /api/leads/:id/payments
-router.post('/:id/payments', requireRole(1), (req, res) => {
-  const db = getDb();
+router.post('/:id/payments', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('pay');
   const { amount, date, method, reference, note } = req.body;
-  db.prepare(`INSERT INTO payments (id, lead_id, amount, date, method, reference, note, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, amount, date || new Date().toISOString(), method, reference, note, req.user.name);
 
-  // Auto activity
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(generateId('act'), req.params.id, 'Payment', `Payment of ₹${Number(amount).toLocaleString()} received via ${method}`, req.user.name);
+  try {
+    const newPay = await Payment.create({
+      id,
+      lead_id: leadId,
+      amount,
+      date: date || new Date().toISOString(),
+      method,
+      reference,
+      note,
+      created_by: req.user.name
+    });
 
-  auditLog(db, req, 'PAYMENT', 'payments', id, `Payment: ₹${amount}`);
-  res.status(201).json(db.prepare('SELECT * FROM payments WHERE id = ?').get(id));
+    // Auto activity
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'Payment',
+      text: `Payment of ₹${Number(amount).toLocaleString()} received via ${method}`,
+      user_name: req.user.name
+    });
+
+    auditLog(null, req, 'PAYMENT', 'payments', id, `Payment: ₹${amount}`);
+    res.status(201).json(newPay);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record payment' });
+  }
 });
 
 // GET /api/leads/:id/payments
-router.get('/:id/payments', (req, res) => {
-  const db = getDb();
-  res.json(db.prepare('SELECT * FROM payments WHERE lead_id = ? ORDER BY date DESC').all(req.params.id));
+router.get('/:id/payments', async (req, res) => {
+  try {
+    const payments = await Payment.find({ lead_id: req.params.id }).sort({ date: -1 }).lean();
+    res.json(payments);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list payments' });
+  }
 });
 
 // POST /api/leads/:id/billing-items
-router.post('/:id/billing-items', requireRole(1), (req, res) => {
-  const db = getDb();
+router.post('/:id/billing-items', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('item');
   const { description, qty, price, tax } = req.body;
-  db.prepare(`INSERT INTO billing_items (id, lead_id, description, qty, price, tax) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, description, qty || 1, price || 0, tax || 0);
-  res.status(201).json(db.prepare('SELECT * FROM billing_items WHERE id = ?').get(id));
+
+  try {
+    const newItem = await BillingItem.create({
+      id,
+      lead_id: leadId,
+      description,
+      qty: qty || 1,
+      price: price || 0,
+      tax: tax || 0
+    });
+    res.status(201).json(newItem);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add billing item' });
+  }
 });
 
 // GET /api/leads/:id/billing-items
-router.get('/:id/billing-items', (req, res) => {
-  const db = getDb();
-  res.json(db.prepare('SELECT * FROM billing_items WHERE lead_id = ?').all(req.params.id));
+router.get('/:id/billing-items', async (req, res) => {
+  try {
+    const items = await BillingItem.find({ lead_id: req.params.id }).lean();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list billing items' });
+  }
+});
+
+// DELETE /api/leads/:id/billing-items/:itemId
+router.delete('/:id/billing-items/:itemId', requireRole(1), async (req, res) => {
+  try {
+    const result = await BillingItem.deleteOne({ lead_id: req.params.id, id: req.params.itemId });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Billing item not found' });
+    }
+    res.json({ message: 'Billing item deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete billing item' });
+  }
 });
 
 // POST /api/leads/:id/follow-ups
-router.post('/:id/follow-ups', requireRole(1), (req, res) => {
-  const db = getDb();
+router.post('/:id/follow-ups', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('fu');
   const { date, method, notes, outcome, next_date } = req.body;
-  db.prepare(`INSERT INTO follow_ups (id, lead_id, date, method, notes, outcome, next_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, date, method || 'Phone', notes, outcome, next_date, req.user.name);
-  
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(generateId('act'), req.params.id, 'FollowUp', `Follow-up scheduled via ${method}: ${notes || ''}`, req.user.name);
-  
-  res.status(201).json(db.prepare('SELECT * FROM follow_ups WHERE id = ?').get(id));
+
+  try {
+    const newFu = await FollowUp.create({
+      id,
+      lead_id: leadId,
+      date,
+      method: method || 'Phone',
+      notes,
+      outcome,
+      next_date,
+      created_by: req.user.name
+    });
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'FollowUp',
+      text: `Follow-up scheduled via ${method}: ${notes || ''}`,
+      user_name: req.user.name
+    });
+
+    res.status(201).json(newFu);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save follow-up' });
+  }
 });
 
 // GET /api/leads/:id/follow-ups
-router.get('/:id/follow-ups', (req, res) => {
-  const db = getDb();
-  res.json(db.prepare('SELECT * FROM follow_ups WHERE lead_id = ? ORDER BY date DESC').all(req.params.id));
+router.get('/:id/follow-ups', async (req, res) => {
+  try {
+    const followUps = await FollowUp.find({ lead_id: req.params.id }).sort({ date: -1 }).lean();
+    res.json(followUps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list follow-ups' });
+  }
 });
 
 // POST /api/leads/:id/assign-supplier
-router.post('/:id/assign-supplier', requireRole(2), (req, res) => {
-  const db = getDb();
+router.post('/:id/assign-supplier', requireRole(2), async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('as');
   const { supplier_name, service_type, rate, markup, currency, supplier_id } = req.body;
-  db.prepare(`INSERT INTO assigned_suppliers (id, lead_id, supplier_id, supplier_name, service_type, rate, markup, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, supplier_id, supplier_name, service_type, rate, markup || 0, currency || 'INR');
-  
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(generateId('act'), req.params.id, 'Supplier', `Supplier assigned: ${supplier_name} for ${service_type} @ ₹${rate}`, req.user.name);
-  
-  res.status(201).json(db.prepare('SELECT * FROM assigned_suppliers WHERE id = ?').get(id));
+
+  try {
+    const newAs = await AssignedSupplier.create({
+      id,
+      lead_id: leadId,
+      supplier_id,
+      supplier_name,
+      service_type,
+      rate,
+      markup: markup || 0,
+      currency: currency || 'INR'
+    });
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'Supplier',
+      text: `Supplier assigned: ${supplier_name} for ${service_type} @ ₹${rate}`,
+      user_name: req.user.name
+    });
+
+    res.status(201).json(newAs);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to assign supplier' });
+  }
 });
 
 // POST /api/leads/:id/communications
-router.post('/:id/communications', requireRole(1), (req, res) => {
-  const db = getDb();
+router.post('/:id/communications', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
   const id = generateId('comm');
   const { channel, content, template_name, direction } = req.body;
-  db.prepare(`INSERT INTO communications (id, lead_id, channel, direction, template_name, content, sent_by) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, req.params.id, channel, direction || 'outbound', template_name, content, req.user.name);
-  
-  db.prepare(`INSERT INTO activities (id, lead_id, type, text, user_name) VALUES (?, ?, ?, ?, ?)`)
-    .run(generateId('act'), req.params.id, 'Communication', `${channel} sent: ${template_name || 'Custom message'}`, req.user.name);
-  
-  res.status(201).json(db.prepare('SELECT * FROM communications WHERE id = ?').get(id));
+
+  try {
+    const newComm = await Communication.create({
+      id,
+      lead_id: leadId,
+      channel,
+      direction: direction || 'outbound',
+      template_name,
+      content,
+      sent_by: req.user.name
+    });
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'Communication',
+      text: `${channel} sent: ${template_name || 'Custom message'}`,
+      user_name: req.user.name
+    });
+
+    res.status(201).json(newComm);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to log communication' });
+  }
 });
 
 // GET /api/leads/:id/communications
-router.get('/:id/communications', (req, res) => {
-  const db = getDb();
-  res.json(db.prepare('SELECT * FROM communications WHERE lead_id = ? ORDER BY sent_at DESC').all(req.params.id));
+router.get('/:id/communications', async (req, res) => {
+  try {
+    const comms = await Communication.find({ lead_id: req.params.id }).sort({ sent_at: -1 }).lean();
+    res.json(comms);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list communications' });
+  }
 });
-
-function safeJson(str, fallback) {
-  try { return JSON.parse(str); } catch { return fallback; }
-}
 
 module.exports = router;

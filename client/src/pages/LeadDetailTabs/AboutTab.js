@@ -82,7 +82,7 @@ const AboutTab = ({ lead }) => {
       </div>
 
       {lead.isDuplicate && (
-        <div className="card" style={{ borderLeft: '4px solid #EF4444', background: '#FEF2F2' }}>
+        <div className="card" style={{ borderLeft: '4px solid var(--color-red)', background: 'var(--bg-main)' }}>
           <strong>⚠ Duplicate Detected:</strong> This lead may be a duplicate of <strong>{lead.duplicateOf}</strong>. Please review before proceeding.
         </div>
       )}

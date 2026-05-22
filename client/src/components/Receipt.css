@@ -33,7 +33,7 @@
 .receipt-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 2px solid #FF4D4D;
+  border-bottom: 2px solid var(--primary);
   padding-bottom: 20px;
   margin-bottom: 30px;
 }
@@ -46,7 +46,7 @@
 }
 
 .company-branding h2 span {
-  color: #FF4D4D;
+  color: var(--primary);
 }
 
 .company-details p {
@@ -62,7 +62,7 @@
 .receipt-title h1 {
   font-size: 2rem;
   font-weight: 700;
-  color: #FF4D4D;
+  color: var(--primary);
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -146,7 +146,7 @@
 
 .status-watermark.paid { color: #10b981; border-color: #10b981; }
 .status-watermark.partial { color: #3b82f6; border-color: #3b82f6; }
-.status-watermark.pending { color: #ef4444; border-color: #ef4444; }
+.status-watermark.pending { color: var(--color-red); border-color: var(--color-red); }
 
 .totals-section {
   width: 250px;

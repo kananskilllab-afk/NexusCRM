@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiPlus, FiTrash2, FiFileText, FiDollarSign, FiCalendar, FiPrinter, FiTruck } from 'react-icons/fi';
 import { useLeads } from '../../context/LeadContext';
+import { api } from '../../services/api';
 import Receipt from '../../components/Receipt';
 
 const BillingTab = ({ lead }) => {
@@ -25,24 +26,39 @@ const BillingTab = ({ lead }) => {
   const netProfit = grandTotal - totalCost;
   const balanceDue = grandTotal - totalPaid;
 
-  const updateItems = (newItems) => {
-    dispatch({ type: 'UPDATE_BILLING', payload: { leadId: lead.id, billingData: { items: newItems } } });
-  };
-
-  const addItem = () => {
+  const addItem = async () => {
     if (!newItem.description) return;
-    updateItems([...items, { ...newItem, id: Date.now() }]);
-    setNewItem({ description: '', qty: 1, price: 0, tax: 5 });
-    setIsAdding(false);
+    try {
+      const addedItem = await api.addBillingItem(lead.id, newItem);
+      const updatedItems = [...items, addedItem];
+      dispatch({ type: 'UPDATE_BILLING', payload: { leadId: lead.id, billingData: { items: updatedItems } } });
+      setNewItem({ description: '', qty: 1, price: 0, tax: 5 });
+      setIsAdding(false);
+    } catch (err) {
+      alert(err.message || 'Failed to add billing item');
+    }
   };
 
-  const removeItem = (id) => updateItems(items.filter(item => item.id !== id));
+  const removeItem = async (itemId) => {
+    try {
+      await api.deleteBillingItem(lead.id, itemId);
+      const updatedItems = items.filter(item => item.id !== itemId);
+      dispatch({ type: 'UPDATE_BILLING', payload: { leadId: lead.id, billingData: { items: updatedItems } } });
+    } catch (err) {
+      alert(err.message || 'Failed to delete billing item');
+    }
+  };
 
-  const addPayment = () => {
+  const addPayment = async () => {
     if (!payForm.amount) return;
-    dispatch({ type: 'ADD_PAYMENT', payload: { leadId: lead.id, payment: payForm } });
-    setPayForm({ amount: '', method: 'Bank Transfer', reference: '', note: '' });
-    setShowPayForm(false);
+    try {
+      const savedPayment = await api.addPayment(lead.id, payForm);
+      dispatch({ type: 'ADD_PAYMENT', payload: { leadId: lead.id, payment: savedPayment } });
+      setPayForm({ amount: '', method: 'Bank Transfer', reference: '', note: '' });
+      setShowPayForm(false);
+    } catch (err) {
+      alert(err.message || 'Failed to record payment');
+    }
   };
 
   return (

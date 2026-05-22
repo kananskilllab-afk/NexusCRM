@@ -3,22 +3,37 @@ import { NavLink } from 'react-router-dom';
 import { useLeads } from '../context/LeadContext';
 import {
   FiGrid, FiLayers, FiUsers, FiCalendar, FiBriefcase, FiSettings,
-  FiChevronDown, FiChevronLeft, FiMenu, FiUser, FiInfo, FiClock, FiActivity
+  FiChevronDown, FiChevronLeft, FiMenu, FiUser, FiInfo, FiClock, FiActivity, FiDollarSign, FiMessageCircle,
+  FiFolder, FiMail, FiFileText
 } from 'react-icons/fi';
 import { ROLE_HIERARCHY } from '../context/LeadContext';
 import './Sidebar.css';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: <FiGrid />, path: '/', level: 0 },
+  { id: 'pipeline', label: 'Pipeline', icon: <FiActivity />, path: '/pipeline', level: 1 },
+  { id: 'bookings', label: 'Bookings', icon: <FiBriefcase />, path: '/bookings', level: 1 },
   { id: 'leads', label: 'Leads', icon: <FiLayers />, path: '/leads', level: 1 },
   { id: 'users', label: 'Users', icon: <FiUsers />, path: '/users', level: 5 },
   { id: 'customers', label: 'Contact', icon: <FiInfo />, path: '/customers', level: 1 },
   { id: 'scheduler', label: 'Scheduler', icon: <FiClock />, path: '/scheduler', level: 2 },
   { id: 'reports', label: 'Reports', icon: <FiBriefcase />, path: '/reports', level: 1 },
+  { id: 'finance', label: 'Finance', icon: <FiDollarSign />, path: '#', level: 1, 
+    subItems: [
+      { label: 'Quotes', path: '/finance/quotes' },
+      { label: 'Invoices', path: '/finance/invoices' },
+      { label: 'Commissions', path: '/finance/commissions' }
+    ] 
+  },
+  { id: 'documents', label: 'Documents', icon: <FiFolder />, path: '/documents', level: 1 },
+  { id: 'emails', label: 'Emails', icon: <FiMail />, path: '/emails', level: 1 },
+  { id: 'contracts', label: 'Contracts', icon: <FiFileText />, path: '/supplier-contracts', level: 2 },
+  { id: 'comms', label: 'Inbox', icon: <FiMessageCircle />, path: '/comms', level: 1 },
   { id: 'manage', label: 'Manage', icon: <FiSettings />, path: '#', level: 4, 
     subItems: [
       { label: 'Hotels', path: '/manage/hotels' },
-      { label: 'Packages', path: '/manage/packages' }
+      { label: 'Packages', path: '/manage/packages' },
+      { label: 'System Settings', path: '/settings' }
     ] 
   },
 ];
@@ -38,9 +53,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobileMenuOpen, closeMobileMenu
   const filteredMenu = menuItems.filter(item => userLevel >= item.level);
 
   return (
-    <div className={`sidebar-red ${isCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+    <div className={`sidebar-brand ${isCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
-         <span className="logo-text">Nexus<span className="highlight">CRM</span></span>
+         {!isCollapsed && <span className="logo-text">Nexus<span className="highlight">CRM</span></span>}
          <button className="toggle-btn" onClick={toggleSidebar}>
             {isCollapsed ? <FiMenu /> : <FiChevronLeft />}
          </button>

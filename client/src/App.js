@@ -13,6 +13,26 @@ import ManagePackages from './pages/ManagePackages';
 import ManageHotels from './pages/ManageHotels';
 import Login from './pages/Login';
 import { LeadProvider, useLeads, ROLE_HIERARCHY } from './context/LeadContext';
+import { VoyageProvider } from './context/VoyageContext';
+import NotFoundPage from './pages/voyage/system/NotFoundPage';
+import ForbiddenPage from './pages/voyage/system/ForbiddenPage';
+import Register from './pages/voyage/auth/Register';
+import ForgotPassword from './pages/voyage/auth/ForgotPassword';
+import PipelineBoard from './pages/voyage/pipeline/PipelineBoard';
+import ContactDetail from './pages/voyage/contacts/ContactDetail';
+import BookingsList from './pages/voyage/bookings/BookingsList';
+import BookingDetail from './pages/voyage/bookings/BookingDetail';
+import ItineraryBuilder from './pages/voyage/itinerary/ItineraryBuilder';
+import PublicItinerary from './pages/voyage/itinerary/PublicItinerary';
+import Quotes from './pages/voyage/finance/Quotes';
+import Invoices from './pages/voyage/finance/Invoices';
+import Commissions from './pages/voyage/finance/Commissions';
+import CommunicationsHub from './pages/voyage/comms/CommunicationsHub';
+import EmailSequenceBuilder from './pages/voyage/comms/EmailSequenceBuilder';
+import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
+import SupplierContracts from './pages/voyage/suppliers/SupplierContracts';
+import DocumentVault from './pages/voyage/documents/DocumentVault';
+import EmailManager from './pages/voyage/emails/EmailManager';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredLevel = 0 }) => {
@@ -77,6 +97,8 @@ function AppRoutes() {
     <SecurityWrapper>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         
         <Route path="/" element={
           <ProtectedRoute>
@@ -113,10 +135,92 @@ function AppRoutes() {
             <MainLayout><Customers /></MainLayout>
           </ProtectedRoute>
         } />
+
+        <Route path="/pipeline" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><PipelineBoard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/contacts/:id" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><ContactDetail /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/bookings" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><BookingsList /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/bookings/:id" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><BookingDetail /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/itinerary/:id/builder" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><ItineraryBuilder /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Public Route */}
+        <Route path="/it/:token" element={<PublicItinerary />} />
+        
+        {/* Finance Routes */}
+        <Route path="/finance/quotes" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Quotes /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/finance/invoices" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Invoices /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/finance/commissions" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><Commissions /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        {/* Comms & Settings Routes */}
+        <Route path="/comms" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><CommunicationsHub /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/comms/sequences" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><EmailSequenceBuilder /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute requiredLevel={3}>
+            <MainLayout><SettingsDashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
         
         <Route path="/suppliers" element={
           <ProtectedRoute requiredLevel={3}>
             <MainLayout><Suppliers /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/supplier-contracts" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><SupplierContracts /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/documents" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><DocumentVault /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/emails" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><EmailManager /></MainLayout>
           </ProtectedRoute>
         } />
 
@@ -144,7 +248,8 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/403" element={<MainLayout><ForbiddenPage /></MainLayout>} />
+        <Route path="*" element={<MainLayout><NotFoundPage /></MainLayout>} />
       </Routes>
     </SecurityWrapper>
   );
@@ -153,7 +258,9 @@ function AppRoutes() {
 function App() {
   return (
     <LeadProvider>
-      <AppRoutes />
+      <VoyageProvider>
+        <AppRoutes />
+      </VoyageProvider>
     </LeadProvider>
   );
 }

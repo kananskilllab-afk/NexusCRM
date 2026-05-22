@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
+import { api } from '../services/api';
 import { 
   FiPlus, FiUser, FiMail, FiShield, FiTrash2, FiEdit2, FiLock, 
   FiAlertTriangle, FiChevronDown, FiChevronUp, FiUsers, FiSettings,
@@ -17,6 +18,19 @@ const Users = () => {
     reports: true,
     logout: true
   });
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      dispatch({ type: 'FETCH_START' });
+      try {
+        const users = await api.getUsers();
+        dispatch({ type: 'SET_USERS', payload: users });
+      } catch (err) {
+        dispatch({ type: 'FETCH_ERROR', payload: err.message });
+      }
+    };
+    fetchUsers();
+  }, [dispatch]);
 
   const isSuperAdmin = state.currentUser?.role === 'Super Admin';
 
@@ -61,7 +75,7 @@ const Users = () => {
               <div className="section-head" onClick={() => toggleSection('info')}>
                  <div className="head-title">
                     <span className="icon-circle"><FiChevronDown /></span>
-                    <span className="red-text">User Information</span>
+                    <span className="accent-text">User Information</span>
                  </div>
               </div>
               {expandedSections.info && (
@@ -82,7 +96,7 @@ const Users = () => {
               <div className="section-head" onClick={() => toggleSection('access')}>
                  <div className="head-title">
                     <span className="icon-circle"><FiChevronDown /></span>
-                    <span className="red-text">Access Control</span>
+                    <span className="accent-text">Access Control</span>
                  </div>
               </div>
               {expandedSections.access && (
@@ -105,7 +119,7 @@ const Users = () => {
               <div className="section-head" onClick={() => toggleSection('reports')}>
                  <div className="head-title">
                     <span className="icon-circle"><FiChevronDown /></span>
-                    <span className="red-text">Allow Reports</span>
+                    <span className="accent-text">Allow Reports</span>
                  </div>
               </div>
               {expandedSections.reports && (
@@ -130,7 +144,7 @@ const Users = () => {
               <div className="section-head" onClick={() => toggleSection('logout')}>
                  <div className="head-title">
                     <span className="icon-circle"><FiChevronDown /></span>
-                    <span className="red-text">Do you want to force logout User?</span>
+                    <span className="accent-text">Do you want to force logout User?</span>
                  </div>
               </div>
               {expandedSections.logout && (

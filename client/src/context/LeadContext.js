@@ -29,53 +29,15 @@ const initialState = {
   isAuthenticated: false,
   currentUser: null,
   loginTimestamp: null,
+  isLoading: false,
+  error: null,
   preferredCurrency: 'INR',
-  users: [
-    { id: 'U-001', name: 'SuperUser', email: 'superadmin@nexus.com', password: 'nexus123', role: 'Super Admin', status: 'Active' },
-    { id: 'U-002', name: 'Bhargav', email: 'admin@nexus.com', password: 'nexus123', role: 'Admin', status: 'Active' },
-    { id: 'U-003', name: 'Priya', email: 'ops@nexus.com', password: 'nexus123', role: 'Ops Staff', status: 'Active' },
-    { id: 'U-004', name: 'Ravi', email: 'accounts@nexus.com', password: 'nexus123', role: 'Accountant', status: 'Active' },
-    { id: 'U-005', name: 'Manager', email: 'manager@nexus.com', password: 'nexus123', role: 'Ops Manager', status: 'Active' }
-  ],
-  supplierRates: [
-    { id: 'R-001', supplierId: 'S-001', service: 'Hotel', details: 'Deluxe Room', rate: 4500, currency: 'INR' },
-    { id: 'R-002', supplierId: 'S-002', service: 'Hotel', details: 'Deluxe Room', rate: 4200, currency: 'INR' },
-    { id: 'R-003', supplierId: 'S-003', service: 'Flight', details: 'Economy Return', rate: 12000, currency: 'INR' },
-    { id: 'R-004', supplierId: 'S-001', service: 'Transport', details: 'Private AC Sedan', rate: 2500, currency: 'INR' }
-  ],
-  leads: [
-    {
-      id: 'L-1001',
-      first_name: 'Rajesh', last_name: 'Kumar',
-      mobile: '9876543210', email: 'rajesh@example.com',
-      status: 'New', priority: 'Hot',
-      no_adults: 2, no_children: 1,
-      destination: 'Dubai',
-      enquiry_types: ['Flight', 'Hotel'],
-      lead_source: 'Website',
-      assigned_to: 'Bhargav',
-      travel_start_date: '2026-05-10', travel_end_date: '2026-05-17',
-      created_at: new Date().toISOString(),
-      activities: [{ id: 'act-1', date: new Date().toISOString(), text: 'Lead created via Website', user: 'System' }],
-      followUps: [{ id: 'f-1', date: new Date().toISOString(), method: 'Phone', notes: 'Discussed Dubai itinerary options', outcome: 'Interested', nextDate: new Date(Date.now() + 172800000).toISOString() }],
-      assignedSuppliers: [],
-      bookings: [],
-      billing: {
-        items: [{ id: 1, description: 'Dubai Holiday Package (7N/8D)', qty: 1, price: 85000, tax: 5 }],
-        payments: [{ id: 'pay-1', amount: 25000, date: new Date().toISOString(), method: 'Bank Transfer', reference: 'TXN-001', note: 'Advance payment' }],
-        paymentSchedule: []
-      },
-      enquiry_data: { flight: {}, hotel: {} },
-      communications: []
-    }
-    // ... add more seed leads to make dashboard look "working"
-  ],
+  users: [],
+  leads: [],
   notifications: [],
   suppliers: [],
   customers: [],
-  bookings: [],
   auditLog: [],
-  exportLog: [],
   statusTransitions: STATUS_TRANSITIONS
 };
 
@@ -85,20 +47,29 @@ function leadReducer(state, action) {
   });
 
   switch (action.type) {
+    case 'FETCH_START':
+      return { ...state, isLoading: true, error: null };
+    case 'FETCH_ERROR':
+      return { ...state, isLoading: false, error: action.payload };
+    case 'SET_LEADS':
+      return { ...state, isLoading: false, leads: action.payload };
+    case 'SET_CUSTOMERS':
+      return { ...state, isLoading: false, customers: action.payload };
+    case 'SET_USERS':
+      return { ...state, isLoading: false, users: action.payload };
+
     case 'LOGIN':
       return { 
         ...state, 
         isAuthenticated: true, 
-        currentUser: action.payload, 
+        currentUser: action.payload.user,
+        token: action.payload.token,
         loginTimestamp: Date.now() 
       };
     case 'LOGOUT':
-      return { 
-        ...state, 
-        isAuthenticated: false, 
-        currentUser: null, 
-        loginTimestamp: null 
-      };
+      localStorage.removeItem('nexusCRM_State_v2');
+      return { ...initialState };
+    
     case 'UPDATE_SESSION':
       return { ...state, loginTimestamp: Date.now() };
 
@@ -115,6 +86,8 @@ function leadReducer(state, action) {
         leads: state.leads.map(l => l.id === action.payload.id ? { ...l, ...action.payload.data } : l),
         auditLog: [logAudit('UPDATE', 'leads', action.payload.id, `Lead data updated`), ...state.auditLog]
       };
+
+    // ... other cases remain the same but use state.leads
 
     case 'UPDATE_LEAD_STATUS':
       const leadForStatus = state.leads.find(l => l.id === action.payload.id);
@@ -195,6 +168,114 @@ function leadReducer(state, action) {
         auditLog: [logAudit('CREATE', 'users', action.payload.id, `User identity created: ${action.payload.name}`), ...state.auditLog]
       };
     
+    case 'DELETE_CUSTOMER':
+      return {
+        ...state,
+        customers: state.customers.filter(c => c.id !== action.payload),
+        auditLog: [logAudit('DELETE', 'customers', action.payload, `Customer deleted`), ...state.auditLog]
+      };
+
+    case 'ADD_CUSTOMER':
+      return {
+        ...state,
+        customers: [action.payload, ...state.customers],
+        auditLog: [logAudit('CREATE', 'customers', action.payload.id, `Customer created: ${action.payload.first_name}`), ...state.auditLog]
+      };
+
+    case 'UPDATE_CUSTOMER':
+      return {
+        ...state,
+        customers: state.customers.map(c => c.id === action.payload.id ? { ...c, ...action.payload.data } : c),
+        auditLog: [logAudit('UPDATE', 'customers', action.payload.id, `Customer updated`), ...state.auditLog]
+      };
+
+    case 'ADD_FOLLOWUP':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          followUps: [action.payload.followUp, ...(l.followUps || [])]
+        } : l)
+      };
+
+    case 'ADD_ACTIVITY':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          activities: [action.payload.activity, ...(l.activities || [])]
+        } : l)
+      };
+
+    case 'ADD_SUPPLIER':
+      return {
+        ...state,
+        suppliers: [...state.suppliers, action.payload]
+      };
+
+    case 'ADD_FILES':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          files: [...(l.files || []), ...action.payload.files]
+        } : l)
+      };
+
+    case 'REMOVE_FILE':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          files: (l.files || []).filter(f => f.id !== action.payload.fileId)
+        } : l)
+      };
+
+    case 'ADD_NOTE':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          notes: l.notes ? `${l.notes}\n${action.payload.note.text}` : action.payload.note.text
+        } : l)
+      };
+
+    case 'ADD_TRAVELLER':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          travellers: [...(l.travellers || []), action.payload.traveller]
+        } : l)
+      };
+
+    case 'REMOVE_TRAVELLER':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          travellers: (l.travellers || []).filter(t => t.id !== action.payload.travellerId)
+        } : l)
+      };
+
+    case 'ADD_REMINDER':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          reminders: [...(l.reminders || []), action.payload.reminder]
+        } : l)
+      };
+
+    case 'TOGGLE_REMINDER':
+      return {
+        ...state,
+        leads: state.leads.map(l => l.id === action.payload.leadId ? {
+          ...l,
+          reminders: (l.reminders || []).map(r => r.id === action.payload.reminderId ? { ...r, completed: !r.completed } : r)
+        } : l)
+      };
+    
     default:
       return state;
   }
@@ -215,9 +296,7 @@ const loadInitialState = () => {
       return { 
         ...initialState, 
         ...parsed, 
-        users: initialState.users, 
-        isAuthenticated: false,
-        currentUser: null 
+        users: initialState.users // Keep users static for now or sync from DB
       };
     } catch (e) { console.error(e); }
   }

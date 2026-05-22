@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET, ROLE_HIERARCHY } = require('../routes/auth');
+const AuditLog = require('../models/AuditLog');
 
 // Verify JWT token
 const authenticate = (req, res, next) => {
@@ -25,14 +26,21 @@ const requireRole = (minLevel) => (req, res, next) => {
   next();
 };
 
-// Log audit entry
-const auditLog = (db, req, action, table, recordId, details) => {
+// Log audit entry (database parameter kept for backwards compatibility but unused)
+const auditLog = async (db, req, action, table, recordId, details) => {
   try {
-    db.prepare(`INSERT INTO audit_log (id, user_name, action, table_name, record_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(`audit-${Date.now()}-${Math.random()}`, req.user?.name || 'System', action, table, recordId, details, req.ip);
+    await AuditLog.create({
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      user_name: req.user?.name || 'System',
+      action,
+      table_name: table,
+      record_id: recordId,
+      details,
+      ip_address: req.ip
+    });
   } catch (e) { /* non-critical */ }
 };
 
 const generateId = (prefix = 'ID') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-module.exports = { authenticate, requireRole, auditLog, generateId };
+module.exports = { authenticate, authenticateToken: authenticate, requireRole, auditLog, generateId };

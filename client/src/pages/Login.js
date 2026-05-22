@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLeads } from '../context/LeadContext';
 import { FiLock, FiMail, FiEye, FiEyeOff } from 'react-icons/fi';
+import { api } from '../services/api';
 
 const Login = () => {
   const { state, dispatch } = useLeads();
@@ -15,15 +16,15 @@ const Login = () => {
     if (state.isAuthenticated) navigate('/dashboard');
   }, [state.isAuthenticated, navigate]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const user = state.users.find(u => u.email === formData.email && u.password === formData.password);
-
-    if (user) {
-      dispatch({ type: 'LOGIN', payload: { id: user.id, name: user.name, role: user.role, email: user.email } });
+    setError('');
+    try {
+      const response = await api.login(formData.email, formData.password);
+      dispatch({ type: 'LOGIN', payload: response });
       navigate('/dashboard');
-    } else {
-      setError('Invalid email or password. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Invalid email or password. Please try again.');
     }
   };
 
@@ -72,11 +73,29 @@ const Login = () => {
             </button>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 600 }}>Sign In</button>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 600, marginBottom: '15px' }}>Sign In</button>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => navigate('/forgot-password')}>Forgot Password?</span>
+          </div>
+
+          <div style={{ position: 'relative', textAlign: 'center', marginBottom: '20px' }}>
+            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '1px solid var(--border-color)' }}></div>
+            <span style={{ position: 'relative', background: '#1E293B', padding: '0 10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or continue with</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+             <button type="button" style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" style={{ width: 16, height: 16 }}/> Google
+             </button>
+             <button type="button" style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="M" style={{ width: 16, height: 16 }}/> Microsoft
+             </button>
+          </div>
         </form>
 
-        <div style={{ marginTop: '25px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          <p>For account assistance, contact your Super Admin.</p>
+        <div style={{ marginTop: '25px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          <p>Don't have an agency account? <span style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 500 }} onClick={() => navigate('/register')}>Create one now</span>.</p>
         </div>
       </div>
     </div>

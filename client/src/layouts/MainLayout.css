@@ -7,20 +7,26 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: var(--bg-main);
-  /* Sidebar width is 260px */
+  margin-left: 312px; /* 280px + 32px gap for 1rem margin */
+  padding: 1rem 1rem 0 0; /* Padding for top and right to match sidebar's left margin */
+  width: calc(100% - 312px); /* Force exact width to prevent table overflow pushing it */
+}
+
+.content-wrapper.collapsed {
+  margin-left: 122px; /* 90px + 32px gap */
+  width: calc(100% - 122px);
 }
 
 .main-content {
-  padding: 20px;
+  padding: 20px 0; /* Padding handled by wrapper */
   flex: 1;
 }
 
 .container-fluid {
-  max-width: 1600px;
-  margin: 0 auto;
   width: 100%;
+  /* Removed max-width to fix the gap issue on large screens */
 }
 
 @media (max-width: 1024px) {

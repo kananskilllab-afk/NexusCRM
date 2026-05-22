@@ -100,7 +100,7 @@ const LeadDetail = () => {
     dispatch({ type: 'UPDATE_LEAD_STATUS', payload: { id: lead.id, status: newStatus } });
   };
 
-  const priorityColor = { Hot: '#EF4444', Normal: '#3B82F6', Cold: '#94A3B8' };
+  const priorityColor = { Hot: 'var(--color-red)', Normal: 'var(--primary)', Cold: 'var(--text-muted)' };
 
   return (
     <div className="lead-detail-container">

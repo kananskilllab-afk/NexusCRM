@@ -54,8 +54,8 @@
   color: #666;
 }
 
-.red-text {
-  color: #ff5757;
+.accent-text {
+  color: var(--primary);
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -110,7 +110,7 @@
 .permission-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #ff5757;
+  accent-color: var(--primary);
 }
 
 .permission-item label {

@@ -1,79 +1,97 @@
-.sidebar-red {
-  width: 260px;
-  background-color: #ffffff; /* Keeping main bar white but accents red as per premium CRM style */
-  border-right: 1px solid #eee;
+.sidebar-brand {
+  width: 280px;
+  background-color: var(--bg-sidebar); /* White */
+  border: none;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  margin: 1rem 0 1rem 1rem;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  transition: all 0.3s;
+  height: calc(100vh - 2rem);
+  position: fixed; /* Fixed to prevent layout shifting */
+  top: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1100;
 }
 
-.sidebar-red.collapsed {
-  width: 80px;
+.sidebar-brand.collapsed {
+  width: 90px;
 }
 
 .sidebar-header {
-  height: 60px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  background-color: var(--primary); /* Header of sidebar is Red */
-  color: white;
+  padding: 0 24px;
+  background-color: transparent;
+  color: var(--text-primary);
+}
+
+.sidebar-brand.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 0;
 }
 
 .logo-text {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -0.5px;
+  color: var(--text-primary);
 }
 
 .highlight {
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 400;
+  color: var(--primary);
+  font-weight: 600;
 }
 
 .toggle-btn {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   display: flex;
+  transition: var(--transition);
 }
+.toggle-btn:hover { color: var(--primary); }
 
 .sidebar-nav {
   flex: 1;
-  padding: 15px 10px;
+  padding: 10px 16px;
   overflow-y: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.sidebar-nav::-webkit-scrollbar {
+  display: none; /* Hide Chrome/Safari scrollbar */
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  color: #555;
+  padding: 14px 18px;
+  color: var(--text-secondary);
   text-decoration: none;
-  border-radius: 8px;
-  margin-bottom: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
   cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
+  transition: var(--transition);
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .nav-item .icon {
-  margin-right: 12px;
-  font-size: 1.2rem;
+  margin-right: 14px;
+  font-size: 1.3rem;
   display: flex;
-  color: #777;
+  color: var(--text-muted);
+  transition: var(--transition);
 }
 
 .nav-item:hover {
-  background-color: #fff1f1;
-  color: var(--primary);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
 }
 
 .nav-item:hover .icon {
@@ -83,6 +101,7 @@
 .nav-item.active {
   background-color: var(--primary);
   color: white;
+  box-shadow: 0 4px 12px rgba(90, 82, 255, 0.3);
 }
 
 .nav-item.active .icon {
@@ -100,9 +119,9 @@
 }
 
 .submenu {
-  margin-left: 30px;
-  border-left: 2px solid #eee;
-  padding: 5px 0 5px 15px;
+  margin-left: 28px;
+  border-left: 2px solid var(--border-color);
+  padding: 8px 0 8px 20px;
 }
 
 .submenu-item {
@@ -120,11 +139,11 @@
 }
 
 @media (max-width: 1024px) {
-  .sidebar-red {
+  .sidebar-brand {
     position: fixed;
     left: -260px;
   }
-  .sidebar-red.mobile-open {
+  .sidebar-brand.mobile-open {
     left: 0;
   }
 }

@@ -1,14 +1,17 @@
 .top-nav-utility {
-  height: 60px;
-  background-color: white;
-  border-bottom: 1px solid #eee;
+  height: 80px; /* Match sidebar header height */
+  background-color: var(--bg-card); /* Use glassy card background */
+  border: none;
+  border-radius: var(--radius-lg); /* Rounded on all 4 edges */
+  box-shadow: var(--shadow-sm); /* Soft shadow */
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 25px;
   position: sticky;
-  top: 0;
+  top: 1rem; /* Floats exactly aligned with sidebar */
   z-index: 1000;
+  margin-bottom: 1rem;
 }
 
 .nav-left-section {
@@ -67,7 +70,7 @@
   right: 2px;
   width: 8px;
   height: 8px;
-  background-color: #ff5757;
+  background-color: var(--color-red);
   border-radius: 50%;
   border: 2px solid white;
 }
@@ -77,20 +80,20 @@
   align-items: center;
   gap: 12px;
   padding: 5px 12px;
-  background-color: #fff1f1;
+  background-color: var(--bg-main);
   border-radius: 100px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .user-profile-utility:hover {
-  background-color: #ffe4e4;
+  background-color: var(--primary-light);
 }
 
 .avatar-letter {
   width: 32px;
   height: 32px;
-  background-color: #ff5757;
+  background-color: var(--primary);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -117,7 +120,7 @@
 }
 
 .user-profile-utility svg {
-  color: #ff5757;
+  color: var(--primary);
 }
 
 @media (max-width: 1024px) {

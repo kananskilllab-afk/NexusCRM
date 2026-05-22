@@ -135,6 +135,17 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
               <div className="form-group"><label>Travel Start</label><input type="date" value={formData.travel_start_date} onChange={e => setFormData({ ...formData, travel_start_date: e.target.value })} /></div>
               <div className="form-group"><label>Travel End</label><input type="date" value={formData.travel_end_date} onChange={e => setFormData({ ...formData, travel_end_date: e.target.value })} /></div>
             </div>
+
+            <div className="form-row" style={{ marginTop: 10 }}>
+              <div className="form-group" style={{ flex: 2 }}><label>Tags (comma separated)</label><input type="text" placeholder="VIP, Honeymoon, Tech" value={formData.tags || ''} onChange={e => setFormData({ ...formData, tags: e.target.value })} /></div>
+            </div>
+            
+            <div style={{ marginTop: 15, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                 <input type="checkbox" checked={formData.gdpr_consent} onChange={e => setFormData({ ...formData, gdpr_consent: e.target.checked })} />
+                 Customer has provided GDPR consent for data processing
+              </label>
+            </div>
           </div>
 
           <div className="modal-footer" style={{ marginTop: 25 }}>
