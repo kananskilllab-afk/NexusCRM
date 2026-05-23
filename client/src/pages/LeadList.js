@@ -130,14 +130,14 @@ const LeadList = () => {
         <div className="header-title">
           <FiRocket size={24} style={{ color: 'var(--primary)' }} />
           <div>
-            <h3>All Bookings</h3>
-            <p>Manage your travel bookings and leads with real-time status updates.</p>
+            <h3>All Enquiries</h3>
+            <p>Manage your travel enquiries and leads with real-time status updates.</p>
           </div>
         </div>
         <div className="header-actions">
            <button className="btn btn-outline btn-icon-label" onClick={() => handleInputChange('searchTable', '')}><FiSearch /> Clear Filters</button>
            <button className="btn btn-outline" onClick={() => setIsFilterExpanded(!isFilterExpanded)}><FiFilter /> {isFilterExpanded ? 'Hide' : 'Show'} Filters</button>
-           <button className="btn btn-outline btn-icon-label" onClick={() => setIsModalOpen(true)}><FiPlus /> New Booking</button>
+           <button className="btn btn-outline btn-icon-label" onClick={() => setIsModalOpen(true)}><FiPlus /> New Enquiry</button>
         </div>
       </div>
 

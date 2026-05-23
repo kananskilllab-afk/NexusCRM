@@ -72,7 +72,8 @@ const Dashboard = () => {
       <div className="dashboard-actions">
          <button className="btn btn-primary btn-load" onClick={() => window.location.reload()}>Refresh Stats</button>
          <button className="btn btn-secondary" onClick={() => navigate('/analytics')}>Advanced Analytics</button>
-         <button className="btn btn-primary btn-load" style={{ marginLeft: 'auto' }} onClick={() => navigate('/leads')}>New Booking</button>
+         <button className="btn btn-outline" style={{ marginLeft: 'auto' }} onClick={() => navigate('/leads')}>New Enquiry</button>
+         <button className="btn btn-primary btn-load" onClick={() => navigate('/bookings')}>New Booking</button>
       </div>
 
       <div className="dashboard-filters-row card" style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', marginBottom: '20px' }}>

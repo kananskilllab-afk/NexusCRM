@@ -2,7 +2,7 @@ import React from 'react';
 import { FiMail, FiMessageCircle, FiX, FiSend } from 'react-icons/fi';
 
 const TEMPLATES = [
-  { id: 't1', name: 'Welcome & Introduction', subject: 'Exciting Travel Plans Await!', body: "Hi {{name}}, thank you for reaching out to Nexus CRM. We are excited to help you plan your trip to {{destination}}!" },
+  { id: 't1', name: 'Welcome & Introduction', subject: 'Exciting Travel Plans Await!', body: "Hi {{name}}, thank you for reaching out to Kanan Travel CRM. We are excited to help you plan your trip to {{destination}}!" },
   { id: 't2', name: 'Quotation Follow-up', subject: 'Feedback on your {{destination}} Quote', body: "Hi {{name}}, just following up on the quotation we sent yesterday. Does it align with your budget?" },
   { id: 't3', name: 'Payment Reminder', subject: 'Action Required: Payment for {{destination}}', body: "Hi {{name}}, this is a friendly reminder regarding the pending balance of ₹{{balance}} for your upcoming trip." },
   { id: 't4', name: 'Booking Confirmed', subject: 'Great News! Your trip is confirmed', body: "Hi {{name}}, your booking for {{destination}} is now confirmed. Get ready for an amazing adventure!" }

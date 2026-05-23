@@ -55,7 +55,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobileMenuOpen, closeMobileMenu
   return (
     <div className={`sidebar-brand ${isCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
-         {!isCollapsed && <span className="logo-text">Nexus<span className="highlight">CRM</span></span>}
+         {!isCollapsed && (
+           <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0 10px' }}>
+             <img src="/logo.png" alt="Kanan Travel CRM" style={{ height: '35px', objectFit: 'contain', maxWidth: '100%' }} />
+           </div>
+         )}
          <button className="toggle-btn" onClick={toggleSidebar}>
             {isCollapsed ? <FiMenu /> : <FiChevronLeft />}
          </button>

@@ -40,8 +40,8 @@ const SettingsDashboard = () => {
              {activeTab === 'General' && (
                <div>
                  <h3>Agency Details</h3>
-                 <div className="form-group"><label>Agency Name</label><input type="text" className="form-control" defaultValue="Nexus Travels" /></div>
-                 <div className="form-group"><label>Primary Email</label><input type="email" className="form-control" defaultValue="hello@nexustravels.com" /></div>
+                 <div className="form-group"><label>Agency Name</label><input type="text" className="form-control" defaultValue="Kanan Travel CRM" /></div>
+                 <div className="form-group"><label>Primary Email</label><input type="email" className="form-control" defaultValue="hello@kanantravel.com" /></div>
                  <button className="btn btn-primary mt-3">Save Changes</button>
                </div>
              )}

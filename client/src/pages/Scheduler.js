@@ -94,18 +94,18 @@ const Scheduler = () => {
           <p className="text-secondary">Tracking follow-ups, travel dates, and client events.</p>
         </div>
         <div className="header-actions">
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', borderRadius: 0, border: 'var(--border-brutal)', boxShadow: '2px 2px 0px #000', overflow: 'hidden' }}>
             <button className="btn-icon" onClick={() => changeMonth(-1)}><FiChevronLeft /></button>
-            <span style={{ padding: '0 20px', fontWeight: 600, minWidth: 160, textAlign: 'center' }}>{monthName} {year}</span>
+            <span style={{ padding: '0 20px', fontWeight: 700, minWidth: 160, textAlign: 'center' }}>{monthName} {year}</span>
             <button className="btn-icon" onClick={() => changeMonth(1)}><FiChevronRight /></button>
           </div>
           <button className="btn btn-primary" style={{ marginLeft: 10 }}>Sync with Google</button>
         </div>
       </div>
 
-      <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', background: 'var(--border-color)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', background: '#000', border: 'var(--border-brutal)', boxShadow: 'var(--shadow-brutal)', overflow: 'hidden' }}>
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-          <div key={d} style={{ background: 'var(--bg-main)', padding: '12px', textAlign: 'center', fontWeight: 700, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{d}</div>
+          <div key={d} style={{ background: 'var(--bg-main)', padding: '12px', textAlign: 'center', fontWeight: 800, fontSize: '0.9rem', color: '#000', textTransform: 'uppercase' }}>{d}</div>
         ))}
         {days.map((day, idx) => {
           const events = getEventsForDay(day);
@@ -113,10 +113,10 @@ const Scheduler = () => {
 
           return (
             <div key={idx} style={{ 
-              background: day ? 'var(--card-bg)' : 'var(--bg-main)', 
+              background: day ? 'var(--bg-card)' : 'var(--bg-main)', 
               minHeight: '140px', 
               padding: '8px',
-              border: isToday ? '2px solid var(--primary)' : 'none'
+              border: isToday ? '4px solid var(--primary)' : 'none'
             }}>
               {day && (
                 <>

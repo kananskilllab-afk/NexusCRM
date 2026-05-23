@@ -81,14 +81,35 @@ const DocumentVault = () => {
       </div>
 
       {/* Stats cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {Object.entries(TYPE_ICONS).map(([type, icon]) => {
           const count = documents.filter(d => d.type === type).length;
           return (
-            <div key={type} className="card" style={{ padding: '12px 16px', borderLeft: `4px solid ${TYPE_COLORS[type]}`, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem' }}>{icon}</div>
-              <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{count}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{type.replace('_', ' ')}</div>
+            <div 
+              key={type} 
+              className="card" 
+              style={{ 
+                padding: '16px 12px', 
+                textAlign: 'center',
+                border: '2px solid #000',
+                boxShadow: `4px 4px 0px 0px ${TYPE_COLORS[type]}`,
+                background: '#fff',
+                cursor: 'pointer',
+                transition: 'transform 0.1s, box-shadow 0.1s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                e.currentTarget.style.boxShadow = `6px 6px 0px 0px ${TYPE_COLORS[type]}`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translate(0px, 0px)';
+                e.currentTarget.style.boxShadow = `4px 4px 0px 0px ${TYPE_COLORS[type]}`;
+              }}
+              onClick={() => setDocType(type)}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{icon}</div>
+              <div style={{ fontWeight: '900', fontSize: '1.4rem', fontFamily: 'monospace' }}>{count}</div>
+              <div style={{ fontSize: '0.8rem', color: '#000', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{type.replace('_', ' ')}</div>
             </div>
           );
         })}

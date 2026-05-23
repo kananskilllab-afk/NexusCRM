@@ -28,7 +28,7 @@ const ContactDetail = () => {
              </h1>
              <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn btn-outline"><FiMail /> Email</button>
-                <button className="btn btn-primary">New Booking</button>
+                <button className="btn btn-primary">New Enquiry</button>
              </div>
           </div>
           
