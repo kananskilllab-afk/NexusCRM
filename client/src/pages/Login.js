@@ -35,8 +35,8 @@ const Login = () => {
     }}>
       <div className="login-card card" style={{ width: '100%', maxWidth: '400px', padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{ color: 'var(--primary)', marginBottom: '8px' }}>Nexus <span style={{ color: 'var(--text-primary)' }}>CRM</span></h1>
-          <p className="text-secondary">Enterprise Access Portal</p>
+          <img src="/logo.png" alt="Kanan Travel CRM" style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain', marginBottom: '15px' }} />
+          <p className="text-secondary" style={{ marginTop: '10px' }}>Enterprise Access Portal</p>
         </div>
 
         {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}

@@ -63,7 +63,7 @@ const BillingTab = ({ lead }) => {
 
   return (
     <div className="tab-content billing-tab">
-      {showReceipt && <Receipt lead={lead} onClose={() => setShowReceipt(false)} />}
+      {showReceipt && <Receipt lead={lead} payment={typeof showReceipt === 'object' ? showReceipt : null} onClose={() => setShowReceipt(false)} />}
       {/* Financial Summary */}
       <div className="billing-header">
         <div className="billing-stats">
@@ -161,7 +161,7 @@ const BillingTab = ({ lead }) => {
         <div className="card" style={{ marginTop: '1rem' }}>
           <h3 style={{ marginBottom: '1rem' }}><FiDollarSign /> Payment History ({payments.length})</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr style={{ background: 'var(--bg-main)', textAlign: 'left' }}><th style={{ padding: 8 }}>Date</th><th style={{ padding: 8 }}>Amount</th><th style={{ padding: 8 }}>Method</th><th style={{ padding: 8 }}>Reference</th></tr></thead>
+            <thead><tr style={{ background: 'var(--bg-main)', textAlign: 'left' }}><th style={{ padding: 8 }}>Date</th><th style={{ padding: 8 }}>Amount</th><th style={{ padding: 8 }}>Method</th><th style={{ padding: 8 }}>Reference</th><th style={{ padding: 8 }}>Action</th></tr></thead>
             <tbody>
               {payments.map(p => (
                 <tr key={p.id} style={{ borderBottom: '1px solid var(--divider)' }}>
@@ -169,6 +169,9 @@ const BillingTab = ({ lead }) => {
                   <td style={{ padding: 8, fontWeight: 600, color: 'var(--status-booked)' }}>₹{Number(p.amount).toLocaleString()}</td>
                   <td style={{ padding: 8 }}>{p.method}</td>
                   <td style={{ padding: 8, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{p.reference || '—'}</td>
+                  <td style={{ padding: 8 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => setShowReceipt(p)}><FiPrinter /> Receipt</button>
+                  </td>
                 </tr>
               ))}
             </tbody>

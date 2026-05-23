@@ -4,7 +4,7 @@ import { FiEdit, FiTrash2, FiPlus, FiX } from 'react-icons/fi';
 const StickyNotes = ({ isOpen, onClose }) => {
   const [notes, setNotes] = useState(() => {
     const saved = localStorage.getItem('nexusCRM_StickyNotes');
-    return saved ? JSON.parse(saved) : [{ id: 1, text: 'Welcome to Nexus CRM! Use this to jot down quick numbers or notes.', color: '#FEF9C3' }];
+    return saved ? JSON.parse(saved) : [{ id: 1, text: 'Welcome to Kanan Travel CRM! Use this to jot down quick numbers or notes.', color: '#FEF9C3' }];
   });
 
   useEffect(() => {

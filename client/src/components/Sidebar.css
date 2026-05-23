@@ -1,8 +1,8 @@
 .sidebar-brand {
   width: 280px;
   background-color: var(--bg-sidebar); /* White */
-  border: none;
-  box-shadow: var(--shadow-sm);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal);
   border-radius: var(--radius-lg);
   margin: 1rem 0 1rem 1rem;
   display: flex;
@@ -73,12 +73,13 @@
   padding: 14px 18px;
   color: var(--text-secondary);
   text-decoration: none;
-  border-radius: var(--radius-md);
+  border-radius: 0px;
   margin-bottom: 6px;
   cursor: pointer;
   transition: var(--transition);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
+  border: 2px solid transparent;
 }
 
 .nav-item .icon {
@@ -92,16 +93,20 @@
 .nav-item:hover {
   background-color: var(--bg-main);
   color: var(--text-primary);
+  border: var(--border-brutal);
+  box-shadow: 2px 2px 0px #000;
+  transform: translate(-2px, -2px);
 }
 
 .nav-item:hover .icon {
-  color: var(--primary);
+  color: #000;
 }
 
 .nav-item.active {
   background-color: var(--primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(90, 82, 255, 0.3);
+  border: var(--border-brutal);
+  box-shadow: 2px 2px 0px #000;
 }
 
 .nav-item.active .icon {

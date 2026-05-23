@@ -128,12 +128,12 @@ const PipelineBoard = () => {
             })
             .then(() => fetchPipeline())
             .catch(err => {
-              console.error('Failed to create booking:', err);
-              alert('Failed to create booking: ' + err.message);
+              console.error('Failed to create enquiry:', err);
+              alert('Failed to create enquiry: ' + err.message);
             })
           }
         >
-          <FiPlus /> New Booking
+          <FiPlus /> New Enquiry
         </button>
       </div>
 

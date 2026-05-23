@@ -96,12 +96,15 @@ const QuoteTab = ({ lead }) => {
           </div>
         </div>
 
-        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1.5rem', marginTop: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '2px solid var(--primary)' }}>
-            <div>
-              <h2 style={{ color: 'var(--primary)' }}>Nexus CRM</h2>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Your Travel Partner</p>
-            </div>
+        <div className="quote-preview-content" style={{ padding: '40px', background: 'white', color: '#333' }} id="printable-quote">
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--primary)', paddingBottom: '20px', marginBottom: '30px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                  <img src="/logo.png" alt="Logo" style={{ height: '35px' }} />
+                  <h2 style={{ color: 'var(--primary)', margin: 0 }}>Kanan Travel CRM</h2>
+                </div>
+                <p style={{ margin: 0, color: '#666', fontSize: '0.85rem' }}>123 Travel Tower, New Delhi<br/>hello@kanantravel.com</p>
+              </div>
             <div style={{ textAlign: 'right' }}>
               <h3>QUOTATION</h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ref: {lead.id}</p>
