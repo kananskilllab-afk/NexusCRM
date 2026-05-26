@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoyageCRM — Enhanced Schema v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --text: #1a1a18;
+    --text-muted: #5f5e5a;
+    --text-xs: #888780;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    --c-identity: #185FA5;
+    --c-identity-bg: #E6F1FB;
+    --c-crm: #0F6E56;
+    --c-crm-bg: #E1F5EE;
+    --c-booking: #534AB7;
+    --c-booking-bg: #EEEDFE;
+    --c-finance: #854F0B;
+    --c-finance-bg: #FAEEDA;
+    --c-cross: #5F5E5A;
+    --c-cross-bg: #F1EFE8;
+    --c-new: #993556;
+    --c-new-bg: #FBEAF0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111110;
+      --surface: #1a1a18;
+      --border: rgba(255,255,255,0.1);
+      --text: #e8e7e1;
+      --text-muted: #9c9a92;
+      --text-xs: #6b6a64;
+      --c-identity: #378ADD;
+      --c-identity-bg: #0C447C;
+      --c-crm: #1D9E75;
+      --c-crm-bg: #085041;
+      --c-booking: #7F77DD;
+      --c-booking-bg: #3C3489;
+      --c-finance: #EF9F27;
+      --c-finance-bg: #633806;
+      --c-cross: #B4B2A9;
+      --c-cross-bg: #2C2C2A;
+      --c-new: #D4537E;
+      --c-new-bg: #4B1528;
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px;
+    min-height: 100vh;
+  }
+
+  header {
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  header p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .leg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .table-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .table-card.new-table {
+    border-width: 1.5px;
+  }
+
+  .table-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-name {
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--mono);
+    letter-spacing: -0.01em;
+  }
+  .table-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .fields {
+    padding: 6px 0;
+  }
+  .field {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 14px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .field:hover {
+    background: var(--bg);
+  }
+  .field-name {
+    font-family: var(--mono);
+    color: var(--text);
+    font-size: 11.5px;
+  }
+  .field-type {
+    color: var(--text-xs);
+    font-size: 11px;
+    font-family: var(--mono);
+    text-align: right;
+  }
+  .field-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 5px;
+    border-radius: 4px;
+    min-width: 24px;
+    text-align: center;
+  }
+  .pk { background: #FEF3C7; color: #92400E; }
+  .fk { background: #E0E7FF; color: #3730A3; }
+  .new { background: #FCE7F3; color: #9D174D; }
+  @media (prefers-color-scheme: dark) {
+    .pk { background: #3d2a00; color: #FCD34D; }
+    .fk { background: #1e1b4b; color: #A5B4FC; }
+    .new { background: #3b0a1e; color: #F9A8D4; }
+  }
+
+  .section-label {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-xs);
+    margin: 24px 0 10px;
+  }
+
+  .relations-section {
+    margin-top: 40px;
+  }
+  .relations-section h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .rel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 8px;
+  }
+  .rel-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  .rel-from { color: var(--text); font-weight: 600; }
+  .rel-cardinality { color: var(--text-xs); font-size: 11px; white-space: nowrap; }
+  .rel-to { color: var(--text-muted); }
+  .rel-label { color: var(--text-xs); font-size: 11px; margin-left: auto; font-family: var(--font); font-style: italic; }
+
+  .erd-section {
+    margin-top: 40px;
+  }
+  .erd-section h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  #erd { width: 100%; overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  #erd svg { min-width: 600px; }
+  #erd svg.erDiagram .divider path { stroke-opacity: 0.4; }
+  #erd svg.erDiagram .row-rect-odd path,
+  #erd svg.erDiagram .row-rect-odd rect,
+  #erd svg.erDiagram .row-rect-even path,
+  #erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+
+  .changes-section {
+    margin-top: 40px;
+  }
+  .changes-section h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .change-group {
+    margin-bottom: 24px;
+  }
+  .change-group h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-xs);
+    margin-bottom: 8px;
+  }
+  .change-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .change-item strong {
+    color: var(--text);
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VoyageCRM — Database Schema v2</h1>
+  <p>23 tables &nbsp;·&nbsp; 15 original + 8 new &nbsp;·&nbsp; Enhanced for professional travel CRM workflows</p>
+</header>
+
+<div class="legend">
+  <div class="leg"><div class="dot" style="background:var(--c-identity)"></div>Identity &amp; access</div>
+  <div class="leg"><div class="dot" style="background:var(--c-crm)"></div>CRM &amp; pipeline</div>
+  <div class="leg"><div class="dot" style="background:var(--c-booking)"></div>Bookings &amp; travel</div>
+  <div class="leg"><div class="dot" style="background:var(--c-finance)"></div>Finance &amp; suppliers</div>
+  <div class="leg"><div class="dot" style="background:var(--c-cross)"></div>Cross-cutting</div>
+  <div class="leg"><div class="dot" style="background:var(--c-new)"></div>New in v2</div>
+</div>
+
+<div class="grid" id="tables-grid"></div>
+
+<div class="erd-section">
+  <h2>Entity-relationship diagram</h2>
+  <div id="erd"></div>
+</div>
+
+<div class="changes-section">
+  <h2>Schema changes &amp; rationale</h2>
+
+  <div class="change-group">
+    <h3>New tables</h3>
+    <div class="change-item"><strong>quotes</strong> — Pre-booking proposal stage. Agents build quotes that can be accepted (→ booking), expired, or rejected. Enables pipeline analytics on conversion rate from proposal to booking, and stores the exact price offered before it becomes a booking.</div>
+    <div class="change-item"><strong>contact_relationships</strong> — Models companion/family/corporate account links between contacts. Essential for group travel, spousal accounts, and B2B clients where one contact is the decision-maker for many travellers.</div>
+    <div class="change-item"><strong>payment_schedules</strong> — Explicit deposit and balance-due installment rows per booking. Previously, financial_events tracked ad hoc payments but couldn't enforce pre-defined payment plan structures (e.g. 20% deposit + 80% 60 days before travel).</div>
+    <div class="change-item"><strong>supplier_contracts</strong> — Per-tenant rate agreements with suppliers: net rates, markup floors, validity windows, and override commission percentages. Decouples the negotiated rate from the supplier's default commission_pct, allowing multiple contracts per supplier per year.</div>
+    <div class="change-item"><strong>email_templates</strong> — Reusable tenant-scoped message templates for confirmations, payment reminders, itinerary shares, and marketing. Supports liquid-style merge variables stored in a jsonb variables column.</div>
+    <div class="change-item"><strong>email_sends</strong> — Delivery and engagement log: sent, delivered, opened, clicked, bounced. Links back to the template, contact, booking, and the triggering user. Required for compliance audit trails and deliverability monitoring.</div>
+    <div class="change-item"><strong>tag_definitions</strong> — Proper tag registry replacing the flat text[] on contacts. Tags have a color, a category (e.g. "Interest", "Lifecycle", "Source"), and belong to a tenant. Enables consistent taxonomy management and UI autocomplete.</div>
+    <div class="change-item"><strong>contact_tags</strong> — Join table between contacts and tag_definitions. Replaces the denormalized text_arr tags column and allows efficient filtering across large contact lists.</div>
+  </div>
+
+  <div class="change-group">
+    <h3>Enhancements to existing tables</h3>
+    <div class="change-item"><strong>contacts</strong> — Added <strong>account_id</strong> (self-referencing FK for corporate hierarchy), <strong>source</strong> (lead origin: referral, web, campaign), <strong>lifecycle_stage</strong> (enum: lead → prospect → active → lapsed), and dropped the denormalized <strong>tags text_arr</strong> column in favour of contact_tags.</div>
+    <div class="change-item"><strong>bookings</strong> — Added <strong>quote_id FK</strong> (traceability from proposal to confirmed booking), <strong>group_booking_id</strong> (self-referencing FK to link travellers in the same group trip), and <strong>cancellation_reason text</strong> (captured when status → cancelled for reporting).</div>
+    <div class="change-item"><strong>booking_segments</strong> — Added <strong>contract_id FK</strong> (links to the supplier_contracts row used to price this segment), <strong>cancellation_policy text</strong>, and <strong>is_on_request boolean</strong> (pending supplier confirmation).</div>
+    <div class="change-item"><strong>users</strong> — Added <strong>commission_tier</strong> (enum: junior/standard/senior/director, drives commission_pct overrides) and <strong>phone varchar</strong> for 2FA and contact purposes.</div>
+    <div class="change-item"><strong>suppliers</strong> — Added <strong>primary_contact_name</strong>, <strong>primary_contact_phone</strong>, and <strong>bank_details_encrypted text</strong> (AES-256 blob for payment setup, never exposed via API directly).</div>
+    <div class="change-item"><strong>financial_events</strong> — Added <strong>payment_schedule_id FK</strong> to link ad hoc payments back to an installment in payment_schedules, enabling over/underpayment tracking per installment.</div>
+  </div>
+</div>
+
+<script>
+const SCHEMA = [
+  {
+    name: 'tenants',
+    category: 'identity',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'name', type: 'varchar' },
+      { name: 'plan', type: 'enum' },
+      { name: 'settings', type: 'jsonb' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'users',
+    category: 'identity',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'email', type: 'varchar' },
+      { name: 'phone', type: 'varchar', isNew: true },
+      { name: 'role', type: 'enum' },
+      { name: 'commission_tier', type: 'enum', isNew: true },
+      { name: 'is_active', type: 'boolean' },
+      { name: 'last_login_at', type: 'timestamptz' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'audit_logs',
+    category: 'cross',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'user_id', type: 'uuid', tag: 'FK' },
+      { name: 'entity_type', type: 'varchar' },
+      { name: 'entity_id', type: 'uuid' },
+      { name: 'action', type: 'enum' },
+      { name: 'diff', type: 'jsonb' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'tag_definitions',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'name', type: 'varchar' },
+      { name: 'color_hex', type: 'char(7)' },
+      { name: 'category', type: 'varchar' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'contacts',
+    category: 'crm',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'assigned_to', type: 'uuid', tag: 'FK' },
+      { name: 'account_id', type: 'uuid', tag: 'FK', isNew: true },
+      { name: 'email', type: 'varchar' },
+      { name: 'phone', type: 'varchar' },
+      { name: 'full_name', type: 'varchar' },
+      { name: 'source', type: 'enum', isNew: true },
+      { name: 'lifecycle_stage', type: 'enum', isNew: true },
+      { name: 'lead_score', type: 'numeric' },
+      { name: 'profile', type: 'jsonb' },
+      { name: 'gdpr_consent_at', type: 'timestamptz' },
+      { name: 'last_contacted_at', type: 'timestamptz' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'contact_tags',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'tag_id', type: 'uuid', tag: 'FK' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'contact_relationships',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'from_contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'to_contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'relationship_type', type: 'enum' },
+      { name: 'notes', type: 'text' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'pipeline_stages',
+    category: 'crm',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'name', type: 'varchar' },
+      { name: 'position', type: 'int' },
+      { name: 'automation_rules', type: 'jsonb' },
+      { name: 'is_closed_won', type: 'boolean' },
+    ]
+  },
+  {
+    name: 'activities',
+    category: 'crm',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'user_id', type: 'uuid', tag: 'FK' },
+      { name: 'type', type: 'enum' },
+      { name: 'note', type: 'text' },
+      { name: 'scheduled_at', type: 'timestamptz' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'notifications',
+    category: 'cross',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'user_id', type: 'uuid', tag: 'FK' },
+      { name: 'type', type: 'enum' },
+      { name: 'payload', type: 'jsonb' },
+      { name: 'channel', type: 'enum' },
+      { name: 'read_at', type: 'timestamptz' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'email_templates',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'name', type: 'varchar' },
+      { name: 'subject', type: 'varchar' },
+      { name: 'body_html', type: 'text' },
+      { name: 'body_text', type: 'text' },
+      { name: 'variables', type: 'jsonb' },
+      { name: 'category', type: 'enum' },
+      { name: 'is_active', type: 'boolean' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'email_sends',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'template_id', type: 'uuid', tag: 'FK' },
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'sent_by', type: 'uuid', tag: 'FK' },
+      { name: 'to_email', type: 'varchar' },
+      { name: 'subject', type: 'varchar' },
+      { name: 'status', type: 'enum' },
+      { name: 'opened_at', type: 'timestamptz' },
+      { name: 'clicked_at', type: 'timestamptz' },
+      { name: 'bounced_at', type: 'timestamptz' },
+      { name: 'sent_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'quotes',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'stage_id', type: 'uuid', tag: 'FK' },
+      { name: 'assigned_to', type: 'uuid', tag: 'FK' },
+      { name: 'status', type: 'enum' },
+      { name: 'currency_code', type: 'char(3)' },
+      { name: 'total_sell_cents', type: 'bigint' },
+      { name: 'travel_dates', type: 'daterange' },
+      { name: 'destinations', type: 'text[]' },
+      { name: 'pax_count', type: 'int' },
+      { name: 'notes', type: 'text' },
+      { name: 'expires_at', type: 'timestamptz' },
+      { name: 'accepted_at', type: 'timestamptz' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'bookings',
+    category: 'booking',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'stage_id', type: 'uuid', tag: 'FK' },
+      { name: 'assigned_to', type: 'uuid', tag: 'FK' },
+      { name: 'quote_id', type: 'uuid', tag: 'FK', isNew: true },
+      { name: 'group_booking_id', type: 'uuid', tag: 'FK', isNew: true },
+      { name: 'status', type: 'enum' },
+      { name: 'currency_code', type: 'char(3)' },
+      { name: 'total_cost_cents', type: 'bigint' },
+      { name: 'total_sell_cents', type: 'bigint' },
+      { name: 'margin_pct', type: 'numeric' },
+      { name: 'itinerary_version', type: 'int' },
+      { name: 'travel_dates', type: 'daterange' },
+      { name: 'cancellation_reason', type: 'text', isNew: true },
+      { name: 'created_at', type: 'timestamptz' },
+      { name: 'updated_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'booking_passengers',
+    category: 'booking',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'first_name', type: 'varchar' },
+      { name: 'last_name', type: 'varchar' },
+      { name: 'dob', type: 'date' },
+      { name: 'passport_num', type: 'text' },
+      { name: 'passport_expiry', type: 'date' },
+      { name: 'nationality', type: 'char(2)' },
+    ]
+  },
+  {
+    name: 'booking_segments',
+    category: 'booking',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'supplier_id', type: 'uuid', tag: 'FK' },
+      { name: 'contract_id', type: 'uuid', tag: 'FK', isNew: true },
+      { name: 'segment_type', type: 'enum' },
+      { name: 'status', type: 'enum' },
+      { name: 'is_on_request', type: 'boolean', isNew: true },
+      { name: 'start_at', type: 'timestamptz' },
+      { name: 'end_at', type: 'timestamptz' },
+      { name: 'cost_cents', type: 'bigint' },
+      { name: 'sell_cents', type: 'bigint' },
+      { name: 'cancellation_policy', type: 'text', isNew: true },
+      { name: 'confirmation_ref', type: 'text' },
+      { name: 'supplier_ref', type: 'varchar' },
+      { name: 'metadata', type: 'jsonb' },
+    ]
+  },
+  {
+    name: 'itinerary_versions',
+    category: 'booking',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'created_by', type: 'uuid', tag: 'FK' },
+      { name: 'version_num', type: 'int' },
+      { name: 'content', type: 'jsonb' },
+      { name: 'share_token', type: 'uuid' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'suppliers',
+    category: 'finance',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'type', type: 'enum' },
+      { name: 'name', type: 'varchar' },
+      { name: 'commission_pct', type: 'numeric' },
+      { name: 'contact_email', type: 'varchar' },
+      { name: 'primary_contact_name', type: 'varchar', isNew: true },
+      { name: 'primary_contact_phone', type: 'varchar', isNew: true },
+      { name: 'bank_details_encrypted', type: 'text', isNew: true },
+      { name: 'payment_terms', type: 'int' },
+      { name: 'is_preferred', type: 'boolean' },
+      { name: 'metadata', type: 'jsonb' },
+    ]
+  },
+  {
+    name: 'supplier_contracts',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'supplier_id', type: 'uuid', tag: 'FK' },
+      { name: 'name', type: 'varchar' },
+      { name: 'net_rate_multiplier', type: 'numeric' },
+      { name: 'commission_override_pct', type: 'numeric' },
+      { name: 'markup_floor_pct', type: 'numeric' },
+      { name: 'valid_from', type: 'date' },
+      { name: 'valid_until', type: 'date' },
+      { name: 'is_active', type: 'boolean' },
+      { name: 'notes', type: 'text' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'financial_events',
+    category: 'finance',
+    updated: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'payment_schedule_id', type: 'uuid', tag: 'FK', isNew: true },
+      { name: 'recorded_by', type: 'uuid', tag: 'FK' },
+      { name: 'event_type', type: 'enum' },
+      { name: 'amount_cents', type: 'bigint' },
+      { name: 'currency', type: 'char(3)' },
+      { name: 'due_date', type: 'date' },
+      { name: 'paid_at', type: 'timestamptz' },
+      { name: 'stripe_pi_id', type: 'text' },
+      { name: 'recorded_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'payment_schedules',
+    category: 'new',
+    isNew: true,
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'installment_number', type: 'int' },
+      { name: 'label', type: 'varchar' },
+      { name: 'amount_cents', type: 'bigint' },
+      { name: 'due_date', type: 'date' },
+      { name: 'status', type: 'enum' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'commissions',
+    category: 'finance',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'supplier_id', type: 'uuid', tag: 'FK' },
+      { name: 'agent_id', type: 'uuid', tag: 'FK' },
+      { name: 'expected_cents', type: 'bigint' },
+      { name: 'received_cents', type: 'bigint' },
+      { name: 'status', type: 'enum' },
+      { name: 'received_at', type: 'timestamptz' },
+    ]
+  },
+  {
+    name: 'documents',
+    category: 'cross',
+    fields: [
+      { name: 'id', type: 'uuid', tag: 'PK' },
+      { name: 'tenant_id', type: 'uuid', tag: 'FK' },
+      { name: 'booking_id', type: 'uuid', tag: 'FK' },
+      { name: 'contact_id', type: 'uuid', tag: 'FK' },
+      { name: 'uploaded_by', type: 'uuid', tag: 'FK' },
+      { name: 'type', type: 'enum' },
+      { name: 'storage_key', type: 'text' },
+      { name: 'filename', type: 'text' },
+      { name: 'created_at', type: 'timestamptz' },
+    ]
+  },
+];
+
+const CAT_COLORS = {
+  identity: 'var(--c-identity)',
+  crm: 'var(--c-crm)',
+  booking: 'var(--c-booking)',
+  finance: 'var(--c-finance)',
+  cross: 'var(--c-cross)',
+  new: 'var(--c-new)',
+};
+const CAT_BG = {
+  identity: 'var(--c-identity-bg)',
+  crm: 'var(--c-crm-bg)',
+  booking: 'var(--c-booking-bg)',
+  finance: 'var(--c-finance-bg)',
+  cross: 'var(--c-cross-bg)',
+  new: 'var(--c-new-bg)',
+};
+const CAT_LABELS = {
+  identity: 'Identity', crm: 'CRM', booking: 'Bookings', finance: 'Finance', cross: 'Cross-cutting', new: 'New'
+};
+
+const grid = document.getElementById('tables-grid');
+SCHEMA.forEach(table => {
+  const card = document.createElement('div');
+  card.className = 'table-card' + (table.isNew ? ' new-table' : '');
+  const cat = table.isNew ? 'new' : table.category;
+  const borderColor = CAT_COLORS[cat];
+
+  card.style.borderTop = `3px solid ${borderColor}`;
+
+  const badge = table.isNew ? 'New' : (table.updated ? '+ Updated' : CAT_LABELS[cat]);
+  const badgeBg = CAT_BG[cat];
+  const badgeColor = CAT_COLORS[cat];
+
+  let fieldsHtml = '';
+  table.fields.forEach(f => {
+    const tagHtml = f.tag ? `<span class="field-tag ${f.tag.toLowerCase()}">${f.tag}</span>` : '<span></span>';
+    const newHtml = f.isNew ? `<span class="field-tag new">new</span>` : '<span></span>';
+    fieldsHtml += `<div class="field">
+      <span class="field-name">${f.name}</span>
+      <span class="field-type">${f.type}</span>
+      <span style="display:flex;gap:3px;align-items:center">${tagHtml}${f.isNew ? '<span class="field-tag new">new</span>' : ''}</span>
+    </div>`;
+  });
+
+  card.innerHTML = `
+    <div class="table-header">
+      <span class="table-name" style="color:${borderColor}">${table.name}</span>
+      <span class="table-badge" style="background:${badgeBg};color:${badgeColor}">${badge}</span>
+    </div>
+    <div class="fields">${fieldsHtml}</div>
+  `;
+  grid.appendChild(card);
+});
+</script>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Segoe UI", system-ui, sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#1a1a2e' : '#E6F1FB',
+    primaryBorderColor: dark ? '#378ADD' : '#185FA5',
+    primaryTextColor: dark ? '#B5D4F4' : '#0C447C',
+    secondaryColor: dark ? '#0d1a0d' : '#EAF3DE',
+    tertiaryColor: dark ? '#1a1508' : '#FAEEDA',
+    edgeLabelBackground: dark ? '#1e1e1e' : '#ffffff',
+  },
+});
+
+const diagram = `erDiagram
+  tenants {
+    uuid id PK
+    varchar name
+    enum plan
+    jsonb settings
+    timestamptz created_at
+  }
+  users {
+    uuid id PK
+    uuid tenant_id FK
+    varchar email
+    varchar phone
+    enum role
+    enum commission_tier
+    boolean is_active
+    timestamptz last_login_at
+  }
+  audit_logs {
+    uuid id PK
+    uuid tenant_id FK
+    uuid user_id FK
+    varchar entity_type
+    uuid entity_id
+    enum action
+    jsonb diff
+  }
+  tag_definitions {
+    uuid id PK
+    uuid tenant_id FK
+    varchar name
+    char color_hex
+    varchar category
+  }
+  contacts {
+    uuid id PK
+    uuid tenant_id FK
+    uuid assigned_to FK
+    uuid account_id FK
+    varchar email
+    varchar full_name
+    enum source
+    enum lifecycle_stage
+    numeric lead_score
+    jsonb profile
+    timestamptz gdpr_consent_at
+  }
+  contact_tags {
+    uuid contact_id FK
+    uuid tag_id FK
+    timestamptz created_at
+  }
+  contact_relationships {
+    uuid id PK
+    uuid tenant_id FK
+    uuid from_contact_id FK
+    uuid to_contact_id FK
+    enum relationship_type
+    text notes
+  }
+  pipeline_stages {
+    uuid id PK
+    uuid tenant_id FK
+    varchar name
+    int position
+    jsonb automation_rules
+    boolean is_closed_won
+  }
+  activities {
+    uuid id PK
+    uuid tenant_id FK
+    uuid contact_id FK
+    uuid booking_id FK
+    uuid user_id FK
+    enum type
+    text note
+    timestamptz scheduled_at
+  }
+  notifications {
+    uuid id PK
+    uuid tenant_id FK
+    uuid user_id FK
+    enum type
+    jsonb payload
+    enum channel
+    timestamptz read_at
+  }
+  email_templates {
+    uuid id PK
+    uuid tenant_id FK
+    varchar name
+    varchar subject
+    text body_html
+    jsonb variables
+    enum category
+  }
+  email_sends {
+    uuid id PK
+    uuid tenant_id FK
+    uuid template_id FK
+    uuid contact_id FK
+    uuid booking_id FK
+    uuid sent_by FK
+    enum status
+    timestamptz opened_at
+    timestamptz sent_at
+  }
+  quotes {
+    uuid id PK
+    uuid tenant_id FK
+    uuid contact_id FK
+    uuid stage_id FK
+    uuid assigned_to FK
+    enum status
+    bigint total_sell_cents
+    daterange travel_dates
+    int pax_count
+    timestamptz expires_at
+  }
+  bookings {
+    uuid id PK
+    uuid tenant_id FK
+    uuid contact_id FK
+    uuid stage_id FK
+    uuid assigned_to FK
+    uuid quote_id FK
+    uuid group_booking_id FK
+    enum status
+    bigint total_cost_cents
+    bigint total_sell_cents
+    numeric margin_pct
+    daterange travel_dates
+    text cancellation_reason
+  }
+  booking_passengers {
+    uuid id PK
+    uuid booking_id FK
+    varchar first_name
+    varchar last_name
+    date dob
+    text passport_num
+    date passport_expiry
+  }
+  booking_segments {
+    uuid id PK
+    uuid booking_id FK
+    uuid supplier_id FK
+    uuid contract_id FK
+    enum segment_type
+    enum status
+    boolean is_on_request
+    bigint cost_cents
+    bigint sell_cents
+    text cancellation_policy
+    jsonb metadata
+  }
+  itinerary_versions {
+    uuid id PK
+    uuid booking_id FK
+    uuid created_by FK
+    int version_num
+    jsonb content
+    uuid share_token
+  }
+  suppliers {
+    uuid id PK
+    uuid tenant_id FK
+    enum type
+    varchar name
+    numeric commission_pct
+    varchar contact_email
+    varchar primary_contact_name
+    text bank_details_encrypted
+    boolean is_preferred
+  }
+  supplier_contracts {
+    uuid id PK
+    uuid tenant_id FK
+    uuid supplier_id FK
+    varchar name
+    numeric net_rate_multiplier
+    numeric commission_override_pct
+    date valid_from
+    date valid_until
+    boolean is_active
+  }
+  financial_events {
+    uuid id PK
+    uuid tenant_id FK
+    uuid booking_id FK
+    uuid payment_schedule_id FK
+    uuid recorded_by FK
+    enum event_type
+    bigint amount_cents
+    date due_date
+    timestamptz paid_at
+    text stripe_pi_id
+  }
+  payment_schedules {
+    uuid id PK
+    uuid booking_id FK
+    int installment_number
+    varchar label
+    bigint amount_cents
+    date due_date
+    enum status
+  }
+  commissions {
+    uuid id PK
+    uuid booking_id FK
+    uuid supplier_id FK
+    uuid agent_id FK
+    bigint expected_cents
+    bigint received_cents
+    enum status
+  }
+  documents {
+    uuid id PK
+    uuid tenant_id FK
+    uuid booking_id FK
+    uuid contact_id FK
+    uuid uploaded_by FK
+    enum type
+    text storage_key
+    text filename
+  }
+
+  tenants ||--o{ users : "has"
+  tenants ||--o{ contacts : "owns"
+  tenants ||--o{ pipeline_stages : "defines"
+  tenants ||--o{ bookings : "manages"
+  tenants ||--o{ suppliers : "works with"
+  tenants ||--o{ financial_events : "records"
+  tenants ||--o{ audit_logs : "logs"
+  tenants ||--o{ notifications : "sends"
+  tenants ||--o{ documents : "stores"
+  tenants ||--o{ quotes : "creates"
+  tenants ||--o{ tag_definitions : "owns"
+  tenants ||--o{ email_templates : "owns"
+  tenants ||--o{ email_sends : "sends"
+  tenants ||--o{ contact_relationships : "tracks"
+  tenants ||--o{ supplier_contracts : "negotiates"
+  users ||--o{ audit_logs : "triggers"
+  users ||--o{ notifications : "receives"
+  users ||--o{ itinerary_versions : "creates"
+  users ||--o{ financial_events : "records"
+  users ||--o{ commissions : "earns"
+  users ||--o{ activities : "logs"
+  users ||--o{ email_sends : "sends"
+  users }o--o{ contacts : "assigned to"
+  users }o--o{ bookings : "owns"
+  users }o--o{ quotes : "assigned"
+  contacts ||--o{ bookings : "books"
+  contacts ||--o{ quotes : "receives"
+  contacts ||--o{ activities : "has"
+  contacts ||--o{ documents : "has"
+  contacts ||--o{ email_sends : "receives"
+  contacts ||--o{ contact_tags : "tagged by"
+  contacts }o--o{ contacts : "account of"
+  contacts }o--o{ contact_relationships : "from"
+  contacts }o--o{ contact_relationships : "to"
+  tag_definitions ||--o{ contact_tags : "applied via"
+  pipeline_stages ||--o{ bookings : "stages"
+  pipeline_stages ||--o{ quotes : "stages"
+  bookings ||--o{ booking_segments : "contains"
+  bookings ||--o{ booking_passengers : "carries"
+  bookings ||--o{ itinerary_versions : "versions"
+  bookings ||--o{ financial_events : "generates"
+  bookings ||--o{ commissions : "earns"
+  bookings ||--o{ activities : "linked to"
+  bookings ||--o{ documents : "has"
+  bookings ||--o{ payment_schedules : "scheduled by"
+  bookings ||--o{ email_sends : "triggers"
+  bookings }o--o{ bookings : "group booking"
+  quotes ||--o{ bookings : "converts to"
+  payment_schedules ||--o{ financial_events : "matched to"
+  suppliers ||--o{ booking_segments : "fulfils"
+  suppliers ||--o{ commissions : "pays"
+  suppliers ||--o{ supplier_contracts : "has"
+  supplier_contracts ||--o{ booking_segments : "priced by"
+  email_templates ||--o{ email_sends : "used in"
+`;
+
+try {
+  const { svg } = await mermaid.render('erd-svg', diagram);
+  document.getElementById('erd').innerHTML = svg;
+  document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+    const firstPath = node.querySelector('path[d]');
+    if (!firstPath) return;
+    const d = firstPath.getAttribute('d');
+    const nums = d.match(/-?[\d.]+/g)?.map(Number);
+    if (!nums || nums.length < 8) return;
+    const xs = [nums[0], nums[2], nums[4], nums[6]];
+    const ys = [nums[1], nums[3], nums[5], nums[7]];
+    const x = Math.min(...xs), y = Math.min(...ys);
+    const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', w); rect.setAttribute('height', h);
+    rect.setAttribute('rx', '8');
+    for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+      if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+    }
+    firstPath.replaceWith(rect);
+  });
+  document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+    p.setAttribute('stroke', 'none');
+  });
+} catch(e) {
+  document.getElementById('erd').innerHTML = '<p style="color:var(--text-muted);padding:1rem;font-size:13px">ERD render error: ' + e.message + '</p>';
+}
+</script>
+</body>
+</html>

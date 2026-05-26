@@ -7,6 +7,7 @@ const emailSendSchema = new mongoose.Schema(
     contact_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Contact' },
     booking_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
     sent_by:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    is_bulk:     { type: Boolean, default: false },
     to_email:    { type: String, required: true, lowercase: true },
     subject:     { type: String, required: true },
     status: {
@@ -18,6 +19,7 @@ const emailSendSchema = new mongoose.Schema(
     clicked_at: { type: Date },
     bounced_at: { type: Date },
     sent_at:    { type: Date },
+    error_message: { type: String },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );

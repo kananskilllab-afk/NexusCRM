@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiSend, FiMail, FiCheck, FiX, FiEye, FiEdit2 } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSend, FiMail, FiCheck, FiX, FiEye, FiEdit2, FiLayers } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { api } from '../../../services/api';
+import { useLeads, ROLE_HIERARCHY } from '../../../context/LeadContext';
 
 const CATEGORY_COLORS = {
   confirmation: '#10b981', payment_reminder: '#f59e0b', itinerary: '#3b82f6',
@@ -8,25 +10,32 @@ const CATEGORY_COLORS = {
 };
 
 const EmailManager = () => {
+  const { state } = useLeads();
+  const userRole = state.currentUser?.role || 'Viewer';
+  const userLevel = ROLE_HIERARCHY[userRole] || 0;
+
   const [activeView, setActiveView] = useState('templates');
   const [templates, setTemplates] = useState([]);
   const [history, setHistory] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [form, setForm] = useState({ name: '', subject: '', body_html: '', category: 'other' });
-  const [sendForm, setSendForm] = useState({ template_id: '', to_email: '', subject: '' });
+  const [sendForm, setSendForm] = useState({ template_id: '', to_email: '', subject: '', booking_id: '' });
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [t, h] = await Promise.all([
+        const [t, h, l] = await Promise.all([
           voyageApi.getEmailTemplates(),
-          voyageApi.getEmailHistory()
+          voyageApi.getEmailHistory(),
+          api.getLeads().catch(() => [])
         ]);
         setTemplates(t);
         setHistory(h);
+        setLeads(l);
       } catch (e) { console.error(e); }
       setLoading(false);
     };
@@ -55,12 +64,17 @@ const EmailManager = () => {
   const handleSendEmail = async () => {
     if (!sendForm.to_email) return alert('Recipient email is required.');
     try {
-      const result = await voyageApi.sendEmail(sendForm);
+      const result = await voyageApi.sendEmail({
+        template_id: sendForm.template_id,
+        to_email: sendForm.to_email,
+        subject: sendForm.subject,
+        booking_id: sendForm.booking_id || undefined
+      });
       alert(result.message);
       const updated = await voyageApi.getEmailHistory();
       setHistory(updated);
       setShowSend(false);
-      setSendForm({ template_id: '', to_email: '', subject: '' });
+      setSendForm({ template_id: '', to_email: '', subject: '', booking_id: '' });
     } catch (e) { alert(e.message); }
   };
 
@@ -78,17 +92,24 @@ const EmailManager = () => {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn btn-primary" onClick={() => setShowSend(!showSend)}><FiSend /> Compose Email</button>
-          <button className="btn btn-outline" onClick={() => setShowAdd(!showAdd)}><FiPlus /> New Template</button>
+          {userLevel >= 2 && (
+            <button className="btn btn-outline" onClick={() => setShowAdd(!showAdd)}><FiPlus /> New Template</button>
+          )}
         </div>
       </div>
 
       {/* View toggle */}
       <div style={{ display: 'flex', gap: '0', marginBottom: '20px' }}>
-        {[{ key: 'templates', label: 'Templates', icon: <FiEdit2 /> }, { key: 'history', label: 'Sent History', icon: <FiMail /> }].map(v => (
+        {[
+          { key: 'templates', label: 'Templates', icon: <FiEdit2 /> }, 
+          { key: 'history', label: 'Individual History', icon: <FiMail /> },
+          { key: 'bulk', label: 'Bulk Sends', icon: <FiLayers /> }
+        ].map((v, idx, arr) => (
           <button key={v.key} onClick={() => setActiveView(v.key)} style={{
             padding: '10px 20px', border: '1px solid var(--border-color)', background: activeView === v.key ? 'var(--primary)' : 'white',
             color: activeView === v.key ? 'white' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-            borderRadius: v.key === 'templates' ? '6px 0 0 6px' : '0 6px 6px 0', fontWeight: activeView === v.key ? 'bold' : 'normal'
+            borderRadius: idx === 0 ? '6px 0 0 6px' : idx === arr.length - 1 ? '0 6px 6px 0' : '0', 
+            fontWeight: activeView === v.key ? 'bold' : 'normal'
           }}>{v.icon} {v.label}</button>
         ))}
       </div>
@@ -97,7 +118,23 @@ const EmailManager = () => {
       {showSend && (
         <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '2px dashed #10b981' }}>
           <h4 style={{ marginTop: 0 }}><FiSend style={{ marginRight: 6 }} /> Compose & Send Email</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Associate Lead (optional)</label>
+              <select value={sendForm.booking_id} onChange={e => {
+                const selectedLead = leads.find(l => l.id === e.target.value);
+                setSendForm(f => ({
+                  ...f,
+                  booking_id: e.target.value,
+                  to_email: selectedLead ? selectedLead.email : f.to_email
+                }));
+              }} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+                <option value="">— None —</option>
+                {leads.map(l => (
+                  <option key={l.id} value={l.id}>{l.first_name} {l.last_name} ({l.id})</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Template (optional)</label>
               <select value={sendForm.template_id} onChange={e => {
@@ -112,7 +149,7 @@ const EmailManager = () => {
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Recipient Email *</label>
               <input type="email" placeholder="client@example.com" value={sendForm.to_email} onChange={e => setSendForm(f => ({ ...f, to_email: e.target.value }))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
             </div>
-            <div style={{ gridColumn: 'span 2' }}>
+            <div style={{ gridColumn: 'span 3' }}>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Subject</label>
               <input type="text" placeholder="Booking Confirmation" value={sendForm.subject} onChange={e => setSendForm(f => ({ ...f, subject: e.target.value }))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
             </div>
@@ -174,8 +211,10 @@ const EmailManager = () => {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0 0 12px 0' }}>Subject: {t.subject}</p>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="btn btn-outline btn-sm" onClick={() => setPreviewTemplate(previewTemplate === t.id ? null : t.id)}><FiEye /> {previewTemplate === t.id ? 'Hide' : 'Preview'}</button>
-                <button className="btn btn-outline btn-sm" onClick={() => handleDeleteTemplate(t.id)} style={{ color: '#ef4444' }}><FiTrash2 /></button>
-                <button className="btn btn-primary btn-sm" onClick={() => { setSendForm({ template_id: t.id, to_email: '', subject: t.subject }); setShowSend(true); }}><FiSend /> Use</button>
+                {userLevel >= 3 && (
+                  <button className="btn btn-outline btn-sm" onClick={() => handleDeleteTemplate(t.id)} style={{ color: '#ef4444' }}><FiTrash2 /></button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={() => { setSendForm({ template_id: t.id, to_email: '', subject: t.subject, booking_id: '' }); setShowSend(true); }}><FiSend /> Use</button>
               </div>
               {previewTemplate === t.id && (
                 <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem', maxHeight: '200px', overflowY: 'auto' }} dangerouslySetInnerHTML={{ __html: t.body_html }} />
@@ -191,33 +230,84 @@ const EmailManager = () => {
         </div>
       )}
 
-      {/* History View */}
+      {/* Individual History View */}
       {activeView === 'history' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="leads-table">
+        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="leads-table" style={{ width: '100%', minWidth: '950px' }}>
             <thead>
               <tr>
                 <th>Recipient</th>
                 <th>Subject</th>
                 <th>Template</th>
                 <th>Contact</th>
+                <th>Sender</th>
                 <th>Status</th>
                 <th>Sent At</th>
               </tr>
             </thead>
             <tbody>
-              {history.map(h => (
+              {history.filter(h => !h.is_bulk).map(h => (
                 <tr key={h.id}>
                   <td style={{ fontWeight: 'bold' }}><FiMail style={{ marginRight: 6, color: 'var(--primary)' }} />{h.to_email}</td>
                   <td>{h.subject}</td>
                   <td>{h.template || 'Custom'}</td>
                   <td>{h.contact || '—'}</td>
-                  <td><span className={`badge badge-${STATUS_BADGES[h.status] || 'warning'}`}>{h.status}</span></td>
+                  <td>{h.sent_by || '—'}</td>
+                  <td>
+                    <span className={`badge badge-${STATUS_BADGES[h.status] || 'warning'}`}>{h.status}</span>
+                    {h.status === 'failed' && h.error_message && (
+                      <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '4px', maxWidth: '200px', wordBreak: 'break-word', lineHeight: '1.2' }}>
+                        {h.error_message}
+                      </div>
+                    )}
+                  </td>
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{h.sent_at ? new Date(h.sent_at).toLocaleString() : h.created_at}</td>
                 </tr>
               ))}
-              {history.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '50px', color: '#999' }}>No emails sent yet.</td></tr>
+              {history.filter(h => !h.is_bulk).length === 0 && !loading && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: '#999' }}>No individual emails sent yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Bulk Sends View */}
+      {activeView === 'bulk' && (
+        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+          <table className="leads-table" style={{ width: '100%', minWidth: '950px' }}>
+            <thead>
+              <tr>
+                <th>Recipient</th>
+                <th>Subject</th>
+                <th>Template</th>
+                <th>Contact</th>
+                <th>Sender</th>
+                <th>Status</th>
+                <th>Sent At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.filter(h => h.is_bulk).map(h => (
+                <tr key={h.id}>
+                  <td style={{ fontWeight: 'bold' }}><FiMail style={{ marginRight: 6, color: 'var(--primary)' }} />{h.to_email}</td>
+                  <td>{h.subject}</td>
+                  <td>{h.template || 'Custom'}</td>
+                  <td>{h.contact || '—'}</td>
+                  <td>{h.sent_by || '—'}</td>
+                  <td>
+                    <span className={`badge badge-${STATUS_BADGES[h.status] || 'warning'}`}>{h.status}</span>
+                    {h.status === 'failed' && h.error_message && (
+                      <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '4px', maxWidth: '200px', wordBreak: 'break-word', lineHeight: '1.2' }}>
+                        {h.error_message}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{h.sent_at ? new Date(h.sent_at).toLocaleString() : h.created_at}</td>
+                </tr>
+              ))}
+              {history.filter(h => h.is_bulk).length === 0 && !loading && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: '#999' }}>No bulk emails sent yet.</td></tr>
               )}
             </tbody>
           </table>
