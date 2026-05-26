@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api/voyage';
+const API_URL = 'http://localhost:5005/api/voyage';
 
 const getHeaders = () => {
   const stateStr = localStorage.getItem('nexusCRM_State_v2');
@@ -278,6 +278,18 @@ export const voyageApi = {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Failed to send email');
+    return res.json();
+  },
+  sendBulkEmails: async (data) => {
+    const res = await fetch(`${API_URL}/emails/send-bulk`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to send bulk emails');
+    }
     return res.json();
   },
 };

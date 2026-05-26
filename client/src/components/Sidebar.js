@@ -57,7 +57,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobileMenuOpen, closeMobileMenu
       <div className="sidebar-header">
          {!isCollapsed && (
            <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0 10px' }}>
-             <img src="/logo.png" alt="Kanan Travel CRM" style={{ height: '35px', objectFit: 'contain', maxWidth: '100%' }} />
+             <img src="/logo.png" alt="Kanan Travel CRM" style={{ maxWidth: '100%', height: 'auto', maxHeight: '45px', objectFit: 'contain' }} />
            </div>
          )}
          <button className="toggle-btn" onClick={toggleSidebar}>

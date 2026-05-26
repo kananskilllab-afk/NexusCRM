@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5005/api';
 
 const getHeaders = () => {
   const stateStr = localStorage.getItem('nexusCRM_State_v2');
@@ -65,6 +65,44 @@ export const api = {
   getUsers: async () => {
     const res = await fetch(`${API_URL}/users`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch users');
+    return res.json();
+  },
+
+  createUser: async (userData) => {
+    const res = await fetch(`${API_URL}/users`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userData)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create user');
+    }
+    return res.json();
+  },
+
+  updateUser: async (id, updates) => {
+    const res = await fetch(`${API_URL}/users/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update user');
+    }
+    return res.json();
+  },
+
+  deleteUser: async (id) => {
+    const res = await fetch(`${API_URL}/users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete user');
+    }
     return res.json();
   },
 

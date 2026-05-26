@@ -10,6 +10,7 @@ const Communication = require('../models/Communication');
 const Customer = require('../models/Customer');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 const { ROLE_HIERARCHY } = require('./auth');
+const { sendAutomatedEmail } = require('../utils/automation');
 
 // All lead routes require authentication
 router.use(authenticate);
@@ -108,6 +109,9 @@ router.post('/', requireRole(1), async (req, res) => {
 
     auditLog(null, req, 'CREATE', 'leads', id, `Lead created: ${first_name} ${last_name}`);
 
+    // Trigger automated welcome email
+    sendAutomatedEmail(newLead, 'Enquiry Welcome');
+
     res.status(201).json(newLead);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create lead' });
@@ -150,6 +154,11 @@ router.patch('/:id', requireRole(1), async (req, res) => {
         text: `Status changed: ${lead.status} → ${req.body.status}`,
         user_name: req.user.name
       });
+
+      // Trigger automated booking confirmation email
+      if (req.body.status === 'Booked') {
+        sendAutomatedEmail(updated, 'Booking Confirmation');
+      }
     }
 
     auditLog(null, req, 'UPDATE', 'leads', leadId, `Lead updated`);
@@ -196,19 +205,11 @@ router.put('/:id/cancel', requireRole(1), async (req, res) => {
       user_name: req.user.name
     });
 
-    // Send notification log if customer exists
+    // Send automated cancellation email if customer exists and notifications are enabled
     const customer = await Customer.findOne({ email: lead.email });
     if (customer && customer.notification_enabled) {
-      // Create template-like communication log
-      await Communication.create({
-        id: generateId('comm'),
-        lead_id: leadId,
-        channel: 'email',
-        direction: 'outbound',
-        template_name: 'Booking Cancelled',
-        content: `Your booking ${leadId} has been cancelled. Refund of ${refundAmount} is being processed.`,
-        status: 'Sent',
-        sent_by: req.user.name
+      sendAutomatedEmail(lead, 'Booking Cancelled', { 
+        refund_amount: `₹${refundAmount.toLocaleString()}` 
       });
     }
 
@@ -277,6 +278,16 @@ router.post('/:id/payments', requireRole(1), async (req, res) => {
     });
 
     auditLog(null, req, 'PAYMENT', 'payments', id, `Payment: ₹${amount}`);
+
+    // Trigger automated payment receipt email (using Payment Reminder template)
+    const leadDoc = await Lead.findOne({ id: leadId });
+    if (leadDoc) {
+      sendAutomatedEmail(leadDoc, 'Payment Reminder', {
+        amount: `₹${Number(amount).toLocaleString()}`,
+        due_date: new Date(newPay.date).toLocaleDateString()
+      });
+    }
+
     res.status(201).json(newPay);
   } catch (err) {
     res.status(500).json({ error: 'Failed to record payment' });

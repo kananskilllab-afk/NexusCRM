@@ -168,6 +168,20 @@ function leadReducer(state, action) {
         auditLog: [logAudit('CREATE', 'users', action.payload.id, `User identity created: ${action.payload.name}`), ...state.auditLog]
       };
     
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        users: state.users.map(u => u.id === action.payload.id ? { ...u, ...action.payload.data } : u),
+        auditLog: [logAudit('UPDATE', 'users', action.payload.id, `User identity updated: ${action.payload.data.name || 'properties'}`), ...state.auditLog]
+      };
+    
+    case 'DELETE_USER':
+      return {
+        ...state,
+        users: state.users.filter(u => u.id !== action.payload),
+        auditLog: [logAudit('DELETE', 'users', action.payload, `User identity deleted`), ...state.auditLog]
+      };
+    
     case 'DELETE_CUSTOMER':
       return {
         ...state,

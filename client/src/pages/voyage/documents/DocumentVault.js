@@ -10,6 +10,7 @@ const DocumentVault = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState('other');
+  const [filterType, setFilterType] = useState('all');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -60,6 +61,8 @@ const DocumentVault = () => {
     return <FiFile />;
   };
 
+  const filteredDocuments = documents.filter(doc => filterType === 'all' || doc.type === filterType);
+
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -80,10 +83,11 @@ const DocumentVault = () => {
         </div>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats cards as Filters */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {Object.entries(TYPE_ICONS).map(([type, icon]) => {
           const count = documents.filter(d => d.type === type).length;
+          const isSelected = filterType === type;
           return (
             <div 
               key={type} 
@@ -92,24 +96,30 @@ const DocumentVault = () => {
                 padding: '16px 12px', 
                 textAlign: 'center',
                 border: '2px solid #000',
-                boxShadow: `4px 4px 0px 0px ${TYPE_COLORS[type]}`,
-                background: '#fff',
+                boxShadow: isSelected ? `2px 2px 0px 0px #000` : `4px 4px 0px 0px ${TYPE_COLORS[type]}`,
+                background: isSelected ? TYPE_COLORS[type] : '#fff',
+                color: isSelected ? '#fff' : '#000',
                 cursor: 'pointer',
+                transform: isSelected ? 'translate(2px, 2px)' : 'none',
                 transition: 'transform 0.1s, box-shadow 0.1s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translate(-2px, -2px)';
-                e.currentTarget.style.boxShadow = `6px 6px 0px 0px ${TYPE_COLORS[type]}`;
+                if(!isSelected) {
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = `6px 6px 0px 0px ${TYPE_COLORS[type]}`;
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translate(0px, 0px)';
-                e.currentTarget.style.boxShadow = `4px 4px 0px 0px ${TYPE_COLORS[type]}`;
+                if(!isSelected) {
+                  e.currentTarget.style.transform = 'translate(0px, 0px)';
+                  e.currentTarget.style.boxShadow = `4px 4px 0px 0px ${TYPE_COLORS[type]}`;
+                }
               }}
-              onClick={() => setDocType(type)}
+              onClick={() => setFilterType(isSelected ? 'all' : type)}
             >
               <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{icon}</div>
               <div style={{ fontWeight: '900', fontSize: '1.4rem', fontFamily: 'monospace' }}>{count}</div>
-              <div style={{ fontSize: '0.8rem', color: '#000', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{type.replace('_', ' ')}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: isSelected ? '#fff' : '#000' }}>{type.replace('_', ' ')}</div>
             </div>
           );
         })}
@@ -129,7 +139,7 @@ const DocumentVault = () => {
             </tr>
           </thead>
           <tbody>
-            {documents.map(doc => (
+            {filteredDocuments.map(doc => (
               <tr key={doc.id}>
                 <td style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {getFileIcon(doc.mime_type)} {doc.filename}

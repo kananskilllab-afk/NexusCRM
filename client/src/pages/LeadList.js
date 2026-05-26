@@ -3,19 +3,43 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FiPlus, FiSearch, FiLayers, FiList, FiChevronDown, FiChevronUp, 
   FiFilter, FiMapPin, FiEye, FiEdit2, FiTrash2, FiClock,
-  FiUserPlus, FiGrid, FiPrinter
+  FiUserPlus, FiGrid, FiPrinter, FiX
 } from 'react-icons/fi';
-import { useLeads } from '../context/LeadContext';
+import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import AddLeadModal from '../components/AddLeadModal';
 import { api } from '../services/api';
+import { voyageApi } from '../services/voyageApi';
 import './LeadList.css';
 
 const LeadList = () => {
   const { state, dispatch } = useLeads();
   const navigate = useNavigate();
+
+  const userRole = state.currentUser?.role || 'Viewer';
+  const userLevel = ROLE_HIERARCHY[userRole] || 0;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState([]);
+  
+  const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [sendingBulk, setSendingBulk] = useState(false);
+
+  // Fetch templates when modal opens
+  useEffect(() => {
+    if (showBulkEmailModal && emailTemplates.length === 0) {
+      const fetchTemplates = async () => {
+        try {
+          const list = await voyageApi.getEmailTemplates();
+          setEmailTemplates(list.filter(t => t.is_active));
+        } catch (e) {
+          console.error('Failed to load email templates', e);
+        }
+      };
+      fetchTemplates();
+    }
+  }, [showBulkEmailModal, emailTemplates.length]);
 
   // Massive Filter State
   const [filters, setFilters] = useState({
@@ -106,10 +130,34 @@ const LeadList = () => {
 
   const handleBulkAction = (action) => {
     if (selectedLeads.length === 0) return alert('Please select at least one booking');
+    if (action === 'Email') {
+      setShowBulkEmailModal(true);
+      return;
+    }
     if (window.confirm(`Are you sure you want to perform ${action} on ${selectedLeads.length} bookings?`)) {
       console.log(`Performing ${action} on:`, selectedLeads);
-      // Implementation for bulk API calls
+      // Implementation for other bulk API calls
     }
+  };
+
+  const handleSendBulkEmails = async () => {
+    if (!selectedTemplateId) {
+      alert('Please select an email template.');
+      return;
+    }
+    setSendingBulk(true);
+    try {
+      const response = await voyageApi.sendBulkEmails({
+        booking_ids: selectedLeads,
+        template_id: selectedTemplateId
+      });
+      alert(response.message || `Bulk email process finished successfully!`);
+      setSelectedLeads([]);
+      setShowBulkEmailModal(false);
+    } catch (e) {
+      alert(e.message || 'Failed to send bulk emails');
+    }
+    setSendingBulk(false);
   };
 
   const handleDeleteLead = async (id) => {
@@ -248,7 +296,9 @@ const LeadList = () => {
                      <div className="action-icons-grid" style={{ justifyContent: 'flex-end' }}>
                         <div className="icon-box green" title="View" onClick={() => navigate(`/leads/${lead.id}`)}><FiEye size={12}/></div>
                         <div className="icon-box yellow" title="Edit" onClick={() => navigate(`/leads/${lead.id}`)}><FiEdit2 size={12}/></div>
-                        <div className="icon-box red" title="Delete" onClick={() => handleDeleteLead(lead.id)}><FiTrash2 size={12}/></div>
+                        {userLevel >= 4 && (
+                          <div className="icon-box red" title="Delete" onClick={() => handleDeleteLead(lead.id)}><FiTrash2 size={12}/></div>
+                        )}
                      </div>
                   </td>
                 </tr>
@@ -271,6 +321,47 @@ const LeadList = () => {
            </div>
         </div>
       </div>
+
+      {showBulkEmailModal && (
+        <div className="modal-overlay">
+          <div className="modal-content card" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>Bulk Email Selection</h3>
+              <button className="close-btn" onClick={() => setShowBulkEmailModal(false)}><FiX /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '10px 0' }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                You have selected <strong>{selectedLeads.length}</strong> bookings. Choose a template to send them bulk emails.
+              </p>
+              <div className="form-group">
+                <label>Select Email Template *</label>
+                <select 
+                  value={selectedTemplateId} 
+                  onChange={e => setSelectedTemplateId(e.target.value)}
+                  style={{ width: '100%', padding: '8px', border: 'var(--border-brutal)' }}
+                >
+                  <option value="">— Choose a template —</option>
+                  {emailTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedTemplateId && (
+                <div style={{ padding: '10px', background: '#f9fafb', border: '1px solid #e5e7eb', fontSize: '0.8rem', borderRadius: '4px' }}>
+                  <strong>Subject Preview:</strong> {emailTemplates.find(t => t.id === selectedTemplateId)?.subject}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowBulkEmailModal(false)} disabled={sendingBulk}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSendBulkEmails} disabled={sendingBulk || !selectedTemplateId}>
+                {sendingBulk ? 'Sending...' : 'Send Bulk Emails'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
