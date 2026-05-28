@@ -1,0 +1,18 @@
+{
+  "name": "nexus-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kanan Travel CRM — Express API + React (CRA) client. Backend dependencies live at the root via the npm workspace; client is installed separately to avoid CRA/workspace hoisting issues.",
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm --prefix client install",
+    "client": "npm --prefix client start",
+    "client:build": "npm --prefix client run build",
+    "server": "npm --workspace server start",
+    "server:dev": "npm --workspace server run dev",
+    "seed:voyage": "node server/seeders/voyage/seed.js",
+    "check:db": "node scripts/check-db.js"
+  }
+}
