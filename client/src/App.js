@@ -33,6 +33,7 @@ import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
 import SupplierContracts from './pages/voyage/suppliers/SupplierContracts';
 import DocumentVault from './pages/voyage/documents/DocumentVault';
 import EmailManager from './pages/voyage/emails/EmailManager';
+import CookieConsent from './components/common/CookieConsent';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requiredLevel = 0 }) => {
@@ -260,6 +261,7 @@ function App() {
     <LeadProvider>
       <VoyageProvider>
         <AppRoutes />
+        <CookieConsent />
       </VoyageProvider>
     </LeadProvider>
   );

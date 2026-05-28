@@ -35,7 +35,7 @@ const CustomerSchema = new mongoose.Schema(
 // 1. Post-Save Sync: Automatically mirror Customer creations/updates to Voyage Contacts
 CustomerSchema.post('save', async function (doc) {
   try {
-    const { Contact, Tenant } = require('../../travel_crm/models');
+    const { Contact, Tenant } = require('./voyage');
 
     // Find the first or default Tenant in VoyageCRM
     const tenant = await Tenant.findOne();
@@ -89,7 +89,7 @@ CustomerSchema.pre('deleteOne', { document: false, query: true }, async function
     const customer = await this.model.findOne(filter);
     if (!customer) return;
 
-    const { Contact } = require('../../travel_crm/models');
+    const { Contact } = require('./voyage');
     const LoyaltyPoints = require('./LoyaltyPoints');
 
     // 2.1. Cascade Delete associated LoyaltyPoints

@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const mongoose = require('mongoose');
-const { EmailTemplate, EmailSend, Tenant } = require('../../travel_crm/models');
+const { EmailTemplate, EmailSend, Tenant } = require('../models/voyage');
 const CRMUser = require('../models/CRMUser');
 const Communication = require('../models/Communication');
 const Activity = require('../models/Activity');
@@ -22,6 +22,11 @@ const globalTransporter = nodemailer.createTransport({
 
 async function sendAutomatedEmail(lead, templateName, customVariables = {}) {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      console.warn(`[Automation] MongoDB is not connected. Skipping automated email "${templateName}".`);
+      return;
+    }
+
     // 1. Resolve template
     const template = await EmailTemplate.findOne({ name: templateName, is_active: true });
     if (!template) {
@@ -76,6 +81,11 @@ async function sendAutomatedEmail(lead, templateName, customVariables = {}) {
 
     // 4. Log in EmailSend
     const tenant = await Tenant.findOne();
+    if (!tenant) {
+      console.warn(`[Automation] Tenant not found. Skipping automated email "${templateName}".`);
+      return;
+    }
+
     const emailSend = await EmailSend.create({
       tenant_id: tenant._id,
       template_id: template._id,
@@ -139,6 +149,11 @@ async function sendAutomatedEmail(lead, templateName, customVariables = {}) {
 
 async function initializeDefaultTemplates() {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      console.warn('[Automation] MongoDB is not connected. Skipping default template initialization.');
+      return;
+    }
+
     const tenant = await Tenant.findOne();
     if (!tenant) return;
 
@@ -188,9 +203,4 @@ async function initializeDefaultTemplates() {
   }
 }
 
-// Automatically initialize default templates when the module is loaded
-setTimeout(() => {
-  initializeDefaultTemplates();
-}, 2000);
-
-module.exports = { sendAutomatedEmail };
+module.exports = { sendAutomatedEmail, initializeDefaultTemplates };

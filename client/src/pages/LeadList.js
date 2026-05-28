@@ -6,7 +6,7 @@ import {
   FiUserPlus, FiGrid, FiPrinter, FiX
 } from 'react-icons/fi';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
-import AddLeadModal from '../components/AddLeadModal';
+import AddLeadModal from '../components/modals/AddLeadModal';
 import { api } from '../services/api';
 import { voyageApi } from '../services/voyageApi';
 import './LeadList.css';

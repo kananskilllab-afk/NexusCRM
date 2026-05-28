@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { BookingSegment } = require('../../../travel_crm/models');
+const { BookingSegment } = require('../../models/voyage');
 
 // GET /api/voyage/segments/:bookingId — list segments for a booking
 router.get('/:bookingId', authenticateToken, async (req, res) => {

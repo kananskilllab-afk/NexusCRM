@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { Booking, Contact, Tenant, PipelineStage } = require('../../../travel_crm/models');
+const { Booking, Contact, Tenant, PipelineStage } = require('../../models/voyage');
 
 // Get all bookings
 router.get('/', authenticateToken, async (req, res) => {

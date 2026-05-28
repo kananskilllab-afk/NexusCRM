@@ -68,3 +68,82 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Stage-by-stage mapping : lead chnages
+
+  Stage: 1. Lead comes in
+  Where it lives now: UTM auto-capture in AddLeadModal → stored on Lead 
+  ────────────────────────────────────────
+  Stage: 2. Lead captured
+  Where it lives now: Lead.nextLeadCode() issues LD-XXXXXX;
+  enquiry_types
+    already drives the sub-form
+  ────────────────────────────────────────
+  Stage: 3. Auto-assign
+  Where it lives now: pickAgent() round-robin + visa skill-match; POST  
+    /api/leads/:id/auto-assign
+  ────────────────────────────────────────
+  Stage: 4. Qualify
+  Where it lives now: POST /api/leads/:id/qualify sets status, scores   
+    0–100, auto-creates SLA follow-up when Qualified
+  ────────────────────────────────────────
+  Stage: 5. Kanban
+  Where it lives now: pipeline_stage enum + POST /api/leads/:id/pipeline
+  ────────────────────────────────────────
+  Stage: 6. Itinerary
+  Where it lives now: existing Voyage ItineraryVersion model retained   
+  (no
+    change needed)
+  ────────────────────────────────────────
+  Stage: 7. Quote
+  Where it lives now: POST /api/quotes — auto-routes to Pending Approval
+
+    if discount > threshold; manager approve/reject/send; margin hidden 
+    from juniors
+  ────────────────────────────────────────
+  Stage: 8. Customer review
+  Where it lives now: POST /api/leads/:id/share-link issues 14-day      
+  token;
+    public GET/POST /api/public/share/:token[/respond] (approve /       
+    request_changes loops back & bumps revision_cycles)
+  ────────────────────────────────────────
+  Stage: 9. Booking + Invoice
+  Where it lives now: POST /api/invoices — issues GST-correct invoice   
+    from quote, records deposit + balance, locks lead to Won/Booked     
+  ────────────────────────────────────────
+  Stage: 10. Travel documents
+  Where it lives now: POST /api/invoices/:id/supplier-confirmation logs 
+    per-segment refs (existing Document Vault retains files)
+  ────────────────────────────────────────
+  Stage: 11. Trip in progress
+  Where it lives now: Activity log on lead is already there; no schema  
+    change needed
+  ────────────────────────────────────────
+  Stage: 12. Trip closed
+  Where it lives now: POST /api/leads/:id/close-trip — captures
+    rating/comment, credits loyalty (1pt/₹100 paid), audit-logs the     
+  close
+
+  Notes & env
+
+  - Discount threshold is DISCOUNT_THRESHOLD_PCT (default 10).
+  - GST split uses HOME_STATE (default Gujarat).
+  - Public share URL base reads from APP_URL (defaults to
+  http://localhost:5005).
+  - A separate Node server instance is already running on port 5000 —   
+  restart it to pick up the new routes. Boot was verified on port 5099  
+  against the live Atlas cluster.

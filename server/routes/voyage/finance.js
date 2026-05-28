@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { Quote, PaymentSchedule, Commission } = require('../../../travel_crm/models');
+const { Quote, PaymentSchedule, Commission } = require('../../models/voyage');
 
 // Get all quotes
 router.get('/quotes', authenticateToken, async (req, res) => {

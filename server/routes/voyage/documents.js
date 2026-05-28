@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { authenticateToken } = require('../../middleware/auth');
-const { Document, Tenant } = require('../../../travel_crm/models');
+const { Document, Tenant } = require('../../models/voyage');
 
 // Configure local file storage (can swap to S3/GCS later)
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');

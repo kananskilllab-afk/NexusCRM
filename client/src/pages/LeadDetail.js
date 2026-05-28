@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import { FiEdit2, FiMessageCircle, FiClock, FiArrowLeft, FiAlertCircle, FiMail } from 'react-icons/fi';
-import TemplateSelector from '../components/TemplateSelector';
+import TemplateSelector from '../components/common/TemplateSelector';
 import AboutTab from './LeadDetailTabs/AboutTab';
 import BillingTab from './LeadDetailTabs/BillingTab';
 import HistoryTab from './LeadDetailTabs/HistoryTab';

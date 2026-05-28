@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { PipelineStage, Booking, Tenant } = require('../../../travel_crm/models');
+const { PipelineStage, Booking, Tenant } = require('../../models/voyage');
 
 // Get full pipeline state
 router.get('/', authenticateToken, async (req, res) => {

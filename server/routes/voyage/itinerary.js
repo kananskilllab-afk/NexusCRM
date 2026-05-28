@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { ItineraryVersion } = require('../../../travel_crm/models');
+const { ItineraryVersion } = require('../../models/voyage');
 
 // Get itinerary segments for a booking
 router.get('/:bookingId', authenticateToken, async (req, res) => {

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { Tenant, User } = require('../../../travel_crm/models');
+const { Tenant, User } = require('../../models/voyage');
 
 router.post('/register', async (req, res) => {
   const { agency_name, full_name, email, password } = req.body;

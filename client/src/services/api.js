@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5005/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const getHeaders = () => {
   const stateStr = localStorage.getItem('nexusCRM_State_v2');
@@ -172,6 +172,92 @@ export const api = {
       body: JSON.stringify(paymentData)
     });
     if (!res.ok) throw new Error('Failed to add payment');
+    return res.json();
+  },
+
+  // --- Process-flow endpoints (12-stage CRM) ---
+  qualifyLead: async (leadId, payload) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/qualify`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to qualify lead');
+    return res.json();
+  },
+
+  movePipeline: async (leadId, stage) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/pipeline`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify({ stage })
+    });
+    if (!res.ok) throw new Error('Failed to move pipeline stage');
+    return res.json();
+  },
+
+  autoAssign: async (leadId) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/auto-assign`, {
+      method: 'POST', headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to auto-assign');
+    return res.json();
+  },
+
+  generateShareLink: async (leadId) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/share-link`, {
+      method: 'POST', headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to generate share link');
+    return res.json();
+  },
+
+  closeTrip: async (leadId, payload) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/close-trip`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to close trip');
+    return res.json();
+  },
+
+  // Quotes
+  createQuote: async (payload) => {
+    const res = await fetch(`${API_URL}/quotes`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to create quote');
+    return res.json();
+  },
+  getQuotesForLead: async (leadId) => {
+    const res = await fetch(`${API_URL}/quotes?lead_id=${encodeURIComponent(leadId)}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load quotes');
+    return res.json();
+  },
+  approveQuote: async (id) => {
+    const res = await fetch(`${API_URL}/quotes/${id}/approve`, { method: 'POST', headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to approve quote');
+    return res.json();
+  },
+  sendQuote: async (id) => {
+    const res = await fetch(`${API_URL}/quotes/${id}/send`, { method: 'POST', headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to send quote');
+    return res.json();
+  },
+
+  // Invoices
+  createInvoice: async (payload) => {
+    const res = await fetch(`${API_URL}/invoices`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to create invoice');
+    return res.json();
+  },
+  getInvoicesForLead: async (leadId) => {
+    const res = await fetch(`${API_URL}/invoices?lead_id=${encodeURIComponent(leadId)}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load invoices');
+    return res.json();
+  },
+  addSupplierConfirmation: async (invoiceId, payload) => {
+    const res = await fetch(`${API_URL}/invoices/${invoiceId}/supplier-confirmation`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to log supplier confirmation');
     return res.json();
   }
 };

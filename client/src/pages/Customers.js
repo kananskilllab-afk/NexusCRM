@@ -7,7 +7,7 @@ import {
   FiUserPlus, FiUpload, FiDownload, FiUser, FiHome
 } from 'react-icons/fi';
 import { api } from '../services/api';
-import CustomerModal from '../components/CustomerModal';
+import CustomerModal from '../components/modals/CustomerModal';
 import './LeadList.css'; // Reusing established table styles
 
 const Customers = () => {

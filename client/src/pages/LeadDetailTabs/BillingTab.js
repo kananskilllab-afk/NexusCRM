@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FiPlus, FiTrash2, FiFileText, FiDollarSign, FiCalendar, FiPrinter, FiTruck } from 'react-icons/fi';
 import { useLeads } from '../../context/LeadContext';
 import { api } from '../../services/api';
-import Receipt from '../../components/Receipt';
+import Receipt from '../../components/common/Receipt';
 
 const BillingTab = ({ lead }) => {
   const { dispatch } = useLeads();

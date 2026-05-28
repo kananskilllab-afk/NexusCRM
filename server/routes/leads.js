@@ -11,6 +11,10 @@ const Customer = require('../models/Customer');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 const { ROLE_HIERARCHY } = require('./auth');
 const { sendAutomatedEmail } = require('../utils/automation');
+const { scoreLead } = require('../utils/leadScoring');
+const { pickAgent } = require('../utils/assignment');
+const crypto = require('crypto');
+const LoyaltyPoints = require('../models/LoyaltyPoints');
 
 // All lead routes require authentication
 router.use(authenticate);
@@ -80,40 +84,64 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/leads - create lead
+// POST /api/leads - create lead (Stages 1-4)
 router.post('/', requireRole(1), async (req, res) => {
   const id = generateId('L');
   const {
     first_name, last_name, email, mobile, status = 'New', priority = 'Normal',
     no_adults = 1, no_children = 0, no_infants = 0, destination, lead_source,
     assigned_to, travel_start_date, travel_end_date,
-    enquiry_types = [], enquiry_data = {}, notes, tags = []
+    enquiry_types = [], enquiry_data = {}, notes, tags = [],
+    utm_source, utm_medium, utm_campaign, referrer_url,
+    auto_assign = true
   } = req.body;
 
   try {
+    // Stage 2 — Lead Code (LD-100001)
+    const lead_code = await Lead.nextLeadCode();
+
+    // Stage 3 — Round-robin if no explicit owner
+    let finalAssignedTo = assigned_to || null;
+    if (!finalAssignedTo && auto_assign) {
+      const agent = await pickAgent({ enquiry_types });
+      finalAssignedTo = agent ? agent.name : req.user.name;
+    } else if (!finalAssignedTo) {
+      finalAssignedTo = req.user.name;
+    }
+
+    // Stage 4 — Lead score (initial, no engagement yet)
+    const initialScore = scoreLead(
+      { lead_source, enquiry_data, created_at: new Date() },
+      { touchpoints: 0 }
+    );
+
     const newLead = await Lead.create({
-      id, first_name, last_name, email, mobile, status, priority,
+      id, lead_code, first_name, last_name, email, mobile, status, priority,
       no_adults, no_children, no_infants, destination, lead_source,
-      assigned_to: assigned_to || req.user.name, travel_start_date, travel_end_date,
-      enquiry_types, enquiry_data, notes, tags
+      assigned_to: finalAssignedTo, travel_start_date, travel_end_date,
+      enquiry_types, enquiry_data, notes, tags,
+      utm_source, utm_medium, utm_campaign, referrer_url,
+      lead_score: initialScore,
+      pipeline_stage: 'Inquiry'
     });
 
-    // Auto-create activity
+    // Auto-create activity (Stage 1 capture audit)
     await Activity.create({
       id: generateId('act'),
       lead_id: id,
       type: 'System',
-      text: `Lead created by ${req.user.name}`,
+      text: `Lead ${lead_code} captured (source: ${lead_source || 'Unknown'}). Auto-assigned to ${finalAssignedTo}.`,
       user_name: req.user.name
     });
 
-    auditLog(null, req, 'CREATE', 'leads', id, `Lead created: ${first_name} ${last_name}`);
+    auditLog(null, req, 'CREATE', 'leads', id, `Lead ${lead_code} created: ${first_name} ${last_name}`);
 
     // Trigger automated welcome email
     sendAutomatedEmail(newLead, 'Enquiry Welcome');
 
     res.status(201).json(newLead);
   } catch (err) {
+    console.error('Create lead failed:', err);
     res.status(500).json({ error: 'Failed to create lead' });
   }
 });
@@ -128,7 +156,10 @@ router.patch('/:id', requireRole(1), async (req, res) => {
 
     const allowed = ['first_name','last_name','email','mobile','status','priority','destination',
       'lead_source','assigned_to','travel_start_date','travel_end_date','enquiry_types',
-      'enquiry_data','no_adults','no_children','no_infants','notes','tags'];
+      'enquiry_data','no_adults','no_children','no_infants','notes','tags',
+      'utm_source','utm_medium','utm_campaign','referrer_url',
+      'qualification_status','qualification_reason','lead_score',
+      'pipeline_stage','gstin','place_of_supply'];
 
     const updates = {};
     allowed.forEach(key => {
@@ -460,6 +491,256 @@ router.get('/:id/communications', async (req, res) => {
     res.json(comms);
   } catch (err) {
     res.status(500).json({ error: 'Failed to list communications' });
+  }
+});
+
+// ============================================================================
+// Stage 3 — Manual re-assignment via round-robin
+// ============================================================================
+router.post('/:id/auto-assign', requireRole(2), async (req, res) => {
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const agent = await pickAgent({ enquiry_types: lead.enquiry_types || [] });
+    if (!agent) return res.status(404).json({ error: 'No eligible agent available' });
+
+    lead.assigned_to = agent.name;
+    await lead.save();
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'Assignment',
+      text: `Round-robin reassigned to ${agent.name}`,
+      user_name: req.user.name
+    });
+
+    auditLog(null, req, 'ASSIGN', 'leads', lead.id, `Reassigned to ${agent.name}`);
+    res.json({ assigned_to: agent.name, lead });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// Stage 4 — Qualify / Unqualify with SLA-based follow-up
+// ============================================================================
+router.post('/:id/qualify', requireRole(1), async (req, res) => {
+  const { decision, reason, sla_hours = 24 } = req.body; // 'Qualified' | 'Unqualified' | 'Pending'
+
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Recompute score using engagement count
+    const touchpoints = await Activity.countDocuments({ lead_id: lead.id });
+    const newScore = scoreLead(lead.toObject(), { touchpoints });
+
+    lead.qualification_status = decision;
+    lead.qualification_reason = reason;
+    lead.lead_score = newScore;
+
+    if (decision === 'Unqualified') {
+      lead.status = 'Lost';
+      lead.pipeline_stage = 'Lost';
+    } else if (decision === 'Qualified') {
+      lead.status = 'Qualified';
+      lead.pipeline_stage = lead.pipeline_stage === 'Lost' ? 'Inquiry' : lead.pipeline_stage;
+      // Auto-create follow-up task respecting SLA
+      const due = new Date(Date.now() + sla_hours * 3600 * 1000);
+      await FollowUp.create({
+        id: generateId('fu'),
+        lead_id: lead.id,
+        date: due.toISOString(),
+        method: 'Phone',
+        notes: `Auto-created on qualification (SLA ${sla_hours}h)`,
+        created_by: req.user.name
+      });
+    }
+    await lead.save();
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'Qualification',
+      text: `Marked ${decision}${reason ? ' — ' + reason : ''}. Score: ${newScore}`,
+      user_name: req.user.name
+    });
+
+    auditLog(null, req, 'QUALIFY', 'leads', lead.id, `${decision} (score ${newScore})`);
+    res.json({ lead, score: newScore });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// Stage 5 — Move card on Kanban pipeline
+// ============================================================================
+router.post('/:id/pipeline', requireRole(1), async (req, res) => {
+  const { stage } = req.body;
+  const valid = ['Inquiry', 'Quoted', 'Negotiation', 'Won', 'Lost'];
+  if (!valid.includes(stage)) return res.status(400).json({ error: 'Invalid pipeline stage' });
+
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const prev = lead.pipeline_stage;
+    lead.pipeline_stage = stage;
+    await lead.save();
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'Pipeline',
+      text: `Pipeline: ${prev} → ${stage}`,
+      user_name: req.user.name
+    });
+    res.json({ lead });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
+// Stage 8 — Generate secure share link + customer review actions
+// ============================================================================
+router.post('/:id/share-link', requireRole(1), async (req, res) => {
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const token = crypto.randomBytes(24).toString('hex');
+    lead.share_token = token;
+    lead.share_token_expires_at = new Date(Date.now() + 14 * 86400 * 1000); // 14d
+    lead.customer_approval_status = 'Sent';
+    await lead.save();
+
+    const baseUrl = process.env.APP_URL || 'http://localhost:5005';
+    const url = `${baseUrl}/share/${token}`;
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'Share',
+      text: `Share link generated for customer review`,
+      user_name: req.user.name
+    });
+
+    res.json({ url, token, expires_at: lead.share_token_expires_at });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public — fetch shared itinerary (no auth)
+const publicRouter = express.Router();
+publicRouter.get('/share/:token', async (req, res) => {
+  try {
+    const lead = await Lead.findOne({ share_token: req.params.token }).lean();
+    if (!lead) return res.status(404).json({ error: 'Invalid link' });
+    if (lead.share_token_expires_at && new Date(lead.share_token_expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Link expired' });
+    }
+    const billingItems = await BillingItem.find({ lead_id: lead.id }).lean();
+    const suppliers = await AssignedSupplier.find({ lead_id: lead.id }).lean();
+    res.json({
+      lead_code: lead.lead_code,
+      customer_name: `${lead.first_name || ''} ${lead.last_name || ''}`.trim(),
+      destination: lead.destination,
+      travel_start_date: lead.travel_start_date,
+      travel_end_date: lead.travel_end_date,
+      no_adults: lead.no_adults, no_children: lead.no_children,
+      itinerary: lead.enquiry_data,
+      items: billingItems,
+      suppliers,
+      approval_status: lead.customer_approval_status
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+publicRouter.post('/share/:token/respond', async (req, res) => {
+  const { action, comment } = req.body; // 'approve' | 'request_changes'
+  try {
+    const lead = await Lead.findOne({ share_token: req.params.token });
+    if (!lead) return res.status(404).json({ error: 'Invalid link' });
+
+    if (action === 'approve') {
+      lead.customer_approval_status = 'Approved';
+      lead.pipeline_stage = 'Won';
+      lead.status = 'Booked';
+    } else if (action === 'request_changes') {
+      lead.customer_approval_status = 'ChangesRequested';
+      lead.customer_change_request = comment;
+      lead.revision_cycles = (lead.revision_cycles || 0) + 1;
+    } else {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    await lead.save();
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'CustomerReview',
+      text: action === 'approve'
+        ? 'Customer approved itinerary via share link'
+        : `Customer requested changes (cycle ${lead.revision_cycles}): ${comment || ''}`,
+      user_name: 'Customer'
+    });
+
+    res.json({ ok: true, status: lead.customer_approval_status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.publicRoutes = publicRouter;
+
+// ============================================================================
+// Stage 12 — Close trip: feedback + loyalty credit + commission release
+// ============================================================================
+router.post('/:id/close-trip', requireRole(1), async (req, res) => {
+  const { rating, comment } = req.body;
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    lead.status = 'Completed';
+    lead.trip_completed_at = new Date();
+    if (rating !== undefined) lead.customer_feedback_rating = rating;
+    if (comment) lead.customer_feedback_comment = comment;
+    await lead.save();
+
+    // Loyalty: 1 point per ₹100 paid
+    const payments = await Payment.find({ lead_id: lead.id, type: { $ne: 'refunded' } }).lean();
+    const paidTotal = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    const points = Math.floor(paidTotal / 100);
+
+    const customer = lead.email ? await Customer.findOne({ email: lead.email }) : null;
+    if (customer && points > 0) {
+      await LoyaltyPoints.create({
+        id: generateId('lp'),
+        customer_id: customer.id,
+        points_earned: points,
+        points_redeemed: 0
+      });
+    }
+
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: lead.id,
+      type: 'TripClosed',
+      text: `Trip closed. Feedback: ${rating ?? 'N/A'}/5. Loyalty credited: ${points} pts.`,
+      user_name: req.user.name
+    });
+
+    auditLog(null, req, 'CLOSE_TRIP', 'leads', lead.id, `Trip closed, ${points} loyalty pts`);
+    res.json({ lead, loyalty_points: points });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

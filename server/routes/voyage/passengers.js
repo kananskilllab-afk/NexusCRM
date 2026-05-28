@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../middleware/auth');
-const { BookingPassenger } = require('../../../travel_crm/models');
+const { BookingPassenger } = require('../../models/voyage');
 
 // GET /api/voyage/passengers/:bookingId — list passengers for a booking
 router.get('/:bookingId', authenticateToken, async (req, res) => {

@@ -1,16 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-require('dotenv').config(); // Hot-reloaded environmental configuration
+const path = require('path');
+// Load .env from this file's directory regardless of where node was invoked.
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Unify Mongoose cache to share the active connection pool between server & travel_crm
-try {
-  const travelMongoosePath = require.resolve('../travel_crm/node_modules/mongoose');
-  require.cache[travelMongoosePath] = require.cache[require.resolve('mongoose')];
-  console.log('🔗 Mongoose module cache unified successfully between standard CRM and VoyageCRM.');
-} catch (e) {
-  console.warn('⚠️ Could not resolve travel_crm Mongoose path:', e.message);
-}
+// All models (NexusCRM + Voyage) live under server/models/, so a single
+// mongoose instance is used throughout. No connection-pool gymnastics needed.
 
 const { router: authRouter } = require('./routes/auth');
 const leadsRouter = require('./routes/leads');
@@ -23,6 +19,8 @@ const analyticsRouter = require('./routes/analytics');
 const activityFeedRouter = require('./routes/activity_feed');
 const travelServicesRouter = require('./routes/travel_services');
 const voyageRouter = require('./routes/voyage/index');
+const quotesRouter = require('./routes/quotes');
+const invoicesRouter = require('./routes/invoices');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +28,7 @@ const PORT = process.env.PORT || 5000;
 // Initialize MongoDB Atlas connection & CRM Data Seeder
 const mongoose = require('mongoose');
 const { seedDatabase } = require('./db/seedCRM');
+const { initializeDefaultTemplates } = require('./utils/automation');
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -41,6 +40,7 @@ mongoose.connect(MONGODB_URI)
   .then(async () => {
     console.log('🍃 Connected to MongoDB Atlas successfully');
     await seedDatabase();
+    await initializeDefaultTemplates();
   })
   .catch(err => {
     console.error('❌ Failed to connect to MongoDB Atlas:', err);
@@ -54,6 +54,8 @@ app.use(morgan('dev'));
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/leads', leadsRouter);
+// Public (unauthenticated) share-link routes — Stage 8 customer review
+if (leadsRouter.publicRoutes) app.use('/api/public', leadsRouter.publicRoutes);
 app.use('/api/users', usersRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/suppliers', suppliersRouter);
@@ -63,6 +65,8 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/activity-feed', activityFeedRouter);
 app.use('/api/travel-services', travelServicesRouter);
 app.use('/api/voyage', voyageRouter);
+app.use('/api/quotes', quotesRouter);
+app.use('/api/invoices', invoicesRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
