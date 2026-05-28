@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bookingSegmentSchema = new mongoose.Schema(
   {
     booking_id:   { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
-    supplier_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+    supplier_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'VoyageSupplier' },
     contract_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'SupplierContract' }, // NEW
     segment_type: {
       type: String,

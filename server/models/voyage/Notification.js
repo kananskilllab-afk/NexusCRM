@@ -22,4 +22,4 @@ const notificationSchema = new mongoose.Schema(
 
 notificationSchema.index({ user_id: 1, read_at: 1 });
 
-module.exports = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+module.exports = mongoose.models.VoyageNotification || mongoose.model('VoyageNotification', notificationSchema);

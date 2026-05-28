@@ -23,4 +23,4 @@ const supplierSchema = new mongoose.Schema(
 
 supplierSchema.index({ tenant_id: 1, name: 1 });
 
-module.exports = mongoose.models.Supplier || mongoose.model('Supplier', supplierSchema);
+module.exports = mongoose.models.VoyageSupplier || mongoose.model('VoyageSupplier', supplierSchema);

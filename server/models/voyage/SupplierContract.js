@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const supplierContractSchema = new mongoose.Schema(
   {
     tenant_id:               { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
-    supplier_id:             { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+    supplier_id:             { type: mongoose.Schema.Types.ObjectId, ref: 'VoyageSupplier', required: true },
     name:                    { type: String, required: true },
     net_rate_multiplier:     { type: Number, default: 1.0 },
     commission_override_pct: { type: Number },

@@ -18,4 +18,4 @@ const auditLogSchema = new mongoose.Schema(
 
 auditLogSchema.index({ tenant_id: 1, entity_type: 1, entity_id: 1 });
 
-module.exports = mongoose.models.AuditLog || mongoose.model('AuditLog', auditLogSchema);
+module.exports = mongoose.models.VoyageAuditLog || mongoose.model('VoyageAuditLog', auditLogSchema);

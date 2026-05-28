@@ -1,37 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiSave, FiUser, FiInfo, FiSliders, FiShield, FiCalendar } from 'react-icons/fi';
+import { FiX, FiSave, FiUser, FiInfo, FiSliders, FiShield, FiCalendar, FiRotateCcw } from 'react-icons/fi';
 import './Modal.css';
+import { hasConsent, loadDraft, saveDraft, clearDraft, loadDefaults, saveDefaults } from '../../utils/cookies';
 
 const SALUTATION_OPTIONS = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.'];
 const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP'];
 const SOURCE_OPTIONS = ['Website', 'Referral', 'Google Ad', 'Facebook Ad', 'WhatsApp', 'Instagram', 'Walk-in', 'Other'];
 
-const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view' }) => {
-  const [formData, setFormData] = useState({
-    salutation: 'Mr.',
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile: '',
-    phone: '',
-    city: '',
-    address: '',
-    date_of_birth: '',
-    anniversary: '',
-    customer_type: 'Individual',
-    source: 'Website',
-    tags: '',
-    notes: '',
-    preferred_currency: 'INR',
-    notification_enabled: 1,
-    two_factor_enabled: 0,
-    gdpr_consent: false
-  });
+const FORM_ID = 'customer_create';
 
+const blankCustomerForm = (defaults = {}) => ({
+  salutation: defaults.salutation || 'Mr.',
+  first_name: '',
+  last_name: '',
+  email: '',
+  mobile: '',
+  phone: '',
+  city: defaults.city || '',
+  address: '',
+  date_of_birth: '',
+  anniversary: '',
+  customer_type: defaults.customer_type || 'Individual',
+  source: defaults.source || 'Website',
+  tags: '',
+  notes: '',
+  preferred_currency: defaults.preferred_currency || 'INR',
+  notification_enabled: 1,
+  two_factor_enabled: 0,
+  gdpr_consent: false,
+});
+
+const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view' }) => {
+  const [formData, setFormData] = useState(() => blankCustomerForm());
   const [activeSection, setActiveSection] = useState('personal');
   const [error, setError] = useState('');
+  const [restoredDraft, setRestoredDraft] = useState(false);
+
+  const isCreate = !customer && mode !== 'view';
 
   useEffect(() => {
+    if (!isOpen) return;
+    setError('');
+    setRestoredDraft(false);
+
     if (customer) {
       const parsedTags = customer.tags ? (Array.isArray(customer.tags) ? customer.tags.join(', ') : customer.tags) : '';
       setFormData({
@@ -54,30 +65,24 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view'
         two_factor_enabled: customer.two_factor_enabled !== undefined ? customer.two_factor_enabled : 0,
         gdpr_consent: !!customer.gdpr_consent_at
       });
-    } else {
-      setFormData({
-        salutation: 'Mr.',
-        first_name: '',
-        last_name: '',
-        email: '',
-        mobile: '',
-        phone: '',
-        city: '',
-        address: '',
-        date_of_birth: '',
-        anniversary: '',
-        customer_type: 'Individual',
-        source: 'Website',
-        tags: '',
-        notes: '',
-        preferred_currency: 'INR',
-        notification_enabled: 1,
-        two_factor_enabled: 0,
-        gdpr_consent: false
-      });
+      return;
     }
-    setError('');
+
+    // Create mode — restore draft if present, otherwise seed last-used defaults.
+    const draft = loadDraft(FORM_ID);
+    if (draft) {
+      setFormData({ ...blankCustomerForm(), ...draft });
+      setRestoredDraft(true);
+    } else {
+      setFormData(blankCustomerForm(loadDefaults(FORM_ID)));
+    }
   }, [customer, isOpen]);
+
+  // Auto-save draft only when creating a new customer.
+  useEffect(() => {
+    if (!isOpen || !isCreate || !hasConsent()) return;
+    saveDraft(FORM_ID, formData);
+  }, [isOpen, isCreate, formData]);
 
   if (!isOpen) return null;
 
@@ -103,8 +108,25 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view'
       gdpr_consent_at: formData.gdpr_consent ? (customer?.gdpr_consent_at || new Date().toISOString()) : null
     };
 
+    if (isCreate) {
+      saveDefaults(FORM_ID, {
+        salutation:         formData.salutation,
+        city:               formData.city,
+        customer_type:      formData.customer_type,
+        source:             formData.source,
+        preferred_currency: formData.preferred_currency,
+      });
+      clearDraft(FORM_ID);
+    }
+
     onSave(payload);
     onClose();
+  };
+
+  const handleClearDraft = () => {
+    clearDraft(FORM_ID);
+    setFormData(blankCustomerForm(loadDefaults(FORM_ID)));
+    setRestoredDraft(false);
   };
 
   const isView = mode === 'view';
@@ -151,6 +173,15 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view'
           {error && (
             <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem' }}>
               {error}
+            </div>
+          )}
+
+          {restoredDraft && (
+            <div style={{ background: '#EEF6FF', color: '#1F3A68', padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Restored your unsaved entries from last time.</span>
+              <button type="button" onClick={handleClearDraft} style={{ background: 'transparent', border: 'none', color: '#1F3A68', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <FiRotateCcw /> Start fresh
+              </button>
             </div>
           )}
 
@@ -399,15 +430,22 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view'
         </form>
 
         {/* Modal Footer */}
-        <div className="modal-footer" style={{ padding: '20px 30px', borderTop: '1px solid var(--divider)', margin: 0 }}>
-          <button type="button" className="btn btn-outline" onClick={onClose}>
-            {isView ? 'Close' : 'Cancel'}
-          </button>
-          {!isView && (
-            <button type="button" className="btn btn-primary" onClick={handleSubmit}>
-              <FiSave /> {customer ? 'Save Changes' : 'Create Customer'}
+        <div className="modal-footer" style={{ padding: '20px 30px', borderTop: '1px solid var(--divider)', margin: 0, justifyContent: 'space-between' }}>
+          {isCreate ? (
+            <button type="button" className="btn btn-outline" onClick={handleClearDraft} title="Clear saved entries for this form">
+              <FiRotateCcw /> Clear
             </button>
-          )}
+          ) : <span />}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="btn btn-outline" onClick={onClose}>
+              {isView ? 'Close' : 'Cancel'}
+            </button>
+            {!isView && (
+              <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                <FiSave /> {customer ? 'Save Changes' : 'Create Customer'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

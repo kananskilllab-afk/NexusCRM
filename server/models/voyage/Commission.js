@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const commissionSchema = new mongoose.Schema(
   {
     booking_id:     { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
-    supplier_id:    { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+    supplier_id:    { type: mongoose.Schema.Types.ObjectId, ref: 'VoyageSupplier' },
     agent_id:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     expected_cents: { type: Number, default: 0 },
     received_cents: { type: Number, default: 0 },

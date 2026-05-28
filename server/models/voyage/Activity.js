@@ -20,4 +20,4 @@ const activitySchema = new mongoose.Schema(
 activitySchema.index({ tenant_id: 1, contact_id: 1 });
 activitySchema.index({ tenant_id: 1, booking_id: 1 });
 
-module.exports = mongoose.models.Activity || mongoose.model('Activity', activitySchema);
+module.exports = mongoose.models.VoyageActivity || mongoose.model('VoyageActivity', activitySchema);
