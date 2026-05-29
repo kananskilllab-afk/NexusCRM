@@ -227,6 +227,25 @@ function leadReducer(state, action) {
         suppliers: [...state.suppliers, action.payload]
       };
 
+    case 'SET_SUPPLIERS':
+      return {
+        ...state,
+        isLoading: false,
+        suppliers: action.payload
+      };
+
+    case 'UPDATE_SUPPLIER':
+      return {
+        ...state,
+        suppliers: state.suppliers.map(s => s.id === action.payload.id ? { ...s, ...action.payload.data } : s)
+      };
+
+    case 'DELETE_SUPPLIER':
+      return {
+        ...state,
+        suppliers: state.suppliers.filter(s => s.id !== action.payload)
+      };
+
     case 'ADD_FILES':
       return {
         ...state,
