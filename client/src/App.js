@@ -205,7 +205,7 @@ function AppRoutes() {
         } />
         
         <Route path="/suppliers" element={
-          <ProtectedRoute requiredLevel={3}>
+          <ProtectedRoute requiredLevel={2}>
             <MainLayout><Suppliers /></MainLayout>
           </ProtectedRoute>
         } />

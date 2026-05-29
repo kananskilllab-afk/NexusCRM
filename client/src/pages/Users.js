@@ -4,13 +4,16 @@ import { api } from '../services/api';
 import { 
   FiPlus, FiUser, FiMail, FiShield, FiTrash2, FiEdit2, FiLock, 
   FiAlertTriangle, FiChevronDown, FiChevronUp, FiUsers, FiSettings,
-  FiFileText, FiCheckSquare, FiLogOut, FiEye, FiX
+  FiFileText, FiCheckSquare, FiLogOut, FiEye, FiEyeOff, FiX
 } from 'react-icons/fi';
 import './Users.css';
 
 const Users = () => {
   const { state, dispatch } = useLeads();
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showAccountPass, setShowAccountPass] = useState(false);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [showDetailsSmtpPass, setShowDetailsSmtpPass] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
@@ -215,6 +218,26 @@ const Users = () => {
                    <div className="info-item"><label>Assign To</label><div>{selectedUser.assigned_to || '—'}</div></div>
                    <div className="info-item"><label>Area</label><div>{selectedUser.area || '—'}</div></div>
                    <div className="info-item"><label>SMTP Configuration</label><div>{selectedUser.smtp_user ? `Configured (${selectedUser.smtp_user})` : 'Not Configured (System Default)'}</div></div>
+                    {selectedUser.smtp_user && (
+                      <>
+                        <div className="info-item"><label>SMTP Host</label><div>{selectedUser.smtp_host || '—'}</div></div>
+                        <div className="info-item"><label>SMTP Port</label><div>{selectedUser.smtp_port || '—'}</div></div>
+                        <div className="info-item"><label>SMTP User</label><div>{selectedUser.smtp_user || '—'}</div></div>
+                        <div className="info-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label style={{ display: 'block', marginRight: '5px' }}>SMTP Password</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>{showDetailsSmtpPass ? (selectedUser.smtp_pass || '—') : '••••••••••••'}</span>
+                            <button 
+                              type="button" 
+                              onClick={() => setShowDetailsSmtpPass(!showDetailsSmtpPass)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                            >
+                              {showDetailsSmtpPass ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                 </div>
               )}
            </div>
@@ -381,13 +404,23 @@ const Users = () => {
 
                 <div className="form-group">
                   <label>{isEditMode ? 'Password (Leave blank to keep current)' : 'Password *'}</label>
-                  <input 
-                    type="password" 
-                    autoComplete="new-password"
-                    value={formData.password} 
-                    onChange={e => setFormData({ ...formData, password: e.target.value })} 
-                    required={!isEditMode}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    <input 
+                      type={showAccountPass ? "text" : "password"} 
+                      autoComplete="new-password"
+                      value={formData.password} 
+                      onChange={e => setFormData({ ...formData, password: e.target.value })} 
+                      required={!isEditMode}
+                      style={{ width: '100%', paddingRight: '40px' }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAccountPass(!showAccountPass)}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                    >
+                      {showAccountPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="form-row">
@@ -480,12 +513,22 @@ const Users = () => {
                     </div>
                     <div className="form-group">
                       <label>SMTP Password</label>
-                      <input 
-                        type="password" 
-                        placeholder="••••••••••••••••"
-                        value={formData.smtp_pass || ''} 
-                        onChange={e => setFormData({ ...formData, smtp_pass: e.target.value })} 
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                        <input 
+                          type={showSmtpPass ? "text" : "password"} 
+                          placeholder="••••••••••••••••"
+                          value={formData.smtp_pass || ''} 
+                          onChange={e => setFormData({ ...formData, smtp_pass: e.target.value })} 
+                          style={{ width: '100%', paddingRight: '40px' }}
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setShowSmtpPass(!showSmtpPass)}
+                          style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                        >
+                          {showSmtpPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

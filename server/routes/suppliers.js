@@ -6,15 +6,38 @@ const { authenticate, requireRole, auditLog, generateId } = require('../middlewa
 
 // All routes require auth; level 3 (Ops Manager) required for Suppliers
 router.use(authenticate);
-router.use(requireRole(3));
+router.use(requireRole(2));
 
 // GET /api/suppliers
 router.get('/', async (req, res) => {
   try {
     const suppliers = await Supplier.find({}).sort({ name: 1 }).lean();
     
+    // Normalize and backfill fields from old DB schema (contact_email / primary_contact_phone)
+    const normalized = suppliers.map(s => {
+      let needsUpdate = false;
+      const updateData = {};
+      
+      if (!s.email && s.contact_email) {
+        s.email = s.contact_email;
+        updateData.email = s.contact_email;
+        needsUpdate = true;
+      }
+      
+      if (!s.phone && s.primary_contact_phone) {
+        s.phone = s.primary_contact_phone;
+        updateData.phone = s.primary_contact_phone;
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        Supplier.updateOne({ _id: s._id }, { $set: updateData }).catch(() => {});
+      }
+      return s;
+    });
+
     // Attach rates to suppliers
-    const suppliersWithRates = await Promise.all(suppliers.map(async (supplier) => {
+    const suppliersWithRates = await Promise.all(normalized.map(async (supplier) => {
       const rates = await SupplierRate.find({ supplier_id: supplier.id }).lean();
       return { ...supplier, rates };
     }));
@@ -28,13 +51,29 @@ router.get('/', async (req, res) => {
 // POST /api/suppliers
 router.post('/', async (req, res) => {
   const id = generateId('S');
-  const { name, email, phone, service_type, gst, address, city } = req.body;
+  const { 
+    name, product_name, email, phone, service_type, gst, address,
+    address_1, address_2, address_3, address_4, city,
+    payment_terms, commission_pct, phone_contacts, email_contacts
+  } = req.body;
 
   if (!name || !service_type) return res.status(400).json({ error: 'Name and service type required' });
 
+  if (phone_contacts && phone_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 phone numbers allowed' });
+  }
+  if (email_contacts && email_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 email IDs allowed' });
+  }
+
   try {
     const newSupplier = await Supplier.create({
-      id, name, email, phone, service_type, gst, address, city
+      id, name, product_name, email, phone, service_type, gst, address,
+      address_1, address_2, address_3, address_4, city,
+      payment_terms: payment_terms !== undefined ? String(payment_terms) : undefined,
+      commission_pct: commission_pct || 0,
+      phone_contacts: phone_contacts || [],
+      email_contacts: email_contacts || []
     });
 
     auditLog(null, req, 'CREATE', 'suppliers', id, `Added supplier: ${name}`);
@@ -48,11 +87,22 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const supplierId = req.params.id;
 
-  const allowed = ['name', 'email', 'phone', 'service_type', 'gst', 'address', 'city', 'status'];
+  const allowed = [
+    'name', 'product_name', 'email', 'phone', 'service_type', 'gst', 'address',
+    'address_1', 'address_2', 'address_3', 'address_4', 'city', 'status',
+    'payment_terms', 'commission_pct', 'phone_contacts', 'email_contacts'
+  ];
   const updates = {};
   allowed.forEach(key => {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
   });
+
+  if (req.body.phone_contacts && req.body.phone_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 phone numbers allowed' });
+  }
+  if (req.body.email_contacts && req.body.email_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 email IDs allowed' });
+  }
 
   if (Object.keys(updates).length === 0) return res.json({ message: 'No updates provided' });
 
