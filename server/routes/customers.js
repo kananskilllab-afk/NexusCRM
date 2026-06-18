@@ -31,6 +31,24 @@ router.get('/', requireRole(1), async (req, res) => {
   }
 });
 
+// GET /api/customers/:id - Single customer with loyalty points
+router.get('/:id', requireRole(1), async (req, res) => {
+  try {
+    const customer = await Customer.findOne({ id: req.params.id }).lean();
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const records = await LoyaltyPoints.find({ customer_id: customer.id }).lean();
+    const loyalty_points = records.reduce(
+      (sum, r) => sum + (r.points_earned || 0) - (r.points_redeemed || 0), 0
+    );
+
+    res.json({ ...customer, loyalty_points });
+  } catch (err) {
+    console.error('Failed to fetch customer:', err);
+    res.status(500).json({ error: 'Failed to fetch customer' });
+  }
+});
+
 // POST /api/customers - Create customer
 router.post('/', requireRole(1), async (req, res) => {
   const id = generateId('C');

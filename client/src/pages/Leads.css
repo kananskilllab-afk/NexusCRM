@@ -1,0 +1,233 @@
+/* ═══════════════════════════════════════════════════════════════
+   Leads page
+═══════════════════════════════════════════════════════════════ */
+
+.leads-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+.leads-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.leads-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.leads-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted, #8A90A6);
+  pointer-events: none;
+  font-size: 14px;
+}
+
+.leads-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid var(--border-color, #E6E8F0);
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-card, #fff);
+  font-size: 0.875rem;
+  font-family: var(--font-sans, 'Poppins', sans-serif);
+  color: var(--text-primary, #1A1F36);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.leads-search-input::placeholder { color: var(--text-muted, #8A90A6); }
+.leads-search-input:focus {
+  border-color: var(--kanan-blue, #284695);
+  box-shadow: var(--shadow-focus, 0 0 0 4px rgba(40,70,149,.14));
+}
+
+/* ── Filter pills ───────────────────────────────────────────── */
+.leads-filter-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.leads-pill {
+  padding: 6px 16px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--kanan-line, var(--border-color, #E6E8F0));
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #454C66);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans, 'Poppins', sans-serif);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.leads-pill:hover {
+  border-color: var(--border-strong, #D6DAE6);
+  background: var(--bg-subtle, #F8F9FD);
+}
+
+.leads-pill--active {
+  background: var(--kanan-navy, #393185);
+  border-color: var(--kanan-navy, #393185);
+  color: var(--kanan-white);
+}
+.leads-pill--active:hover {
+  background: var(--kanan-navy, #393185);
+  color: var(--kanan-white);
+}
+
+/* ── Stats row ──────────────────────────────────────────────── */
+.leads-stats {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-muted, #8A90A6);
+  padding: 0 2px;
+}
+
+.leads-stats strong {
+  color: var(--text-primary, #1A1F36);
+  font-weight: 700;
+}
+
+.leads-stats-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--border-color, #E6E8F0);
+}
+
+/* ── Score ring ─────────────────────────────────────────────── */
+.ld-score-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ld-score-ring svg {
+  display: block;
+}
+
+/* ── Contact cell ───────────────────────────────────────────── */
+.ld-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ld-contact-name {
+  font-weight: 600;
+  color: var(--text-primary, #1A1F36);
+  font-size: 0.875rem;
+}
+
+.ld-contact-mobile {
+  font-size: 0.75rem;
+  color: var(--text-muted, #8A90A6);
+}
+
+/* ── Type & destination cell ────────────────────────────────── */
+.ld-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ld-type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--kanan-blue, #284695);
+  background: color-mix(in srgb, var(--kanan-blue, #284695) 10%, transparent);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill, 999px);
+  display: inline-block;
+  width: fit-content;
+}
+
+.ld-dest-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #454C66);
+}
+
+/* ── Lead ID cell ───────────────────────────────────────────── */
+.ld-code {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted, #8A90A6);
+  font-family: var(--font-mono, monospace);
+}
+
+/* ── Agent cell ─────────────────────────────────────────────── */
+.ld-agent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ld-agent-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gradient-brand, linear-gradient(135deg, #393185, #284695));
+  color: var(--kanan-white);
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ld-agent-name {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #454C66);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* ── Budget cell ────────────────────────────────────────────── */
+.ld-budget {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #1A1F36);
+}
+
+/* ── Arrow cell ─────────────────────────────────────────────── */
+.ld-arrow {
+  color: var(--text-muted, #8A90A6);
+  font-size: 16px;
+  display: block;
+  transition: transform 0.15s, color 0.15s;
+}
+.dt-row:hover .ld-arrow {
+  color: var(--kanan-sky, #00A0E3);
+  transform: translateX(3px);
+}
+
+/* ── Empty / loading ────────────────────────────────────────── */
+.leads-error {
+  text-align: center;
+  padding: 24px;
+  color: var(--kanan-red, #E53935);
+  font-size: 0.875rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .leads-search-wrap { max-width: 100%; }
+  .leads-toolbar { gap: 8px; }
+}

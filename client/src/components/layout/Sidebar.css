@@ -1,0 +1,297 @@
+/* ── Base ────────────────────────────────────────────────────────────────── */
+.app-sidebar {
+  width: 240px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: var(--kanan-navy);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  overflow: hidden;
+  transition:
+    width     0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Collapsed state (icon-only, 64px) ───────────────────────────────────── */
+.app-sidebar--collapsed {
+  width: 64px;
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-5);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  overflow: hidden;
+  min-height: 68px;
+}
+.app-sidebar--collapsed .sidebar-logo {
+  justify-content: center;
+  padding: var(--space-4) var(--space-3);
+}
+.sidebar-logo__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background-color: var(--kanan-sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-surface);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.sidebar-logo__name {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-surface);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.sidebar-logo__sub {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  scrollbar-width: none;
+}
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+.sidebar-nav__section-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  padding: var(--space-4) var(--space-3) var(--space-2);
+  white-space: nowrap;
+}
+
+.sidebar-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  transition: var(--transition-base);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar-nav__item:hover {
+  color: rgba(255,255,255,0.9);
+  background-color: rgba(255,255,255,0.08);
+}
+.sidebar-nav__item.active {
+  color: var(--color-surface);
+  background-color: rgba(255,255,255,0.1);
+  border-left-color: var(--kanan-sky);
+  font-weight: 600;
+}
+.sidebar-nav__item__icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.sidebar-nav__item__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed: centre icon, no label */
+.app-sidebar--collapsed .sidebar-nav__item {
+  justify-content: center;
+  padding: var(--space-2) 0;
+  gap: 0;
+  border-left: none;
+}
+.app-sidebar--collapsed .sidebar-nav__item.active {
+  background-color: rgba(255,255,255,0.12);
+  border-left: none;
+}
+.app-sidebar--collapsed .sidebar-nav__item.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--kanan-sky);
+  border-radius: 0 3px 3px 0;
+}
+
+/* ── Badge ───────────────────────────────────────────────────────────────── */
+.sidebar-badge {
+  background-color: var(--kanan-orange);
+  color: var(--color-surface);
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-pill);
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Dot badge when collapsed */
+.sidebar-badge--dot {
+  position: absolute;
+  top: 5px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  min-width: unset;
+  padding: 0;
+}
+
+/* ── User area ───────────────────────────────────────────────────────────── */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.app-sidebar--collapsed .sidebar-user {
+  justify-content: center;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-2);
+}
+.sidebar-user__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--kanan-sky);
+  color: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sidebar-user__info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.sidebar-user__name {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user__role {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+}
+
+.sidebar-logout-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
+  flex-shrink: 0;
+}
+.sidebar-logout-btn:hover {
+  color: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.08);
+}
+.sidebar-logout-btn:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.5);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+/* Tablet (768–1023px): force icon-only regardless of JS state */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-sidebar {
+    width: 64px;
+  }
+}
+
+/* Mobile (<768px): hidden by default, slides in as drawer */
+@media (max-width: 767px) {
+  .app-sidebar {
+    width: 240px;
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  .app-sidebar--open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+  }
+  /* On mobile, collapsed class does NOT shrink to 64px — it's still a full drawer */
+  .app-sidebar--collapsed {
+    width: 240px;
+  }
+  /* Icon-only overrides revert on mobile */
+  .app-sidebar.app-sidebar--collapsed .sidebar-nav__item {
+    justify-content: flex-start;
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-3);
+    border-left: 3px solid transparent;
+  }
+  .app-sidebar.app-sidebar--collapsed .sidebar-nav__item.active {
+    border-left-color: var(--kanan-sky);
+  }
+  .app-sidebar.app-sidebar--collapsed .sidebar-nav__item.active::after {
+    display: none;
+  }
+  .app-sidebar.app-sidebar--collapsed .sidebar-logo {
+    justify-content: flex-start;
+    padding: var(--space-6) var(--space-5);
+  }
+  .app-sidebar.app-sidebar--collapsed .sidebar-user {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: var(--space-4) var(--space-5);
+  }
+}

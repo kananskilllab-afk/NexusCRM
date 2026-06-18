@@ -1,0 +1,127 @@
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  transition: var(--transition-base);
+  position: relative;
+  text-decoration: none;
+}
+
+.ui-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.ui-btn:disabled,
+.ui-btn--loading {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Sizes ──────────────────────────────────────────────────────────────── */
+
+.ui-btn--sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.78rem;
+  min-height: 30px;
+}
+
+.ui-btn--md {
+  padding: var(--space-2) var(--space-5);
+  font-size: 0.9rem;
+  min-height: 38px;
+}
+
+.ui-btn--lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: 1rem;
+  min-height: 46px;
+}
+
+/* ── Variants ───────────────────────────────────────────────────────────── */
+
+/* primary — kanan-green fill */
+.ui-btn--primary {
+  background-color: var(--kanan-green);
+  color: var(--color-surface);
+  border-color: var(--kanan-green);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--kanan-green) 32%, transparent);
+}
+.ui-btn--primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--kanan-green) 88%, black);
+  border-color: color-mix(in srgb, var(--kanan-green) 88%, black);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--kanan-green) 42%, transparent);
+  transform: translateY(-1px);
+}
+.ui-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* secondary — kanan-navy outline */
+.ui-btn--secondary {
+  background-color: transparent;
+  color: var(--kanan-navy);
+  border-color: var(--kanan-navy);
+}
+.ui-btn--secondary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--kanan-navy) 8%, transparent);
+}
+
+/* ghost — muted text, no border */
+.ui-btn--ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+.ui-btn--ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  background-color: var(--bg-subtle);
+}
+
+/* danger — kanan-red text and border */
+.ui-btn--danger {
+  background-color: transparent;
+  color: var(--kanan-red);
+  border-color: var(--kanan-red);
+}
+.ui-btn--danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--kanan-red) 8%, transparent);
+}
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+
+.ui-btn__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: ui-btn-spin 0.55s linear infinite;
+}
+
+@keyframes ui-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Icon ───────────────────────────────────────────────────────────────── */
+
+.ui-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 1.05em;
+}
+
+.ui-btn--sm .ui-btn__icon { font-size: 0.95em; }
+.ui-btn--lg .ui-btn__icon { font-size: 1.15em; }

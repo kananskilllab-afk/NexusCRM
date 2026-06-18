@@ -82,12 +82,13 @@ async function seed() {
   console.log('✅ TagDefinitions seeded');
 
   // ── 4. Pipeline Stages ───────────────────────────────────────────────────────
-  const [stageEnquiry, stageProposal, stageConfirmed, stageClosed] =
+  const [stageEnquiry, stageProposal, , stageConfirmed, stageClosed] =
     await PipelineStage.insertMany([
-      { tenant_id: tenant._id, name: 'Enquiry',   position: 1, is_closed_won: false },
-      { tenant_id: tenant._id, name: 'Proposal',  position: 2, is_closed_won: false },
-      { tenant_id: tenant._id, name: 'Confirmed', position: 3, is_closed_won: true  },
-      { tenant_id: tenant._id, name: 'Completed', position: 4, is_closed_won: true  },
+      { tenant_id: tenant._id, name: 'Enquiry',     position: 1, color: '#00A0E3', probability: 10,  is_closed_won: false, is_closed_lost: false },
+      { tenant_id: tenant._id, name: 'Proposal',    position: 2, color: '#E19D19', probability: 40,  is_closed_won: false, is_closed_lost: false },
+      { tenant_id: tenant._id, name: 'Negotiation', position: 3, color: '#EF7F1A', probability: 70,  is_closed_won: false, is_closed_lost: false },
+      { tenant_id: tenant._id, name: 'Confirmed',   position: 4, color: '#009846', probability: 100, is_closed_won: true,  is_closed_lost: false },
+      { tenant_id: tenant._id, name: 'Lost',        position: 5, color: '#E53935', probability: 0,   is_closed_won: false, is_closed_lost: true  },
     ]);
   console.log('✅ PipelineStages seeded');
 

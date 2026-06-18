@@ -9,6 +9,10 @@ const CRMUserSchema = new mongoose.Schema(
     role: { type: String, default: 'Viewer' },
     status: { type: String, default: 'Active' },
     area: { type: String },
+    // §3.4 routing attributes
+    territory: { type: String },           // branch / region this agent serves
+    languages: { type: [String], default: [] }, // spoken languages, e.g. ['Gujarati','English']
+    max_open_leads: { type: Number, default: 0 }, // 0 = no capacity cap
     mobile: { type: String },
     assigned_to: { type: String },
     smtp_host: { type: String },

@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Kanan Travel — Design Tokens
+   Source of truth. Import once via index.css only.
+   ========================================================================== */
+:root {
+  --kanan-navy:   #393185;
+  --kanan-blue:   #284695;
+  --kanan-sky:    #00A0E3;
+  --kanan-green:  #009846;
+  --kanan-lime:   #B0CB1F;
+  --kanan-orange: #EF7F1A;
+  --kanan-gold:   #E19D19;
+  --kanan-purple: #9C2BE3;
+  --kanan-yellow: #FFD700;
+  --kanan-red:    #E53935;
+  --kanan-white:  #ffffff;
+  --kanan-ink:    #1A1A2E;
+  --kanan-mute:   #6B7280;
+
+  --color-primary:  var(--kanan-blue);
+  --color-surface:  #ffffff;
+  --color-text:     #1A1F36;
+
+  --color-purple-deep:   var(--kanan-navy);
+  --color-blue-royal:    var(--kanan-blue);
+  --color-blue-cyan:     var(--kanan-sky);
+  --color-green:         var(--kanan-green);
+  --color-lime:          var(--kanan-lime);
+  --color-orange:        var(--kanan-orange);
+  --color-amber:         var(--kanan-gold);
+  --color-purple-bright: var(--kanan-purple);
+  --color-yellow:        var(--kanan-yellow);
+  --color-red:           var(--kanan-red);
+
+  --primary:       var(--kanan-blue);
+  --primary-dark:  var(--kanan-navy);
+  --primary-hover: #1f3a7d;
+  --primary-light: #EEF1FB;
+  --primary-soft:  #F5F7FD;
+
+  --bg-main:   #F4F6FB;
+  --bg-card:   #ffffff;
+  --bg-subtle: #F8F9FD;
+
+  --text-primary:   #1A1F36;
+  --text-secondary: #454C66;
+  --text-muted:     #8A90A6;
+  --text-on-brand:  rgba(255,255,255,0.92);
+
+  --border-color:  #E6E8F0;
+  --border-strong: #D6DAE6;
+  --divider:       #EEF0F6;
+
+  --status-new:      var(--kanan-green);
+  --status-followup: var(--kanan-sky);
+  --status-hot:      var(--kanan-red);
+  --status-booked:   var(--kanan-lime);
+  --status-lost:     #8A90A6;
+
+  --gradient-brand:      linear-gradient(135deg,#393185 0%,#284695 58%,#2f5bb7 100%);
+  --gradient-brand-soft: linear-gradient(135deg,#4438a3 0%,#284695 100%);
+  --gradient-cyan:       linear-gradient(135deg,#284695 0%,#00A0E3 100%);
+
+  --font-sans:    'Poppins','Montserrat',system-ui,sans-serif;
+  --font-display: 'Montserrat','Poppins',system-ui,sans-serif;
+  --font-mono:    'Fira Code','Courier New',monospace;
+
+  --space-0:0px; --space-1:4px;  --space-2:8px;  --space-3:12px;
+  --space-4:16px;--space-5:20px; --space-6:24px; --space-7:28px;
+  --space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;
+  --space-20:80px;--space-24:96px;
+
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px;
+  --radius-xl:22px;--radius-pill:999px;
+
+  --shadow-card:  0 1px 3px rgba(20,26,54,.07),0 1px 2px rgba(20,26,54,.04);
+  --shadow-hover: 0 6px 18px rgba(20,26,54,.08);
+  --shadow-modal: 0 16px 40px rgba(20,26,54,.14);
+  --shadow-xs:    0 1px 2px rgba(20,26,54,.06);
+  --shadow-brand: 0 10px 26px rgba(40,70,149,.28);
+  --shadow-focus: 0 0 0 4px rgba(40,70,149,.14);
+
+  --shadow-sm:var(--shadow-card);--shadow-md:var(--shadow-hover);
+  --shadow-lg:var(--shadow-modal);--shadow-brutal:var(--shadow-card);
+  --shadow-brutal-hover:var(--shadow-hover);
+
+  --transition-base:all 0.2s ease;
+  --transition-slow:all 0.3s ease;
+  --transition:var(--transition-base);
+
+  --kanan-paper:var(--bg-main);
+  --kanan-line: var(--border-color);
+  --border-brutal:1px solid var(--border-color);
+
+  /* State palette — use these for error/info/success/warning banners */
+  --state-error-bg:     #FEE2E2;
+  --state-error-text:   #991B1B;
+  --state-error-border: #EF4444;
+  --state-info-bg:      #EEF6FF;
+  --state-info-text:    var(--kanan-navy);
+  --state-success-bg:   #D1FAE5;
+  --state-success-text: #065F46;
+  --state-warn-bg:      #FEF3C7;
+  --state-warn-text:    #92400E;
+}

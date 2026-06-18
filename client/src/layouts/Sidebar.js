@@ -4,7 +4,7 @@ import { useLeads } from '../context/LeadContext';
 import {
   FiGrid, FiLayers, FiUsers, FiCalendar, FiBriefcase, FiSettings,
   FiChevronDown, FiChevronLeft, FiMenu, FiUser, FiInfo, FiClock, FiActivity, FiDollarSign, FiMessageCircle,
-  FiFolder, FiMail, FiFileText, FiTruck
+  FiFolder, FiMail, FiFileText, FiTruck, FiTarget
 } from 'react-icons/fi';
 import { ROLE_HIERARCHY } from '../context/LeadContext';
 import './Sidebar.css';
@@ -12,9 +12,10 @@ import './Sidebar.css';
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: <FiGrid />, path: '/', level: 0 },
   { id: 'pipeline', label: 'Pipeline', icon: <FiActivity />, path: '/pipeline', level: 1 },
-  { id: 'bookings', label: 'Bookings', icon: <FiBriefcase />, path: '/bookings', level: 1 },
   { id: 'leads', label: 'Leads', icon: <FiLayers />, path: '/leads', level: 1 },
-  { id: 'suppliers', label: 'Suppliers', icon: <FiTruck />, path: '/suppliers', level: 2 },
+  { id: 'opportunities', label: 'Opportunities', icon: <FiTarget />, path: '/opportunities', level: 1 },
+  { id: 'bookings', label: 'Bookings', icon: <FiBriefcase />, path: '/bookings', level: 1 },
+  { id: 'suppliers', label: 'Suppliers', icon: <FiTruck />, path: '/suppliers', level: 3 },
   { id: 'users', label: 'Users', icon: <FiUsers />, path: '/users', level: 5 },
   { id: 'customers', label: 'Contact', icon: <FiInfo />, path: '/customers', level: 1 },
   { id: 'scheduler', label: 'Scheduler', icon: <FiClock />, path: '/scheduler', level: 2 },
@@ -56,14 +57,18 @@ const Sidebar = ({ isCollapsed, toggleSidebar, isMobileMenuOpen, closeMobileMenu
   return (
     <div className={`sidebar-brand ${isCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
-         {!isCollapsed && (
-           <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0 10px' }}>
-             <img src="/logo.png" alt="Kanan Travel CRM" style={{ maxWidth: '100%', height: 'auto', maxHeight: '45px', objectFit: 'contain' }} />
-           </div>
+         {isCollapsed ? (
+           <button className="logo-mark" onClick={toggleSidebar} title="Expand menu">K</button>
+         ) : (
+           <>
+             <div className="sidebar-logo-box">
+               <img src="/logo.png" alt="Kanan Travel CRM" />
+             </div>
+             <button className="toggle-btn" onClick={toggleSidebar} title="Collapse menu">
+                <FiChevronLeft />
+             </button>
+           </>
          )}
-         <button className="toggle-btn" onClick={toggleSidebar}>
-            {isCollapsed ? <FiMenu /> : <FiChevronLeft />}
-         </button>
       </div>
 
       <nav className="sidebar-nav">

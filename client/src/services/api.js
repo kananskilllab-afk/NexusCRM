@@ -51,6 +51,17 @@ export const api = {
     return res.json();
   },
 
+  assignLead: async (id, payload) => {
+    const res = await fetch(`${API_URL}/leads/${id}/assign`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to assign lead');
+    }
+    return res.json();
+  },
+
   updateLead: async (id, updates) => {
     const res = await fetch(`${API_URL}/leads/${id}`, {
       method: 'PATCH',
@@ -58,6 +69,212 @@ export const api = {
       body: JSON.stringify(updates)
     });
     if (!res.ok) throw new Error('Failed to update lead');
+    return res.json();
+  },
+
+  // --- Opportunities (Stage 5 deal pipeline) ---
+  getOpportunities: async () => {
+    const res = await fetch(`${API_URL}/opportunities`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch opportunities');
+    return res.json();
+  },
+  getOpportunityBoard: async () => {
+    const res = await fetch(`${API_URL}/opportunities/board`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch opportunity board');
+    return res.json();
+  },
+  getOpportunity: async (id) => {
+    const res = await fetch(`${API_URL}/opportunities/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch opportunity');
+    return res.json();
+  },
+  createOpportunity: async (payload) => {
+    const res = await fetch(`${API_URL}/opportunities`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create opportunity');
+    }
+    return res.json();
+  },
+  convertLeadToOpportunity: async (leadId, payload = {}) => {
+    const res = await fetch(`${API_URL}/opportunities/from-lead/${leadId}`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to convert lead');
+    }
+    return res.json();
+  },
+  previewConversion: async (leadId) => {
+    const res = await fetch(`${API_URL}/opportunities/from-lead/${leadId}/preview`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to load conversion preview');
+    return res.json();
+  },
+  getCustomerOpportunities: async (customerId) => {
+    const res = await fetch(`${API_URL}/opportunities/by-customer/${customerId}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch customer opportunities');
+    return res.json();
+  },
+  createOpportunityForCustomer: async (customerId, payload = {}) => {
+    const res = await fetch(`${API_URL}/opportunities/from-customer/${customerId}`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create opportunity');
+    }
+    return res.json();
+  },
+  updateOpportunity: async (id, updates) => {
+    const res = await fetch(`${API_URL}/opportunities/${id}`, {
+      method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update opportunity');
+    return res.json();
+  },
+  moveOpportunityStage: async (id, stage, extra = {}) => {
+    const res = await fetch(`${API_URL}/opportunities/${id}/stage`, {
+      method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ stage, ...extra })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to move opportunity');
+    }
+    return res.json();
+  },
+
+  // --- Notifications ---
+  getNotifications: async (limit = 30) => {
+    const res = await fetch(`${API_URL}/notifications?limit=${limit}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch notifications');
+    return res.json();
+  },
+  getUnreadCount: async () => {
+    const res = await fetch(`${API_URL}/notifications/unread-count`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch unread count');
+    return res.json();
+  },
+  markNotificationRead: async (id) => {
+    const res = await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PATCH', headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to update notification');
+    return res.json();
+  },
+  markAllNotificationsRead: async () => {
+    const res = await fetch(`${API_URL}/notifications/read-all`, { method: 'PATCH', headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to update notifications');
+    return res.json();
+  },
+
+  // --- Analytics (§10 dashboards) ---
+  getLeadFunnel: async () => {
+    const res = await fetch(`${API_URL}/analytics/lead-funnel`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch lead funnel');
+    return res.json();
+  },
+  getPipelineAnalytics: async () => {
+    const res = await fetch(`${API_URL}/analytics/pipeline`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch pipeline analytics');
+    return res.json();
+  },
+  getAgentLeaderboard: async () => {
+    const res = await fetch(`${API_URL}/analytics/agents`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch agent leaderboard');
+    return res.json();
+  },
+  getSalesVelocity: async () => {
+    const res = await fetch(`${API_URL}/analytics/velocity`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch sales velocity');
+    return res.json();
+  },
+  getForecast: async () => {
+    const res = await fetch(`${API_URL}/analytics/forecast`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch forecast');
+    return res.json();
+  },
+  getRevenueTrend: async () => {
+    const res = await fetch(`${API_URL}/analytics/revenue`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch revenue trend');
+    return res.json();
+  },
+  deleteOpportunity: async (id) => {
+    const res = await fetch(`${API_URL}/opportunities/${id}`, {
+      method: 'DELETE', headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete opportunity');
+    }
+    return res.json();
+  },
+
+  // Suppliers
+  getSuppliers: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/suppliers${qs ? '?' + qs : ''}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch suppliers');
+    return res.json();
+  },
+  createSupplier: async (data) => {
+    const res = await fetch(`${API_URL}/suppliers`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to create supplier');
+    return res.json();
+  },
+  updateSupplier: async (id, data) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update supplier');
+    return res.json();
+  },
+  deleteSupplier: async (id) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete supplier');
+    return res.json();
+  },
+
+  // Communications
+  getConversations: async () => {
+    const res = await fetch(`${API_URL}/communications`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch conversations');
+    return res.json();
+  },
+  getMessages: async (contactId) => {
+    const res = await fetch(`${API_URL}/communications/${contactId}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch messages');
+    return res.json();
+  },
+  sendMessage: async (contactId, data) => {
+    const res = await fetch(`${API_URL}/communications/${contactId}`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+    if (!res.ok) throw new Error('Failed to send message');
+    return res.json();
+  },
+
+  // Bookings
+  getBookings: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/voyage/bookings${qs ? '?' + qs : ''}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch bookings');
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.bookings || []);
+  },
+  getBooking: async (id) => {
+    const res = await fetch(`${API_URL}/voyage/bookings/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch booking');
+    return res.json();
+  },
+  updateBooking: async (id, payload) => {
+    const res = await fetch(`${API_URL}/voyage/bookings/${id}`, {
+      method: 'PATCH', headers: getHeaders(), body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update booking');
     return res.json();
   },
 
@@ -110,6 +327,12 @@ export const api = {
   getCustomers: async () => {
     const res = await fetch(`${API_URL}/customers`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch customers');
+    return res.json();
+  },
+
+  getCustomer: async (id) => {
+    const res = await fetch(`${API_URL}/customers/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch customer');
     return res.json();
   },
 
@@ -259,5 +482,33 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to log supplier confirmation');
     return res.json();
-  }
+  },
+
+  // Settings
+  getSettings: async () => {
+    const res = await fetch(`${API_URL}/settings`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    return res.json();
+  },
+  updateSettings: async (payload) => {
+    const res = await fetch(`${API_URL}/settings`, {
+      method: 'PATCH', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    return res.json();
+  },
+
+  // Team
+  getTeam: async () => {
+    const res = await fetch(`${API_URL}/team`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch team');
+    return res.json();
+  },
+  inviteTeamMember: async (payload) => {
+    const res = await fetch(`${API_URL}/team/invite`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to send invite');
+    return res.json();
+  },
 };

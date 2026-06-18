@@ -2,18 +2,19 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
 const LeadContext = createContext();
 
-/* ── Status Workflow: defines allowed transitions ── */
+/* ── §3.3 Lead status workflow: allowed transitions ──
+   The lead lifecycle ends at Qualified; conversion to an Opportunity is an
+   explicit action (the Convert button), which sets status to Converted. */
 const STATUS_TRANSITIONS = {
-  'Unqualified': ['New', 'Lost'],
-  'New': ['Working', 'Lost', 'Unqualified'],
-  'Working': ['Proposal Sent', 'Lost', 'New'],
-  'Proposal Sent': ['Negotiating', 'Working', 'Lost'],
-  'Negotiating': ['Booked', 'Proposal Sent', 'Lost'],
-  'Booked': ['Lost'],
-  'Lost': ['New', 'Working']
+  'New': ['Attempting Contact', 'Working', 'Unqualified'],
+  'Attempting Contact': ['Working', 'Nurturing', 'Unqualified'],
+  'Working': ['Qualified', 'Nurturing', 'Unqualified'],
+  'Nurturing': ['Working', 'Qualified', 'Unqualified'],
+  'Qualified': ['Unqualified'],
+  'Unqualified': ['New'],
+  'Converted': []
 };
 
-const BOOKING_STATUSES = ['Confirmed', 'Ticketed', 'Vouchered', 'Amended', 'Cancelled', 'Refunded'];
 
 const ROLE_HIERARCHY = {
   'Super Admin': 5,
@@ -35,6 +36,7 @@ const initialState = {
   users: [],
   leads: [],
   notifications: [],
+  unreadComms: 0,
   suppliers: [],
   customers: [],
   auditLog: [],
@@ -51,6 +53,8 @@ function leadReducer(state, action) {
       return { ...state, isLoading: true, error: null };
     case 'FETCH_ERROR':
       return { ...state, isLoading: false, error: action.payload };
+    case 'SET_COMMS_UNREAD':
+      return { ...state, unreadComms: action.payload };
     case 'SET_LEADS':
       return { ...state, isLoading: false, leads: action.payload };
     case 'SET_CUSTOMERS':

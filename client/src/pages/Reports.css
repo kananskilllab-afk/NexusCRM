@@ -1,78 +1,149 @@
-.reports-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
+/* ═══════════════════════════════════════════════════════════════
+   Reports page
+═══════════════════════════════════════════════════════════════ */
 
-.report-card {
-  padding: 1.5rem;
-}
-
-.report-category-header {
+.rp-page {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--divider);
+  flex-direction: column;
+  gap: 20px;
 }
 
-.report-category-header h3 {
-  font-size: 1.2rem;
-  color: var(--text-primary);
+/* ── KPI row ────────────────────────────────────────────────── */
+.rp-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
 }
 
-.icon-box {
-  width: 40px;
-  height: 40px;
-  background: var(--primary-light);
-  color: var(--primary);
-  border-radius: 8px;
+/* ── Charts row ─────────────────────────────────────────────── */
+.rp-charts-row {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.rp-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #E6E8F0);
+  border-radius: var(--radius-card, 10px);
+  padding: 20px 24px;
+}
+
+/* ── Empty / loading state ──────────────────────────────────── */
+.rp-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  min-height: 200px;
+  color: var(--text-muted, #8A90A6);
+  font-size: 0.875rem;
 }
 
-.report-list {
-  list-style: none;
+/* ── Agent table ────────────────────────────────────────────── */
+.rp-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
 }
 
-.report-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.8rem 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--divider);
+.rp-agent-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.report-list li:last-child {
+.rp-agent-table thead tr {
+  background: var(--bg-subtle, #F8F9FD);
+}
+
+.rp-agent-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #8A90A6);
+  border-bottom: 1px solid var(--border-color, #E6E8F0);
+}
+
+.rp-agent-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color, #E6E8F0);
+  font-size: 0.875rem;
+  color: var(--text-primary, #1A1F36);
+}
+
+.rp-agent-table tr:last-child td {
   border-bottom: none;
 }
 
-.report-icon {
-  color: var(--text-muted);
+/* ── Rank badge ─────────────────────────────────────────────── */
+.rp-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--kanan-navy, #393185);
+  color: var(--kanan-white);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
-.report-list li span {
-  flex: 1;
+/* ── Agent cell ─────────────────────────────────────────────── */
+.rp-agent-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.view-report-btn {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  padding: 4px 10px;
-  border-radius: 4px;
+.rp-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gradient-brand, linear-gradient(135deg, #393185, #284695));
+  color: var(--kanan-white);
   font-size: 0.75rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.view-report-btn:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+.rp-agent-name {
+  font-weight: 600;
+  color: var(--text-primary, #1A1F36);
+}
+
+/* ── Special cells ──────────────────────────────────────────── */
+.rp-money {
+  font-weight: 600;
+  color: var(--kanan-sky, #00A0E3);
+}
+
+.rp-score {
+  font-weight: 600;
+  color: var(--kanan-gold, #E19D19);
+}
+
+.rp-winrate {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kanan-green, #009846) 12%, transparent);
+  color: var(--kanan-green, #009846);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .rp-kpis      { grid-template-columns: repeat(2, 1fr); }
+  .rp-charts-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 500px) {
+  .rp-kpis { grid-template-columns: 1fr; }
 }

@@ -15,8 +15,8 @@
 }
 
 .content-wrapper.collapsed {
-  margin-left: 122px; /* 90px + 32px gap */
-  width: calc(100% - 122px);
+  margin-left: 124px; /* 92px + 32px gap */
+  width: calc(100% - 124px);
 }
 
 .main-content {

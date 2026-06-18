@@ -1,0 +1,55 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Overlay for mobile drawer */
+.app-layout__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
+  backdrop-filter: blur(2px);
+}
+
+/* Main content area */
+.app-layout__body {
+  margin-left: 240px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--kanan-paper);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed sidebar (64px) */
+.app-layout__body--collapsed {
+  margin-left: 64px;
+}
+
+.app-layout__page {
+  flex: 1;
+  padding: 0 var(--space-8) var(--space-12);
+}
+
+/* ── Tablet (768–1023px): icon-only sidebar ──────────────────────────────── */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .app-layout__body {
+    margin-left: 64px;
+  }
+  .app-layout__body--collapsed {
+    margin-left: 64px;
+  }
+}
+
+/* ── Mobile (<768px): full-width, sidebar is a drawer ───────────────────── */
+@media (max-width: 767px) {
+  .app-layout__body,
+  .app-layout__body--collapsed {
+    margin-left: 0 !important;
+  }
+  .app-layout__page {
+    padding: 0 var(--space-4) var(--space-8);
+  }
+}

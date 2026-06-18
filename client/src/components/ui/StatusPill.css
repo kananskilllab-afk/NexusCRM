@@ -1,0 +1,39 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+
+  /* Color driven by --_pill-color set inline on the element */
+  color: var(--_pill-color);
+  background-color: color-mix(in srgb, var(--_pill-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--_pill-color) 30%, transparent);
+}
+
+/* ── Sizes ──────────────────────────────────────────────────────────────── */
+
+.status-pill--sm {
+  padding: 3px var(--space-2);
+  font-size: 0.68rem;
+}
+
+.status-pill--md {
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.72rem;
+}
+
+/* ── Status dot ─────────────────────────────────────────────────────────── */
+
+.status-pill__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--_pill-color);
+  flex-shrink: 0;
+}

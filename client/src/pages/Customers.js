@@ -209,7 +209,7 @@ const Customers = () => {
             <tbody>
               {filteredCustomers.map(c => (
                 <tr key={c.id}>
-                  <td style={{ color: 'var(--primary)', fontWeight: 500 }}>{c.first_name} {c.last_name}</td>
+                  <td style={{ color: 'var(--primary)', fontWeight: 500, cursor: 'pointer' }} onClick={() => navigate(`/customers/${c.id}`)}>{c.first_name} {c.last_name}</td>
                   <td>
                     <div style={{ fontSize: '0.85rem' }}>{c.mobile}</div>
                     <div style={{ fontSize: '0.75rem', color: '#666' }}>{c.email || 'No email'}</div>
@@ -225,7 +225,7 @@ const Customers = () => {
                   <td><span className="badge badge-success">Active</span></td>
                   <td className="actions-cell">
                      <div className="action-icons-grid" style={{ justifyContent: 'flex-end' }}>
-                        <div className="icon-box green" title="View Profile" onClick={() => { setSelectedCustomer(c); setModalMode('view'); setIsModalOpen(true); }}><FiUser size={12}/></div>
+                        <div className="icon-box green" title="View Profile" onClick={() => navigate(`/customers/${c.id}`)}><FiUser size={12}/></div>
                         <div className="icon-box orange" title="Edit" onClick={() => { setSelectedCustomer(c); setModalMode('edit'); setIsModalOpen(true); }}><FiEdit2 size={12}/></div>
                         <div className="icon-box green" title="WhatsApp" onClick={() => handleWhatsApp(c.mobile)}><FiMessageCircle size={12}/></div>
                         <div className="icon-box red" title="Delete" onClick={() => handleDeleteCustomer(c.id, c.first_name, c.last_name)}><FiTrash2 size={12}/></div>
