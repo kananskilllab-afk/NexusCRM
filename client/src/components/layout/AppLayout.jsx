@@ -8,7 +8,7 @@ import { api } from '../../services/api';
 import './AppLayout.css';
 
 const AppLayout = ({ children, onQuickAdd }) => {
-  const { state } = useLeads();
+  const { state, dispatch } = useLeads();
   const [isCollapsed, setIsCollapsed]     = useState(false);
   const [isMobileOpen, setIsMobileOpen]   = useState(false);
   const [quickAddOpen, setQuickAddOpen]   = useState(false);
@@ -35,7 +35,10 @@ const AppLayout = ({ children, onQuickAdd }) => {
   const toggleMobile   = () => setIsMobileOpen((p) => !p);
   const closeMobile    = () => setIsMobileOpen(false);
   const handleQuickAdd = onQuickAdd ?? (() => setQuickAddOpen(true));
-  const handleSaveLead = (data) => api.createLead(data).catch(console.error);
+  const handleSaveLead = (data) =>
+    api.createLead(data)
+      .then(newLead => dispatch({ type: 'ADD_LEAD', payload: newLead }))
+      .catch(console.error);
 
   return (
     <div className="app-layout">
