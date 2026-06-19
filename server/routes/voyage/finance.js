@@ -6,14 +6,14 @@ const { Quote, PaymentSchedule, Commission } = require('../../models/voyage');
 // Get all quotes
 router.get('/quotes', authenticateToken, async (req, res) => {
   try {
-    const quotes = await Quote.find().populate('contact_id').populate('booking_id').lean();
+    const quotes = await Quote.find().populate('contact_id').lean();
     const formatted = quotes.map(q => ({
       id: q._id.toString(),
-      booking: q.booking_id ? 'BKG-' + q.booking_id._id.toString().substring(18).toUpperCase() : 'N/A',
-      client: q.contact_id ? q.contact_id.full_name : 'Client',
-      amount: (q.total_sell_cents / 100).toLocaleString(),
-      date: q.created_at ? new Date(q.created_at).toISOString().split('T')[0] : 'N/A',
-      status: q.status === 'sent' ? 'Sent' : 'Draft'
+      contact_name: q.contact_id ? q.contact_id.full_name : '—',
+      total_amount: q.total_sell_cents / 100,
+      created_at: q.created_at,
+      expires_at: q.expires_at,
+      status: q.status.charAt(0).toUpperCase() + q.status.slice(1),
     }));
     res.json(formatted);
   } catch (err) {

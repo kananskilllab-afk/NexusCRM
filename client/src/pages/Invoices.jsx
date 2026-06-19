@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   FiDownload, FiSearch, FiRefreshCw,
-  FiAlertCircle, FiCheckCircle, FiClock, FiDollarSign,
+  FiAlertCircle, FiCheckCircle, FiClock,
 } from 'react-icons/fi';
+import { MdCurrencyRupee } from 'react-icons/md';
 import { DataTable, StatusPill, Button, KpiCard, SectionHeader } from '../components/ui';
 import { voyageApi } from '../services/voyageApi';
 import { generateInvoiceHTML, downloadDocument } from '../utils/generateDocument';
@@ -176,7 +177,7 @@ const Invoices = () => {
         <KpiCard
           label="Total Outstanding"
           value={fmtMoney(kpis.outstanding)}
-          icon={<FiDollarSign />}
+          icon={<MdCurrencyRupee />}
           accentColor="var(--kanan-orange, #EF7F1A)"
         />
         <KpiCard

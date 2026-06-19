@@ -3,12 +3,15 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useLeads } from '../../context/LeadContext';
+import AddLeadModal from '../modals/AddLeadModal';
+import { api } from '../../services/api';
 import './AppLayout.css';
 
 const AppLayout = ({ children, onQuickAdd }) => {
   const { state } = useLeads();
-  const [isCollapsed, setIsCollapsed]   = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed]     = useState(false);
+  const [isMobileOpen, setIsMobileOpen]   = useState(false);
+  const [quickAddOpen, setQuickAddOpen]   = useState(false);
 
   /* Sync collapse/mobile state with viewport width */
   useEffect(() => {
@@ -29,8 +32,10 @@ const AppLayout = ({ children, onQuickAdd }) => {
     return () => window.removeEventListener('resize', sync);
   }, []);
 
-  const toggleMobile = () => setIsMobileOpen((p) => !p);
-  const closeMobile  = () => setIsMobileOpen(false);
+  const toggleMobile   = () => setIsMobileOpen((p) => !p);
+  const closeMobile    = () => setIsMobileOpen(false);
+  const handleQuickAdd = onQuickAdd ?? (() => setQuickAddOpen(true));
+  const handleSaveLead = (data) => api.createLead(data).catch(console.error);
 
   return (
     <div className="app-layout">
@@ -51,11 +56,16 @@ const AppLayout = ({ children, onQuickAdd }) => {
       />
 
       <div className={`app-layout__body${isCollapsed ? ' app-layout__body--collapsed' : ''}`}>
-        <TopBar onQuickAdd={onQuickAdd} onMenuToggle={toggleMobile} />
+        <TopBar onQuickAdd={handleQuickAdd} onMenuToggle={toggleMobile} />
         <main className="app-layout__page" id="main-content" tabIndex={-1}>
           {children ?? <Outlet />}
         </main>
       </div>
+      <AddLeadModal
+        isOpen={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        onSave={handleSaveLead}
+      />
     </div>
   );
 };

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import {
-  FiDollarSign, FiUsers, FiTrendingUp, FiCalendar,
+  FiUsers, FiTrendingUp, FiCalendar,
   FiAlertCircle, FiBarChart2, FiCheckCircle, FiCreditCard,
   FiBell, FiClock, FiUser,
 } from 'react-icons/fi';
+import { MdCurrencyRupee } from 'react-icons/md';
 import { KpiCard, SectionHeader } from '../components/ui';
 import { api } from '../services/api';
 import './Dashboard.css';
@@ -190,7 +191,7 @@ const Dashboard = () => {
         <KpiCard
           label="Revenue MTD"
           value={loading ? '—' : fmtMoney(revenueMTD)}
-          icon={<FiDollarSign />}
+          icon={<MdCurrencyRupee />}
           accentColor="var(--kanan-green)"
           className="db-kpi-accented"
         />

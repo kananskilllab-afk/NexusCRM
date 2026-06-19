@@ -3,9 +3,10 @@ import { NavLink } from 'react-router-dom';
 import { useLeads } from '../context/LeadContext';
 import {
   FiGrid, FiLayers, FiUsers, FiCalendar, FiBriefcase, FiSettings,
-  FiChevronDown, FiChevronLeft, FiMenu, FiUser, FiInfo, FiClock, FiActivity, FiDollarSign, FiMessageCircle,
+  FiChevronDown, FiChevronLeft, FiMenu, FiUser, FiInfo, FiClock, FiActivity, FiMessageCircle,
   FiFolder, FiMail, FiFileText, FiTruck, FiTarget
 } from 'react-icons/fi';
+import { MdCurrencyRupee } from 'react-icons/md';
 import { ROLE_HIERARCHY } from '../context/LeadContext';
 import './Sidebar.css';
 
@@ -20,7 +21,7 @@ const menuItems = [
   { id: 'customers', label: 'Contact', icon: <FiInfo />, path: '/customers', level: 1 },
   { id: 'scheduler', label: 'Scheduler', icon: <FiClock />, path: '/scheduler', level: 2 },
   { id: 'reports', label: 'Reports', icon: <FiBriefcase />, path: '/reports', level: 1 },
-  { id: 'finance', label: 'Finance', icon: <FiDollarSign />, path: '#', level: 1, 
+  { id: 'finance', label: 'Finance', icon: <MdCurrencyRupee />, path: '#', level: 1,
     subItems: [
       { label: 'Quotes', path: '/finance/quotes' },
       { label: 'Invoices', path: '/finance/invoices' },

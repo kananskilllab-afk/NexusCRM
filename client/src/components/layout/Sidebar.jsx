@@ -2,11 +2,12 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiUsers, FiActivity, FiCalendar,
-  FiFileText, FiDollarSign, FiPackage, FiMessageCircle,
+  FiFileText, FiPackage, FiMessageCircle,
   FiBarChart2, FiSettings, FiGlobe, FiLogOut,
   FiTarget, FiUser, FiClock, FiFolder, FiMail,
   FiClipboard, FiTrendingUp, FiLayers, FiMap,
 } from 'react-icons/fi';
+import { MdCurrencyRupee } from 'react-icons/md';
 import { useLeads, ROLE_HIERARCHY } from '../../context/LeadContext';
 import './Sidebar.css';
 
@@ -19,7 +20,7 @@ const NAV_ITEMS = [
   { id: 'bookings',      label: 'Bookings',        icon: FiCalendar,      path: '/bookings',            level: 1 },
   { id: 'itineraries',  label: 'Itineraries',     icon: FiMap,           path: '/itineraries',         level: 1 },
   { id: 'quotes',       label: 'Quotes',           icon: FiFileText,      path: '/finance/quotes',      level: 1 },
-  { id: 'invoices',      label: 'Invoices',        icon: FiDollarSign,    path: '/finance/invoices',    level: 1 },
+  { id: 'invoices',      label: 'Invoices',        icon: MdCurrencyRupee, path: '/finance/invoices',    level: 1 },
   { id: 'commissions',   label: 'Commissions',     icon: FiTrendingUp,    path: '/finance/commissions', level: 2 },
   { id: 'documents',     label: 'Documents',       icon: FiFolder,        path: '/documents',           level: 1 },
   { id: 'emails',        label: 'Emails',          icon: FiMail,          path: '/emails',              level: 1 },
