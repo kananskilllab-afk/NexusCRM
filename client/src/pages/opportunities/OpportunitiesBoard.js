@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   FiPlus, FiCalendar, FiUser, FiSearch, FiTrendingUp, FiTarget, FiAward, FiLayers,
 } from 'react-icons/fi';
@@ -41,6 +42,7 @@ const formatDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'n
 const priorityClass = (p) => `priority-${(p || 'Normal') === 'Hot' ? 'high' : (p === 'Cold' ? 'low' : 'medium')}`;
 
 const OpportunitiesBoard = () => {
+  const location = useLocation();
   const [stages, setStages] = useState([]);
   const [opps, setOpps] = useState([]);
   const [metrics, setMetrics] = useState(null);
@@ -66,6 +68,16 @@ const OpportunitiesBoard = () => {
   }, []);
 
   useEffect(() => { fetchBoard(); }, [fetchBoard]);
+
+  // Auto-open a specific opportunity when navigated from a lead's "Linked Opportunity"
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(location.search);
+    const openId = params.get('open');
+    if (!openId) return;
+    const target = opps.find((o) => o.id === openId);
+    if (target) setModal({ open: true, mode: 'edit', opp: target });
+  }, [loading, location.search, opps]);
 
   const oppsByStage = useMemo(() => {
     const q = search.trim().toLowerCase();

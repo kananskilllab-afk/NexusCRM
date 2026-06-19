@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FiX, FiSave, FiTrash2, FiMapPin, FiUser, FiDollarSign } from 'react-icons/fi';
+import { FiX, FiSave, FiTrash2, FiMapPin, FiUser } from 'react-icons/fi';
+import { TbCurrencyRupee } from 'react-icons/tb';
 import '../../../components/modals/Modal.css';
 
 // Convert a rupee amount (string/number) to integer paise (cents).
@@ -119,7 +120,7 @@ const EnquiryModal = ({ isOpen, mode, booking, stages = [], onClose, onSave, onD
 
           <div className="form-row" style={{ display: 'flex', gap: 12 }}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label><FiDollarSign style={{ marginRight: 6 }} />Sell Value (₹)</label>
+              <label><TbCurrencyRupee style={{ marginRight: 6 }} />Sell Value (₹)</label>
               <input type="number" min="0" step="0.01" placeholder="0" value={form.sell}
                 onChange={(e) => setForm({ ...form, sell: e.target.value })} />
             </div>

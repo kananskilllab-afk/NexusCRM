@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiX, FiSave, FiTrash2, FiUser, FiMapPin, FiDollarSign, FiPlus, FiTag, FiUsers } from 'react-icons/fi';
+import { FiX, FiSave, FiTrash2, FiUser, FiMapPin, FiPlus, FiTag, FiUsers } from 'react-icons/fi';
 import { useLeads, ROLE_HIERARCHY } from '../../context/LeadContext';
 import '../../components/modals/Modal.css';
 
@@ -202,7 +202,7 @@ const OpportunityModal = ({ isOpen, mode, opp, customer, onClose, onSave, onDele
 
           {/* ── Line items: packages / services on this deal (§5.3) ── */}
           <div className="form-group">
-            <label><FiDollarSign style={{ marginRight: 6 }} />Packages / Services</label>
+            <label><span style={{ marginRight: 6 }}>₹</span>Packages / Services</label>
             {form.line_items.map((li, idx) => (
               <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                 <input type="text" placeholder="Package / service name" value={li.name} style={{ flex: 2 }}
@@ -232,7 +232,7 @@ const OpportunityModal = ({ isOpen, mode, opp, customer, onClose, onSave, onDele
 
           <div className="form-row" style={{ display: 'flex', gap: 12 }}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label><FiDollarSign style={{ marginRight: 6 }} />Amount (₹)</label>
+              <label><span style={{ marginRight: 6 }}>₹</span>Amount (₹)</label>
               <input type="number" min="0" step="1" placeholder="0"
                 value={hasLineItems ? derivedValue : form.estimated_value}
                 disabled={hasLineItems}

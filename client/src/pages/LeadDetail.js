@@ -64,8 +64,9 @@ const LeadDetail = () => {
     }
   }, [lead?.opportunity_id]);
 
+
   const handleConvertToOpportunity = () => {
-    if (lead?.opportunity_id) { navigate('/opportunities'); return; }
+    if (lead?.opportunity_id) { navigate(`/opportunities?open=${lead.opportunity_id}`); return; }
     setShowConvert(true);
   };
 
@@ -242,7 +243,7 @@ const LeadDetail = () => {
 
         {/* Linked opportunity */}
         {opp && (
-          <div className="card" onClick={() => navigate('/opportunities')}
+          <div className="card" onClick={() => navigate(`/opportunities?open=${opp.id}`)}
             style={{ marginTop: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', borderLeft: `4px solid ${STAGE_COLORS[opp.stage] || '#284695'}` }}>
             <div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}><FiTarget size={12} /> Linked Opportunity</div>
@@ -272,9 +273,19 @@ const LeadDetail = () => {
           {activeTab === 'Notes' && <NotesTab lead={lead} />}
           {activeTab === 'Traveller' && <TravellerTab lead={lead} />}
           {activeTab === 'Follow up' && <FollowUpTab lead={lead} />}
-          {activeTab === 'Quote' && <QuoteTab lead={lead} />}
+          {activeTab === 'Quote' && (
+            <QuoteTab
+              lead={lead}
+              opp={opp}
+              onQuoteSent={() => {
+                if (lead?.opportunity_id) {
+                  api.getOpportunity(lead.opportunity_id).then(setOpp).catch(() => {});
+                }
+              }}
+            />
+          )}
           {activeTab === 'Suppliers' && <SuppliersTab lead={lead} />}
-          {activeTab === 'Billing' && <BillingTab lead={lead} />}
+          {activeTab === 'Billing' && <BillingTab lead={lead} opp={opp} />}
         </div>
       </div>
     </div>

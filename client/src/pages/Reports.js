@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import {
-  FiBarChart2, FiDollarSign, FiActivity, FiFileText,
+  FiBarChart2, FiActivity, FiFileText,
   FiDownload, FiTrendingUp, FiTarget, FiAlertCircle,
 } from 'react-icons/fi';
+import { TbCurrencyRupee } from 'react-icons/tb';
 import { KpiCard, SectionHeader, Button } from '../components/ui';
 import { api } from '../services/api';
 import { useLeads } from '../context/LeadContext';
@@ -155,7 +156,7 @@ const Reports = () => {
     {
       id: 'finance',
       title: 'Financial Reports',
-      icon: <FiDollarSign />,
+      icon: <TbCurrencyRupee />,
       reports: [
         { id: 'revenue',          name: 'Revenue Summary',             summary: `Total ₹${totalRevenue.toLocaleString()}`, data: { 'Invoiced': totalRevenue, 'Paid': totalPaid, 'Outstanding': totalOutstanding } },
         { id: 'outstanding',      name: 'Outstanding Balances',        summary: `₹${totalOutstanding.toLocaleString()} pending`, data: { 'Outstanding': totalOutstanding } },
@@ -292,7 +293,7 @@ const Reports = () => {
         {[
           { label: 'Total Leads',      val: leads.length,                           icon: <FiActivity />,    color: 'var(--kanan-sky, #00A0E3)'    },
           { label: 'Conversion Rate',  val: `${conversionRate}%`,                   icon: <FiTrendingUp />,  color: 'var(--kanan-green, #009846)'  },
-          { label: 'Revenue Generated',val: fmtMoney(totalRevenue || chartRevenue), icon: <FiDollarSign />,  color: 'var(--kanan-gold, #E19D19)'   },
+          { label: 'Revenue Generated',val: fmtMoney(totalRevenue || chartRevenue), icon: <TbCurrencyRupee />,  color: 'var(--kanan-gold, #E19D19)'   },
           { label: 'Outstanding',      val: fmtMoney(totalOutstanding),             icon: <FiAlertCircle />, color: 'var(--kanan-red, #E53935)'    },
         ].map(kpi => (
           <KpiCard key={kpi.label} label={kpi.label} value={kpi.val} icon={kpi.icon} accentColor={kpi.color} />

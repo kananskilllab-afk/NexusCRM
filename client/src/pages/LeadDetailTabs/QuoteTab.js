@@ -1,188 +1,191 @@
 import React, { useState } from 'react';
-import { useLeads } from '../../context/LeadContext';
-import { FiSend, FiMail, FiMessageCircle, FiCheck, FiAlertCircle, FiPlus, FiArrowRight } from 'react-icons/fi';
+import { FiMail, FiMessageCircle, FiTarget, FiAlertCircle, FiCheck } from 'react-icons/fi';
+import { api } from '../../services/api';
 
-const QuoteTab = ({ lead }) => {
-  const { state, dispatch } = useLeads();
-  const [markup, setMarkup] = useState(10); // 10% default
-  const [showRateSelector, setShowRateSelector] = useState(false);
-  
-  const billing = lead.billing || { items: [], payments: [] };
-  const items = billing.items || [];
-  const enquiry = lead.enquiry_data || {};
-  const supplierRates = state.supplierRates || [];
+const money = (v = 0) => `₹${Math.round(v || 0).toLocaleString('en-IN')}`;
 
-  const subtotal = items.reduce((acc, i) => acc + (i.qty * i.price), 0);
-  const totalTax = items.reduce((acc, i) => acc + (i.qty * i.price * (i.tax || 0) / 100), 0);
-  const grandTotal = subtotal + totalTax;
+const STAGE_ORDER = ['Qualification', 'Itinerary', 'Quote Sent', 'Negotiation', 'Verbal Confirm', 'Closed-Won', 'Closed-Lost'];
 
-  const addFromRate = (rate) => {
-    const markupAmount = rate.rate * (markup / 100);
-    const finalPrice = rate.rate + markupAmount;
-    
-    const newItem = {
-      id: Date.now(),
-      description: `${rate.service}: ${rate.details}`,
-      qty: 1,
-      price: finalPrice,
-      tax: 5
-    };
+const QuoteTab = ({ lead, opp, onQuoteSent }) => {
+  const [sending, setSending] = useState(null); // 'Email' | 'WhatsApp' | null
 
-    dispatch({ 
-      type: 'UPDATE_BILLING', 
-      payload: { 
-        leadId: lead.id, 
-        billingData: { items: [...items, newItem] } 
-      } 
-    });
-    setShowRateSelector(false);
-  };
+  const hasOpp = !!opp;
+  const hasLineItems = hasOpp && Array.isArray(opp.line_items) && opp.line_items.length > 0;
+  const alreadySent = hasOpp && STAGE_ORDER.indexOf(opp.stage) >= STAGE_ORDER.indexOf('Quote Sent');
 
-  const sendQuote = (method) => {
-    dispatch({
-      type: 'LOG_COMMUNICATION',
-      payload: {
-        leadId: lead.id,
-        comm: { type: method, template: 'Quotation', status: 'Sent', to: method === 'Email' ? lead.email : lead.mobile }
+  const lineItems = hasLineItems ? opp.line_items : [];
+  const subtotal = lineItems.reduce((sum, li) => sum + (Number(li.quantity) || 0) * (Number(li.unit_price) || 0), 0);
+
+  const sendQuote = async (method) => {
+    if (!opp?.id) return;
+    setSending(method);
+    try {
+      if (!alreadySent) {
+        await api.moveOpportunityStage(opp.id, 'Quote Sent');
       }
-    });
-    dispatch({
-      type: 'ADD_ACTIVITY',
-      payload: { leadId: lead.id, activity: { text: `Quotation sent via ${method} to ${method === 'Email' ? lead.email : lead.mobile}`, user: 'Admin' } }
-    });
-    alert(`Quotation sent via ${method}!`);
+      if (onQuoteSent) onQuoteSent();
+      alert(`Quotation sent via ${method}${!alreadySent ? ' — opportunity moved to Quote Sent.' : '.'}`);
+    } catch (err) {
+      alert(err.message || `Failed to send via ${method}`);
+    } finally {
+      setSending(null);
+    }
   };
 
+  // ── No opportunity linked yet ──────────────────────────────────────────────
+  if (!hasOpp) {
+    return (
+      <div className="tab-content">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+          <FiTarget size={40} style={{ marginBottom: '1rem', color: 'var(--kanan-sky)' }} />
+          <h3 style={{ marginBottom: '0.5rem' }}>No linked opportunity</h3>
+          <p style={{ fontSize: '0.9rem' }}>Convert this lead to an opportunity first, then add packages in the Itinerary stage to generate a quotation.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Opportunity exists but no packages added yet ───────────────────────────
+  if (!hasLineItems) {
+    return (
+      <div className="tab-content">
+        <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+          <FiAlertCircle size={40} style={{ marginBottom: '1rem', color: 'var(--kanan-orange)' }} />
+          <h3 style={{ marginBottom: '0.5rem' }}>Quotation not ready</h3>
+          <p style={{ fontSize: '0.9rem' }}>
+            The linked opportunity <strong>{opp.opp_code}</strong> is in <strong>{opp.stage}</strong> stage.<br />
+            Move it to <strong>Itinerary</strong> and add at least one Package / Service with an amount to generate the quotation here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Full quotation preview ─────────────────────────────────────────────────
   return (
     <div className="tab-content">
-      {/* Auto-Quote Bar */}
-      <div className="card" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--primary)' }}>
-        <div className="section-header">
-           <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><FiCheck /> Smart Quote Engine</h3>
-           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Markup (%):</label>
-                 <input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value))} style={{ width: '60px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
-              </div>
-              <button className="btn btn-primary btn-sm" onClick={() => setShowRateSelector(!showRateSelector)}><FiPlus /> Compare Rates</button>
-           </div>
-        </div>
 
-        {showRateSelector && (
-           <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-main)', borderRadius: '8px' }}>
-              <h4 style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>Comparative Supplier Rates (Real-time)</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                 {supplierRates.map(r => (
-                    <div key={r.id} className="rate-card" style={{ padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <div>
-                          <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.service}: {r.details}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Supplier: {state.suppliers?.find(s => s.id === r.supplierId)?.name || r.supplierId}</p>
-                          <p style={{ fontWeight: 700, color: 'var(--primary)', marginTop: 4 }}>₹{r.rate.toLocaleString()} <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>+ {markup}% markup</span></p>
-                       </div>
-                       <button className="btn-icon" onClick={() => addFromRate(r)} title="Apply to Quotation"><FiArrowRight /></button>
-                    </div>
-                 ))}
-              </div>
-           </div>
-        )}
+      {/* Stage banner */}
+      <div className="card" style={{
+        marginBottom: '1rem',
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderLeft: `4px solid ${alreadySent ? 'var(--kanan-green)' : 'var(--kanan-sky)'}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {alreadySent
+            ? <FiCheck size={16} style={{ color: 'var(--kanan-green)' }} />
+            : <FiTarget size={16} style={{ color: 'var(--kanan-sky)' }} />
+          }
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Opportunity · {opp.opp_code}</div>
+            <div style={{ fontWeight: 600 }}>{opp.name || opp.destination || 'Opportunity'} — Stage: <span style={{ color: alreadySent ? 'var(--kanan-green)' : 'var(--kanan-sky)' }}>{opp.stage}</span></div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={!!sending}
+            onClick={() => sendQuote('Email')}
+            style={{ opacity: sending && sending !== 'Email' ? 0.5 : 1 }}
+          >
+            <FiMail /> {sending === 'Email' ? 'Sending…' : 'Email Quote'}
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            disabled={!!sending}
+            onClick={() => sendQuote('WhatsApp')}
+            style={{ opacity: sending && sending !== 'WhatsApp' ? 0.5 : 1 }}
+          >
+            <FiMessageCircle /> {sending === 'WhatsApp' ? 'Sending…' : 'WhatsApp'}
+          </button>
+        </div>
       </div>
 
-      <div className="card">
-        <div className="section-header">
-          <h3>Quotation Preview</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-primary btn-sm" onClick={() => sendQuote('Email')}><FiMail /> Email Quote</button>
-            <button className="btn btn-outline btn-sm" onClick={() => sendQuote('WhatsApp')}><FiMessageCircle /> WhatsApp</button>
+      {/* Quote document */}
+      <div className="card" style={{ padding: '40px', background: 'white', color: '#333' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--kanan-navy)', paddingBottom: '20px', marginBottom: '30px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+              <img src="/logo.png" alt="Logo" style={{ height: '35px' }} onError={(e) => { e.target.style.display = 'none'; }} />
+              <h2 style={{ color: 'var(--kanan-navy)', margin: 0 }}>Kanan International Pvt Ltd</h2>
+            </div>
+            <p style={{ margin: 0, color: '#666', fontSize: '0.85rem' }}>Vadodara, Gujarat<br />hello@kanan.co</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <h3 style={{ color: 'var(--kanan-navy)', marginBottom: 4 }}>QUOTATION</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Ref: {opp.opp_code || lead.lead_code}</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Date: {new Date().toLocaleDateString('en-IN')}</p>
           </div>
         </div>
 
-        <div className="quote-preview-content" style={{ padding: '40px', background: 'white', color: '#333' }} id="printable-quote">
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--primary)', paddingBottom: '20px', marginBottom: '30px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                  <img src="/logo.png" alt="Logo" style={{ height: '35px' }} />
-                  <h2 style={{ color: 'var(--primary)', margin: 0 }}>Kanan Travel CRM</h2>
-                </div>
-                <p style={{ margin: 0, color: '#666', fontSize: '0.85rem' }}>123 Travel Tower, New Delhi<br/>hello@kanantravel.com</p>
-              </div>
-            <div style={{ textAlign: 'right' }}>
-              <h3>QUOTATION</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ref: {lead.id}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Date: {new Date().toLocaleDateString()}</p>
-            </div>
+        {/* Bill to / Trip details */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Bill To</p>
+            <p style={{ fontWeight: 600, margin: 0 }}>{lead.first_name} {lead.last_name || ''}</p>
+            <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>{opp.email || lead.email}</p>
+            <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>{opp.mobile || lead.mobile}</p>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>BILL TO</p>
-              <p style={{ fontWeight: 600 }}>{lead.first_name} {lead.last_name}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{lead.email}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{lead.mobile}</p>
-            </div>
-            <div>
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>TRIP DETAILS</p>
-              <p style={{ fontWeight: 600 }}>{lead.destination}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Travel: {lead.travel_start_date || '—'} to {lead.travel_end_date || '—'}</p>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pax: {lead.no_adults} Adults, {lead.no_children || 0} Children</p>
-            </div>
+          <div>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>Trip Details</p>
+            <p style={{ fontWeight: 600, margin: 0 }}>{opp.destination || lead.destination}</p>
+            {(opp.travel_start || opp.travel_end) && (
+              <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>
+                Travel: {opp.travel_start ? new Date(opp.travel_start).toLocaleDateString('en-IN') : '—'} to {opp.travel_end ? new Date(opp.travel_end).toLocaleDateString('en-IN') : '—'}
+              </p>
+            )}
+            {opp.travellers > 0 && (
+              <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>Pax: {opp.travellers}</p>
+            )}
           </div>
+        </div>
 
-          {Object.keys(enquiry).length > 0 && (
-            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-main)', borderRadius: '8px' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>SERVICE DETAILS</p>
-              {enquiry.flight && <p style={{ fontSize: '0.85rem', marginBottom: 4 }}>✈ Flight: {enquiry.flight.origin} → {enquiry.flight.destination} ({enquiry.flight.class})</p>}
-              {enquiry.hotel && <p style={{ fontSize: '0.85rem', marginBottom: 4 }}>🏨 Hotel: {enquiry.hotel.city} — {enquiry.hotel.stars}★ — {enquiry.hotel.mealPlan || 'Room Only'}</p>}
-              {enquiry.visa && <p style={{ fontSize: '0.85rem', marginBottom: 4 }}>📋 Visa: {enquiry.visa.country} ({enquiry.visa.type})</p>}
-            </div>
-          )}
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
-            <thead>
-              <tr style={{ background: 'var(--bg-main)', textAlign: 'left' }}>
-                <th style={{ padding: '10px', fontSize: '0.8rem' }}>Description</th>
-                <th style={{ padding: '10px', fontSize: '0.8rem' }}>Qty</th>
-                <th style={{ padding: '10px', fontSize: '0.8rem' }}>Rate</th>
-                <th style={{ padding: '10px', fontSize: '0.8rem' }}>Tax</th>
-                <th style={{ padding: '10px', fontSize: '0.8rem', textAlign: 'right' }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} style={{ borderBottom: '1px solid var(--divider)' }}>
-                  <td style={{ padding: '10px', fontSize: '0.9rem' }}>{item.description}</td>
-                  <td style={{ padding: '10px' }}>{item.qty}</td>
-                  <td style={{ padding: '10px' }}>₹{item.price.toLocaleString()}</td>
-                  <td style={{ padding: '10px' }}>{item.tax}%</td>
-                  <td style={{ padding: '10px', textAlign: 'right', fontWeight: 500 }}>₹{(item.qty * item.price * (1 + item.tax / 100)).toLocaleString()}</td>
+        {/* Line items table */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
+          <thead>
+            <tr style={{ background: 'var(--kanan-paper)', textAlign: 'left' }}>
+              <th style={{ padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--kanan-ink)' }}>Package / Service</th>
+              <th style={{ padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--kanan-ink)' }}>Type</th>
+              <th style={{ padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--kanan-ink)', textAlign: 'center' }}>Qty</th>
+              <th style={{ padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--kanan-ink)', textAlign: 'right' }}>Rate (₹)</th>
+              <th style={{ padding: '10px 12px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--kanan-ink)', textAlign: 'right' }}>Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((li, idx) => {
+              const amount = (Number(li.quantity) || 0) * (Number(li.unit_price) || 0);
+              return (
+                <tr key={idx} style={{ borderBottom: '1px solid var(--kanan-line)' }}>
+                  <td style={{ padding: '10px 12px', fontSize: '0.9rem' }}>{li.name}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{li.service_type}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>{li.quantity}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>{money(li.unit_price)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>{money(amount)}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              );
+            })}
+          </tbody>
+        </table>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ width: '250px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '0.9rem' }}><span>Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}><span>Tax</span><span>₹{totalTax.toLocaleString()}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: '1.1rem', fontWeight: 700, borderTop: '2px solid var(--text-primary)', marginTop: '4px' }}><span>Total</span><span>₹{grandTotal.toLocaleString()}</span></div>
+        {/* Total */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '260px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: '1.1rem', fontWeight: 700, borderTop: '2px solid var(--kanan-navy)', marginTop: 4 }}>
+              <span>Total</span>
+              <span style={{ color: 'var(--kanan-green)' }}>{money(subtotal)}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="card" style={{ marginTop: '1rem' }}>
-        <h3 style={{ marginBottom: '0.5rem' }}>Communication Log</h3>
-        {(lead.communications || []).map(c => (
-          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--divider)' }}>
-            {c.type === 'Email' ? <FiMail color="var(--status-followup)" /> : <FiMessageCircle color="#25D366" />}
-            <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>{c.template}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 8 }}>to {c.to}</span>
-            </div>
-            <span className={`badge ${c.status === 'Delivered' || c.status === 'Read' ? 'new' : 'working'}`}>{c.status}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(c.sentAt).toLocaleString()}</span>
+        {opp.notes && (
+          <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--kanan-paper)', borderRadius: 8, fontSize: '0.85rem', color: '#555' }}>
+            <strong>Notes:</strong> {opp.notes}
           </div>
-        ))}
-        {(!lead.communications || lead.communications.length === 0) && <p className="text-muted">No communications sent yet.</p>}
+        )}
       </div>
     </div>
   );

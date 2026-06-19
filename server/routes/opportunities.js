@@ -4,6 +4,9 @@ const Opportunity = require('../models/Opportunity');
 const Lead = require('../models/Lead');
 const Customer = require('../models/Customer');
 const Activity = require('../models/Activity');
+const BillingItem = require('../models/BillingItem');
+const NexusQuote = require('../models/Quote');
+const Invoice = require('../models/Invoice');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 const { ROLE_HIERARCHY } = require('./auth');
 const { checkStageGate, stageGuidance } = require('../utils/stageGating');
@@ -410,6 +413,97 @@ router.patch('/:id/stage', requireRole(1), async (req, res) => {
       opp.lost_reason = lost_reason;
     }
     await opp.save();
+
+    // Auto-generate billing items from opportunity line_items on Closed-Won.
+    if (stage === 'Closed-Won' && opp.lead_id && Array.isArray(opp.line_items) && opp.line_items.length > 0) {
+      const existingCount = await BillingItem.countDocuments({ lead_id: opp.lead_id });
+      if (existingCount === 0) {
+        const billingDocs = opp.line_items.map((li) => ({
+          id: generateId('BI'),
+          lead_id: opp.lead_id,
+          description: li.name,
+          qty: li.quantity || 1,
+          price: li.unit_price || 0,
+          tax: 0,
+        }));
+        await BillingItem.insertMany(billingDocs);
+        await Activity.create({
+          id: generateId('act'),
+          lead_id: opp.lead_id,
+          type: 'System',
+          text: `Bill auto-generated from opportunity ${opp.opp_code} — ${billingDocs.length} item${billingDocs.length !== 1 ? 's' : ''}, total ₹${(opp.estimated_value || 0).toLocaleString('en-IN')}`,
+          user_name: req.user.name,
+        });
+      }
+    }
+
+    // Auto-create Quote + Invoice on Closed-Won.
+    if (stage === 'Closed-Won' && opp.lead_id && Array.isArray(opp.line_items) && opp.line_items.length > 0) {
+      const existingQuote = await NexusQuote.findOne({ lead_id: opp.lead_id });
+      if (!existingQuote) {
+        const quoteItems = opp.line_items.map((li) => ({
+          desc: li.name,
+          service_type: li.service_type,
+          qty: li.quantity || 1,
+          cost: li.unit_cost || 0,
+          sell: li.unit_price || 0,
+        }));
+        const sell_total = quoteItems.reduce((s, i) => s + i.sell * i.qty, 0);
+        const cost_total = quoteItems.reduce((s, i) => s + i.cost * i.qty, 0);
+
+        const quote = await NexusQuote.create({
+          id: generateId('qt'),
+          quote_number: await NexusQuote.nextQuoteNumber(),
+          lead_id: opp.lead_id,
+          opp_id: opp.id,
+          contact_name: opp.customer_name,
+          items: quoteItems,
+          cost_total,
+          sell_total,
+          margin: sell_total - cost_total,
+          discount_pct: 0,
+          discount_amount: 0,
+          final_total: sell_total,
+          currency: 'INR',
+          status: 'Sent',
+          created_by: req.user.name,
+        });
+
+        // Create Invoice from the quote.
+        const subtotal = sell_total;
+        const tax_total = +(subtotal * 0.05).toFixed(2);
+        const grand_total = +(subtotal + tax_total).toFixed(2);
+
+        await Invoice.create({
+          id: generateId('inv'),
+          invoice_number: await Invoice.nextInvoiceNumber(),
+          lead_id: opp.lead_id,
+          quote_id: quote.id,
+          customer_name: opp.customer_name,
+          customer_email: opp.email || '',
+          items: quoteItems.map((i) => ({ ...i, price: i.sell })),
+          subtotal,
+          cgst: 0,
+          sgst: 0,
+          igst: tax_total,
+          tax_total,
+          grand_total,
+          deposit_paid: 0,
+          balance_due: grand_total,
+          status: 'Issued',
+          issued_at: new Date(),
+          created_by: req.user.name,
+        });
+
+        await Activity.create({
+          id: generateId('act'),
+          lead_id: opp.lead_id,
+          type: 'System',
+          text: `Quote ${quote.quote_number} and Invoice auto-generated on Closed-Won (₹${grand_total.toLocaleString('en-IN')})`,
+          user_name: req.user.name,
+        });
+      }
+    }
 
     // The originating lead is read-only post-conversion (§4.5); we only log
     // an activity against it for the audit trail — no field write-back.
