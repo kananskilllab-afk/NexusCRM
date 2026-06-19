@@ -151,9 +151,8 @@ const Leads = () => {
   // Active qualification filter from URL — ?status=Qualified
   const activeFilter = searchParams.get('status') || 'all';
 
-  // ── Load leads (reuse context cache) ────────────────────────
+  // ── Load leads on mount (always fetch fresh from server) ────
   useEffect(() => {
-    if (state.leads.length > 0) return;
     dispatch({ type: 'FETCH_START' });
     api.getLeads()
       .then(data => dispatch({ type: 'SET_LEADS', payload: data }))
@@ -161,7 +160,7 @@ const Leads = () => {
         dispatch({ type: 'FETCH_ERROR', payload: err.message });
         setLoadError(err.message);
       });
-  }, [dispatch, state.leads.length]);
+  }, [dispatch]);
 
   // ── Refresh handler ──────────────────────────────────────────
   const handleRefresh = useCallback(() => {
@@ -214,14 +213,16 @@ const Leads = () => {
     return { all, qualified, pending };
   }, [state.leads]);
 
-  // ── After add: prepend new lead and close modal ──────────────
-  const handleLeadSaved = useCallback((newLead) => {
-    if (newLead) {
-      dispatch({ type: 'SET_LEADS', payload: [newLead, ...(state.leads || [])] });
-      toast('Lead created successfully', 'success');
-    }
+  // ── After add: save to API then prepend to list ──────────────
+  const handleLeadSaved = useCallback((formData) => {
+    api.createLead(formData)
+      .then(newLead => {
+        dispatch({ type: 'ADD_LEAD', payload: newLead });
+        toast('Lead created successfully', 'success');
+      })
+      .catch(err => toast('Failed to create lead: ' + err.message, 'error'));
     setShowAddModal(false);
-  }, [dispatch, state.leads, toast]);
+  }, [dispatch, toast]);
 
   return (
     <div className="leads-page">
