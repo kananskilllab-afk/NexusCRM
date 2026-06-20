@@ -29,17 +29,19 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page" style={{ 
-      height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-      background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', padding: '20px' 
+    <div className="login-page" style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--gradient-brand)', padding: '20px', position: 'relative', overflow: 'hidden'
     }}>
-      <div className="login-card card" style={{ width: '100%', maxWidth: '400px', padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+      <div style={{ position: 'absolute', top: '-160px', right: '-120px', width: '420px', height: '420px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,160,227,0.45) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-180px', left: '-140px', width: '480px', height: '480px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(176,203,31,0.28) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div className="login-card card" style={{ width: '100%', maxWidth: '420px', padding: '40px', boxShadow: 'var(--shadow-lg)', position: 'relative', zIndex: 1 }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <img src="/logo.png" alt="Kanan Travel CRM" style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain', marginBottom: '15px' }} />
           <p className="text-secondary" style={{ marginTop: '10px' }}>Enterprise Access Portal</p>
         </div>
 
-        {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
+        {error && <div style={{ background: 'var(--state-error-bg)', color: 'var(--state-error-text)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
 
         <form onSubmit={handleLogin}>
           <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -81,7 +83,7 @@ const Login = () => {
 
           <div style={{ position: 'relative', textAlign: 'center', marginBottom: '20px' }}>
             <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '1px solid var(--border-color)' }}></div>
-            <span style={{ position: 'relative', background: '#1E293B', padding: '0 10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or continue with</span>
+            <span style={{ position: 'relative', background: '#fff', padding: '0 10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Or continue with</span>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>

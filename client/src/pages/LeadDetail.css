@@ -50,13 +50,13 @@
   letter-spacing: 0.5px;
 }
 
-.badge-status.new { background: #D1FAE5; color: #065F46; }
-.badge-status.working { background: #DBEAFE; color: #1E40AF; }
-.badge-status.booked { background: #D1FAE5; color: #065F46; }
-.badge-status.lost { background: #F3F4F6; color: #6B7280; }
-.badge-status.unqualified { background: #FEF9C3; color: #713F12; }
-.badge-status.proposal-sent { background: #EDE9FE; color: #4C1D95; }
-.badge-status.negotiating { background: #FEF3C7; color: #92400E; }
+.badge-status.new          { background: var(--state-success-bg); color: var(--state-success-text); }
+.badge-status.working      { background: var(--state-info-bg);    color: var(--kanan-blue); }
+.badge-status.booked       { background: var(--state-success-bg); color: var(--state-success-text); }
+.badge-status.lost         { background: var(--bg-subtle);        color: var(--text-muted); }
+.badge-status.unqualified  { background: var(--state-warn-bg);    color: var(--state-warn-text); }
+.badge-status.proposal-sent{ background: color-mix(in srgb, var(--kanan-purple) 12%, white); color: var(--kanan-purple); }
+.badge-status.negotiating  { background: var(--state-warn-bg);    color: var(--state-warn-text); }
 
 /* Pipeline */
 .status-pipeline {
@@ -92,8 +92,8 @@
 }
 
 .status-step.completed .step-dot {
-  background: #10B981;
-  border-color: #10B981;
+  background: var(--kanan-green);
+  border-color: var(--kanan-green);
 }
 
 .status-label {
@@ -106,7 +106,7 @@
 }
 
 .status-step.active .status-label { color: var(--primary); }
-.status-step.completed .status-label { color: #10B981; }
+.status-step.completed .status-label { color: var(--kanan-green); }
 
 .step-line {
   position: absolute;
@@ -118,7 +118,7 @@
   z-index: 0;
 }
 
-.status-step.completed .step-line { background: #10B981; }
+.status-step.completed .step-line { background: var(--kanan-green); }
 
 /* Tabs */
 .tab-container { }

@@ -14,10 +14,14 @@ const SOURCE_OPTIONS = ['Website', 'Facebook Ad', 'Google Ad', 'Referral', 'Walk
 
 const FORM_ID = 'lead_create';
 
+const BUDGET_RANGES = ['<50k', '50k-1L', '1L-2L', '2L+'];
+const CONTACT_CHANNELS = ['Call', 'WhatsApp', 'Email'];
+
 const blankForm = (defaults = {}) => ({
   first_name: '',
   last_name: '',
   mobile: '',
+  alternate_phone: '',
   email: '',
   destination: '',
   no_adults: 1,
@@ -27,6 +31,10 @@ const blankForm = (defaults = {}) => ({
   assigned_to: defaults.assigned_to || 'Bhargav',
   travel_start_date: '',
   travel_end_date: '',
+  budget_range: '',
+  preferred_channel: '',
+  next_follow_up_date: '',
+  do_not_contact: false,
   enquiry_data: {},
   tags: '',
   gdpr_consent: false,
@@ -37,6 +45,14 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState(() => blankForm());
   const [error, setError] = useState('');
   const [restoredDraft, setRestoredDraft] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
 
   // On open: restore an in-progress draft if one exists, otherwise seed
   // from the user's last-used defaults so common fields are pre-filled.
@@ -123,17 +139,23 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content card" style={{ maxWidth: '700px' }}>
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div
+        className="modal-content card"
+        style={{ maxWidth: '700px' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-lead-title"
+      >
         <div className="modal-header">
-          <h2>Create New Lead</h2>
-          <button className="close-btn" onClick={onClose}><FiX /></button>
+          <h2 id="modal-lead-title">Create New Lead</h2>
+          <button className="close-btn" onClick={onClose} aria-label="Close modal"><FiX /></button>
         </div>
 
         {restoredDraft && (
-          <div style={{ background: '#EEF6FF', color: '#1F3A68', padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ background: 'var(--state-info-bg)', color: 'var(--state-info-text)', padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Restored your unsaved entries from last time.</span>
-            <button type="button" onClick={handleClearDraft} style={{ background: 'transparent', border: 'none', color: '#1F3A68', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <button type="button" onClick={handleClearDraft} style={{ background: 'transparent', border: 'none', color: 'var(--state-info-text)', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <FiRotateCcw /> Start fresh
             </button>
           </div>
@@ -155,17 +177,26 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
-          {error && <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: 15 }}>{error}</div>}
+          {error && <div style={{ background: 'var(--state-error-bg)', color: 'var(--state-error-text)', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: 15 }}>{error}</div>}
 
           <div className="form-section">
             <h4><FiUser style={{ marginRight: 8 }} /> Personal Details</h4>
             <div className="form-row">
-              <div className="form-group"><label>First Name*</label><input type="text" required value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} /></div>
-              <div className="form-group"><label>Last Name</label><input type="text" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="alm-first-name">First Name*</label><input id="alm-first-name" type="text" required value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="alm-last-name">Last Name</label><input id="alm-last-name" type="text" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} /></div>
             </div>
             <div className="form-row">
-              <div className="form-group"><label>Mobile*</label><input type="tel" required value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} /></div>
-              <div className="form-group"><label>Email</label><input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="alm-mobile">Mobile*</label><input id="alm-mobile" type="tel" required value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="alm-alt-phone">Alternate Phone</label><input id="alm-alt-phone" type="tel" value={formData.alternate_phone} onChange={e => setFormData({ ...formData, alternate_phone: e.target.value })} /></div>
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label htmlFor="alm-email">Email</label><input id="alm-email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="alm-channel">Preferred Channel</label>
+                <select id="alm-channel" value={formData.preferred_channel} onChange={e => setFormData({ ...formData, preferred_channel: e.target.value })}>
+                  <option value="">—</option>
+                  {CONTACT_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -227,7 +258,24 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
             </div>
 
             <div className="form-row" style={{ marginTop: 10 }}>
+              <div className="form-group"><label>Budget Band</label>
+                <select value={formData.budget_range} onChange={e => setFormData({ ...formData, budget_range: e.target.value })}>
+                  <option value="">—</option>
+                  {BUDGET_RANGES.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label>Next Follow-up</label><input type="date" value={formData.next_follow_up_date} onChange={e => setFormData({ ...formData, next_follow_up_date: e.target.value })} /></div>
+            </div>
+
+            <div className="form-row" style={{ marginTop: 10 }}>
               <div className="form-group" style={{ flex: 2 }}><label>Tags (comma separated)</label><input type="text" placeholder="VIP, Honeymoon, Tech" value={formData.tags || ''} onChange={e => setFormData({ ...formData, tags: e.target.value })} /></div>
+            </div>
+
+            <div style={{ marginTop: 12, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                 <input type="checkbox" checked={formData.do_not_contact} onChange={e => setFormData({ ...formData, do_not_contact: e.target.checked })} />
+                 Do Not Contact (suppress automated outreach &amp; SLA chasing)
+              </label>
             </div>
 
             <div style={{ marginTop: 15, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

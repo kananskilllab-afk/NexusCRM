@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+// §3.3 — the lead status workflow. The first seven are the lead lifecycle;
+// 'Converted' and 'Unqualified' are terminal. The trailing values are legacy
+// operational statuses still written by fulfilment/cancel flows.
+const LEAD_STATUSES = ['New', 'Attempting Contact', 'Working', 'Nurturing', 'Qualified', 'Unqualified', 'Converted'];
+const LEGACY_STATUSES = ['Contacted', 'Proposal', 'Negotiation', 'Booked', 'Cancelled', 'Lost'];
+// §3.6 rating bands derived from the lead score.
+const RATINGS = ['Hot', 'Warm', 'Cold'];
+const BUDGET_RANGES = ['<50k', '50k-1L', '1L-2L', '2L+'];
+const CONTACT_CHANNELS = ['Call', 'WhatsApp', 'Email'];
+
 const LeadSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true },
@@ -8,16 +18,25 @@ const LeadSchema = new mongoose.Schema(
     last_name: { type: String },
     email: { type: String, lowercase: true, trim: true },
     mobile: { type: String },
-    status: { type: String, default: 'New' },
+    alternate_phone: { type: String },
+    status: { type: String, enum: [...LEAD_STATUSES, ...LEGACY_STATUSES], default: 'New' },
     priority: { type: String, default: 'Normal' },
+    rating: { type: String, enum: RATINGS, default: 'Cold' }, // §3.6 Hot/Warm/Cold
     no_adults: { type: Number, default: 1 },
     no_children: { type: Number, default: 0 },
     no_infants: { type: Number, default: 0 },
     destination: { type: String },
     lead_source: { type: String },
-    assigned_to: { type: String },
+    assigned_to: { type: String }, // agent currently working the lead
+    owner: { type: String },       // responsible owner — defaults to the creator
     travel_start_date: { type: String },
     travel_end_date: { type: String },
+    budget_range: { type: String, enum: BUDGET_RANGES },
+    preferred_channel: { type: String, enum: CONTACT_CHANNELS },
+    region: { type: String },   // §3.4 territory routing
+    language: { type: String }, // §3.4 language routing
+    do_not_contact: { type: Boolean, default: false },
+    next_follow_up_date: { type: Date },
     enquiry_types: { type: [String], default: [] },
     enquiry_data: { type: mongoose.Schema.Types.Mixed, default: {} },
     notes: { type: String },
@@ -33,6 +52,10 @@ const LeadSchema = new mongoose.Schema(
     lead_score:   { type: Number, default: 0, min: 0, max: 100 },
     // Stage 5 — Kanban pipeline
     pipeline_stage: { type: String, enum: ['Inquiry', 'Quoted', 'Negotiation', 'Won', 'Lost'], default: 'Inquiry' },
+    // §4 — conversion creates an Account + Opportunity; both are linked back here.
+    opportunity_id: { type: String, index: true },
+    converted_customer_id: { type: String, index: true },
+    converted_at:   { type: Date },
     // Stage 8 — secure customer share link
     share_token: { type: String, unique: true, sparse: true },
     share_token_expires_at: { type: Date },
@@ -57,6 +80,19 @@ LeadSchema.statics.nextLeadCode = async function () {
   return `LD-${seq}`;
 };
 
+// §3.6 — map a 0-100 score to its rating band.
+LeadSchema.statics.ratingForScore = function (score) {
+  const s = Number(score) || 0;
+  if (s >= 70) return 'Hot';
+  if (s >= 40) return 'Warm';
+  return 'Cold';
+};
+
+LeadSchema.statics.LEAD_STATUSES = LEAD_STATUSES;
+LeadSchema.statics.RATINGS = RATINGS;
+LeadSchema.statics.BUDGET_RANGES = BUDGET_RANGES;
+LeadSchema.statics.CONTACT_CHANNELS = CONTACT_CHANNELS;
+
 // Pre-Delete Cascade: Delete all associated activities, billing items, payments, follow-ups, and communications when a lead is deleted
 LeadSchema.pre('deleteOne', { document: false, query: true }, async function () {
   try {
@@ -69,12 +105,14 @@ LeadSchema.pre('deleteOne', { document: false, query: true }, async function () 
     const Payment = require('./Payment');
     const FollowUp = require('./FollowUp');
     const Communication = require('./Communication');
+    const Opportunity = require('./Opportunity');
 
     await Activity.deleteMany({ lead_id: lead.id });
     await BillingItem.deleteMany({ lead_id: lead.id });
     await Payment.deleteMany({ lead_id: lead.id });
     await FollowUp.deleteMany({ lead_id: lead.id });
     await Communication.deleteMany({ lead_id: lead.id });
+    await Opportunity.deleteMany({ lead_id: lead.id });
 
     console.log(`🧹 Cascading delete completed for Lead ID: ${lead.id}`);
   } catch (err) {
@@ -93,6 +131,7 @@ LeadSchema.pre('deleteMany', { document: false, query: true }, async function ()
     const Payment = require('./Payment');
     const FollowUp = require('./FollowUp');
     const Communication = require('./Communication');
+    const Opportunity = require('./Opportunity');
 
     const leadIds = leads.map(l => l.id);
 
@@ -101,6 +140,7 @@ LeadSchema.pre('deleteMany', { document: false, query: true }, async function ()
     await Payment.deleteMany({ lead_id: { $in: leadIds } });
     await FollowUp.deleteMany({ lead_id: { $in: leadIds } });
     await Communication.deleteMany({ lead_id: { $in: leadIds } });
+    await Opportunity.deleteMany({ lead_id: { $in: leadIds } });
 
     console.log(`🧹 Cascading delete completed for multiple Lead IDs: ${leadIds.join(', ')}`);
   } catch (err) {

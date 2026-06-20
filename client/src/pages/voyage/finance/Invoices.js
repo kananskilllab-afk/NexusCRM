@@ -51,14 +51,22 @@ const Invoices = () => {
             </tr>
           </thead>
           <tbody>
+            {loading && (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--kanan-mute)' }}>Loading…</td></tr>
+            )}
+            {!loading && invoices.length === 0 && (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--kanan-mute)' }}>No invoices found. Invoices are generated automatically when an opportunity reaches Closed-Won.</td></tr>
+            )}
             {invoices.map(inv => (
               <tr key={inv.id}>
-                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{inv.id}</td>
-                <td>{inv.client}</td>
-                <td>₹{inv.total}</td>
-                <td style={{ color: inv.due > 0 ? 'var(--color-red)' : 'var(--color-green)', fontWeight: 'bold' }}>₹{inv.due}</td>
-                <td>{inv.dueDate}</td>
-                <td><span className={`badge badge-${inv.status === 'Paid' ? 'success' : 'warning'}`}>{inv.status}</span></td>
+                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{inv.invoice_number || inv.id}</td>
+                <td>{inv.contact_name || '—'}</td>
+                <td>₹{(inv.total_amount || 0).toLocaleString('en-IN')}</td>
+                <td style={{ color: (inv.outstanding || 0) > 0 ? 'var(--color-red)' : 'var(--color-green)', fontWeight: 'bold' }}>
+                  ₹{(inv.outstanding || 0).toLocaleString('en-IN')}
+                </td>
+                <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-IN') : '—'}</td>
+                <td><span className={`badge badge-${inv.status === 'Paid' ? 'success' : inv.status === 'Issued' ? 'info' : 'warning'}`}>{inv.status}</span></td>
                 <td>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button className="btn btn-outline btn-sm"><FiEye /></button>

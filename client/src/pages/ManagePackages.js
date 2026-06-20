@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLeads } from '../context/LeadContext';
-import { FiPlus, FiPackage, FiMapPin, FiClock, FiDollarSign, FiTrash2, FiEdit2 } from 'react-icons/fi';
+import { FiPlus, FiPackage, FiMapPin, FiClock, FiTrash2, FiEdit2 } from 'react-icons/fi';
+import { TbCurrencyRupee } from 'react-icons/tb';
 
 const ManagePackages = () => {
   const { state } = useLeads();

@@ -39,6 +39,11 @@ export const voyageApi = {
     if (!res.ok) throw new Error('Failed to fetch bookings');
     return res.json();
   },
+  getBooking: async (id) => {
+    const res = await fetch(`${API_URL}/bookings/${id}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch booking');
+    return res.json();
+  },
   createBooking: async (data) => {
     const res = await fetch(`${API_URL}/bookings`, {
       method: 'POST',
@@ -48,23 +53,89 @@ export const voyageApi = {
     if (!res.ok) throw new Error('Failed to create booking');
     return res.json();
   },
-  
+  updateBooking: async (id, data) => {
+    const res = await fetch(`${API_URL}/bookings/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update booking');
+    return res.json();
+  },
+  deleteBooking: async (id) => {
+    const res = await fetch(`${API_URL}/bookings/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to delete booking');
+    return res.json();
+  },
+
   // ─── PIPELINE ───────────────────────────────────────────────────────────────
   getPipeline: async () => {
     const res = await fetch(`${API_URL}/pipeline`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch pipeline');
     return res.json();
   },
-  updateBookingStage: async (bookingId, newStageId) => {
+  getPipelineMetrics: async () => {
+    const res = await fetch(`${API_URL}/pipeline/metrics`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch pipeline metrics');
+    return res.json();
+  },
+  updateBookingStage: async (bookingId, newStageId, extra = {}) => {
     const res = await fetch(`${API_URL}/bookings/${bookingId}/stage`, {
       method: 'PATCH',
       headers: getHeaders(),
-      body: JSON.stringify({ stage_id: newStageId })
+      body: JSON.stringify({ stage_id: newStageId, ...extra })
     });
     if (!res.ok) throw new Error('Failed to update booking stage');
     return res.json();
   },
-  
+
+  // ─── PIPELINE STAGES (CRUD) ──────────────────────────────────────────────────
+  createStage: async (data) => {
+    const res = await fetch(`${API_URL}/pipeline/stages`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create stage');
+    }
+    return res.json();
+  },
+  updateStage: async (id, data) => {
+    const res = await fetch(`${API_URL}/pipeline/stages/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update stage');
+    return res.json();
+  },
+  deleteStage: async (id, reassignTo) => {
+    const res = await fetch(`${API_URL}/pipeline/stages/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      body: JSON.stringify(reassignTo ? { reassign_to: reassignTo } : {})
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete stage');
+    }
+    return res.json();
+  },
+  reorderStages: async (order) => {
+    const res = await fetch(`${API_URL}/pipeline/stages/reorder`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ order })
+    });
+    if (!res.ok) throw new Error('Failed to reorder stages');
+    return res.json();
+  },
+
   // ─── ITINERARY ──────────────────────────────────────────────────────────────
   getItinerary: async (bookingId) => {
     const res = await fetch(`${API_URL}/itinerary/${bookingId}`, { headers: getHeaders() });

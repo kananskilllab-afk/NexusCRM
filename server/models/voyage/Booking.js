@@ -18,11 +18,20 @@ const bookingSchema = new mongoose.Schema(
     total_sell_cents:   { type: Number, default: 0 },
     margin_pct:         { type: Number, default: 0 },
     itinerary_version:  { type: Number, default: 1 },
+    // Ordering of the card within its pipeline column (lower = higher on board).
+    board_position:     { type: Number, default: 0 },
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+    },
+    expected_close_date: { type: Date },
     travel_dates: {
       start: { type: Date },
       end:   { type: Date },
     },
     cancellation_reason: { type: String }, // NEW
+    lost_reason:         { type: String }, // why a deal was marked closed-lost
     destination:         { type: String },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
@@ -30,6 +39,7 @@ const bookingSchema = new mongoose.Schema(
 
 bookingSchema.index({ tenant_id: 1, contact_id: 1 });
 bookingSchema.index({ tenant_id: 1, status: 1 });
+bookingSchema.index({ tenant_id: 1, stage_id: 1, board_position: 1 });
 bookingSchema.index({ tenant_id: 1, 'travel_dates.start': 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

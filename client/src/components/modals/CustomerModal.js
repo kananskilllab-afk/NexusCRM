@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiSave, FiUser, FiInfo, FiSliders, FiShield, FiCalendar, FiRotateCcw } from 'react-icons/fi';
+import { FiX, FiSave, FiUser, FiSliders, FiShield, FiRotateCcw } from 'react-icons/fi';
 import './Modal.css';
 import { hasConsent, loadDraft, saveDraft, clearDraft, loadDefaults, saveDefaults } from '../../utils/cookies';
 
@@ -171,15 +171,15 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer = null, mode = 'view'
         {/* Modal Form / Body */}
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {error && (
-            <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem' }}>
+            <div style={{ background: 'var(--state-error-bg)', color: 'var(--state-error-text)', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem' }}>
               {error}
             </div>
           )}
 
           {restoredDraft && (
-            <div style={{ background: '#EEF6FF', color: '#1F3A68', padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--state-info-bg)', color: 'var(--state-info-text)', padding: '8px 12px', borderRadius: 8, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>Restored your unsaved entries from last time.</span>
-              <button type="button" onClick={handleClearDraft} style={{ background: 'transparent', border: 'none', color: '#1F3A68', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" onClick={handleClearDraft} style={{ background: 'transparent', border: 'none', color: 'var(--state-info-text)', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <FiRotateCcw /> Start fresh
               </button>
             </div>

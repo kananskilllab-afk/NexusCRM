@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════════
+   Quotes page
+═══════════════════════════════════════════════════════════════ */
+
+.qv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+.qv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qv-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+}
+
+.qv-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted, #8A90A6);
+  pointer-events: none;
+}
+
+.qv-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid var(--border-color, #E6E8F0);
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-card, #fff);
+  font-size: 0.875rem;
+  font-family: var(--font-sans, 'Poppins', sans-serif);
+  color: var(--text-primary, #1A1F36);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.qv-search-input:focus {
+  border-color: var(--kanan-blue, #284695);
+  box-shadow: 0 0 0 4px rgba(40, 70, 149, 0.14);
+}
+.qv-search-input::placeholder { color: var(--text-muted, #8A90A6); }
+
+/* ── Filter pills ───────────────────────────────────────────── */
+.qv-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.qv-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #E6E8F0);
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary, #454C66);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans, 'Poppins', sans-serif);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.qv-pill:hover {
+  border-color: var(--border-strong, #D6DAE6);
+  background: var(--bg-subtle, #F8F9FD);
+}
+.qv-pill--active {
+  background: var(--kanan-navy, #393185);
+  border-color: var(--kanan-navy, #393185);
+  color: var(--kanan-white);
+}
+.qv-pill--active:hover {
+  background: var(--kanan-navy, #393185);
+}
+
+.qv-pill-count {
+  background: var(--bg-subtle, #F0F0F5);
+  color: var(--text-muted, #8A90A6);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+.qv-pill--active .qv-pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--kanan-white);
+}
+
+/* ── Cell styles ────────────────────────────────────────────── */
+.qv-code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--kanan-blue, #284695);
+}
+
+.qv-ref {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #454C66);
+}
+
+.qv-muted {
+  color: var(--text-muted, #8A90A6);
+}
+
+.qv-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qv-contact-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary, #1A1F36);
+}
+
+.qv-contact-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted, #8A90A6);
+}
+
+.qv-amount {
+  font-weight: 700;
+  color: var(--text-primary, #1A1F36);
+}
+
+.qv-expired-date {
+  color: var(--kanan-red, #E53935);
+  font-weight: 600;
+}
+
+/* ── Download button ────────────────────────────────────────── */
+.qv-dl-btn {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #E6E8F0);
+  background: var(--bg-card, #fff);
+  color: var(--text-muted, #8A90A6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.qv-dl-btn:hover {
+  background: var(--kanan-navy, #393185);
+  color: var(--kanan-white);
+  border-color: var(--kanan-navy, #393185);
+}
+
+/* ── Error ──────────────────────────────────────────────────── */
+.qv-error {
+  text-align: center;
+  padding: 16px;
+  color: var(--kanan-red, #E53935);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .qv-search-wrap { max-width: 100%; }
+  .qv-toolbar { gap: 8px; }
+}

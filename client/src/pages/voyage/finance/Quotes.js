@@ -27,23 +27,27 @@ const Quotes = () => {
           <thead>
             <tr>
               <th>Quote #</th>
-              <th>Booking Ref</th>
               <th>Client</th>
               <th>Amount</th>
-              <th>Date</th>
+              <th>Date Sent</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
+            {loading && (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--kanan-mute)' }}>Loading…</td></tr>
+            )}
+            {!loading && quotes.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--kanan-mute)' }}>No quotes found. Quotes are generated automatically when an opportunity reaches Closed-Won.</td></tr>
+            )}
             {quotes.map(q => (
               <tr key={q.id}>
-                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{q.id}</td>
-                <td>{q.booking}</td>
-                <td>{q.client}</td>
-                <td style={{ fontWeight: 'bold' }}>₹{q.amount}</td>
-                <td>{q.date}</td>
-                <td><span className={`badge badge-${q.status === 'Sent' ? 'info' : 'warning'}`}>{q.status}</span></td>
+                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{q.quote_number || q.id}</td>
+                <td>{q.contact_name || '—'}</td>
+                <td style={{ fontWeight: 'bold' }}>₹{(q.total_amount || 0).toLocaleString('en-IN')}</td>
+                <td>{q.sent_date ? new Date(q.sent_date).toLocaleDateString('en-IN') : '—'}</td>
+                <td><span className={`badge badge-${q.status === 'Sent' ? 'info' : q.status === 'Approved' ? 'success' : 'warning'}`}>{q.status}</span></td>
                 <td>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button className="btn btn-outline btn-sm"><FiEye /></button>

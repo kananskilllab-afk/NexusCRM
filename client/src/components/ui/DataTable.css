@@ -1,0 +1,107 @@
+.dt-outer {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: var(--_dt-max-height, none);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  background-color: var(--bg-card);
+}
+
+/* ── Table chrome ───────────────────────────────────────────────────────── */
+
+.dt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+}
+
+/* ── Head ───────────────────────────────────────────────────────────────── */
+
+.dt-head th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--bg-subtle);
+  padding: var(--space-3) var(--space-5);
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-color);
+  /* Hair-line separator to visually lift the head from the body when scrolled */
+  box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* ── Body rows ──────────────────────────────────────────────────────────── */
+
+.dt-row td {
+  padding: var(--space-3) var(--space-5);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--divider);
+  vertical-align: middle;
+  background-color: var(--bg-card);
+  transition: background-color var(--transition-base);
+}
+
+/* last row — no bottom border */
+.dt-row:last-child td {
+  border-bottom: none;
+}
+
+/* Striped even rows */
+.dt-row:nth-child(even) td {
+  background-color: var(--bg-subtle);
+}
+
+/* Row hover */
+.dt-row:hover td {
+  background-color: color-mix(in srgb, var(--kanan-sky) 8%, var(--bg-card)) !important;
+}
+
+/* Clickable cursor */
+.dt-row--clickable {
+  cursor: pointer;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.dt-empty {
+  padding: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
+
+.dt-skel {
+  display: inline-block;
+  width: 75%;
+  height: 13px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--kanan-line, #E5E7EB) 25%,
+    #f2f3f7                   50%,
+    var(--kanan-line, #E5E7EB) 75%
+  );
+  background-size: 200% 100%;
+  animation: dt-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Stagger skeleton column widths for a natural look */
+.dt-row td:nth-child(2) .dt-skel { width: 85%; }
+.dt-row td:nth-child(3) .dt-skel { width: 60%; }
+.dt-row td:nth-child(4) .dt-skel { width: 40%; }
+.dt-row td:nth-child(5) .dt-skel { width: 55%; }
+
+@keyframes dt-shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -8,11 +8,13 @@ const Payment = require('../models/Payment');
 const AssignedSupplier = require('../models/AssignedSupplier');
 const Communication = require('../models/Communication');
 const Customer = require('../models/Customer');
+const Opportunity = require('../models/Opportunity');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 const { ROLE_HIERARCHY } = require('./auth');
 const { sendAutomatedEmail } = require('../utils/automation');
-const { scoreLead } = require('../utils/leadScoring');
+const { scoreLead, ratingForScore } = require('../utils/leadScoring');
 const { pickAgent } = require('../utils/assignment');
+const { createNotification } = require('../utils/notify');
 const crypto = require('crypto');
 const LoyaltyPoints = require('../models/LoyaltyPoints');
 
@@ -88,9 +90,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', requireRole(1), async (req, res) => {
   const id = generateId('L');
   const {
-    first_name, last_name, email, mobile, status = 'New', priority = 'Normal',
+    first_name, last_name, email, mobile, alternate_phone, status = 'New', priority = 'Normal',
     no_adults = 1, no_children = 0, no_infants = 0, destination, lead_source,
     assigned_to, travel_start_date, travel_end_date,
+    budget_range, preferred_channel, do_not_contact, next_follow_up_date,
+    region, language,
     enquiry_types = [], enquiry_data = {}, notes, tags = [],
     utm_source, utm_medium, utm_campaign, referrer_url,
     auto_assign = true
@@ -103,25 +107,28 @@ router.post('/', requireRole(1), async (req, res) => {
     // Stage 3 — Round-robin if no explicit owner
     let finalAssignedTo = assigned_to || null;
     if (!finalAssignedTo && auto_assign) {
-      const agent = await pickAgent({ enquiry_types });
+      const agent = await pickAgent({ enquiry_types, region, language });
       finalAssignedTo = agent ? agent.name : req.user.name;
     } else if (!finalAssignedTo) {
       finalAssignedTo = req.user.name;
     }
 
-    // Stage 4 — Lead score (initial, no engagement yet)
+    // Stage 4 — Lead score (initial, no engagement yet) + Rating band
     const initialScore = scoreLead(
-      { lead_source, enquiry_data, created_at: new Date() },
+      { lead_source, enquiry_data, enquiry_types, budget_range, no_adults, no_children, created_at: new Date() },
       { touchpoints: 0 }
     );
 
     const newLead = await Lead.create({
-      id, lead_code, first_name, last_name, email, mobile, status, priority,
+      id, lead_code, first_name, last_name, email, mobile, alternate_phone, status, priority,
       no_adults, no_children, no_infants, destination, lead_source,
-      assigned_to: finalAssignedTo, travel_start_date, travel_end_date,
+      assigned_to: finalAssignedTo, owner: req.user.name, travel_start_date, travel_end_date,
+      budget_range, preferred_channel, do_not_contact, next_follow_up_date,
+      region, language,
       enquiry_types, enquiry_data, notes, tags,
       utm_source, utm_medium, utm_campaign, referrer_url,
       lead_score: initialScore,
+      rating: ratingForScore(initialScore),
       pipeline_stage: 'Inquiry'
     });
 
@@ -154,9 +161,15 @@ router.patch('/:id', requireRole(1), async (req, res) => {
     const lead = await Lead.findOne({ id: leadId });
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-    const allowed = ['first_name','last_name','email','mobile','status','priority','destination',
-      'lead_source','assigned_to','travel_start_date','travel_end_date','enquiry_types',
+    // §4.5 — once converted, the lead is read-only; the opportunity carries work forward.
+    if (lead.status === 'Converted') {
+      return res.status(409).json({ error: 'Lead is converted and read-only. Edit the linked opportunity instead.' });
+    }
+
+    const allowed = ['first_name','last_name','email','mobile','alternate_phone','status','priority','destination',
+      'lead_source','assigned_to','owner','travel_start_date','travel_end_date','enquiry_types',
       'enquiry_data','no_adults','no_children','no_infants','notes','tags',
+      'budget_range','preferred_channel','do_not_contact','next_follow_up_date','region','language',
       'utm_source','utm_medium','utm_campaign','referrer_url',
       'qualification_status','qualification_reason','lead_score',
       'pipeline_stage','gstin','place_of_supply'];
@@ -167,6 +180,11 @@ router.patch('/:id', requireRole(1), async (req, res) => {
         updates[key] = req.body[key];
       }
     });
+
+    // Keep the Rating band in sync whenever the score changes.
+    if (updates.lead_score !== undefined) {
+      updates.rating = ratingForScore(updates.lead_score);
+    }
 
     if (Object.keys(updates).length === 0) return res.json(lead);
 
@@ -265,6 +283,30 @@ router.post('/:id/activities', async (req, res) => {
       text,
       user_name: req.user.name
     });
+
+    // §3.7 — any new engagement re-activates a nurturing lead: it jumps back
+    // into the active queue with a refreshed score.
+    const lead = await Lead.findOne({ id: leadId });
+    if (lead && lead.status === 'Nurturing') {
+      const touchpoints = await Activity.countDocuments({ lead_id: leadId, type: { $nin: ['System'] } });
+      lead.status = 'Working';
+      lead.lead_score = scoreLead(lead.toObject(), { touchpoints, connected: true });
+      lead.rating = ratingForScore(lead.lead_score);
+      await lead.save();
+      await Activity.create({
+        id: generateId('act'), lead_id: leadId, type: 'System',
+        text: 'Re-activated from Nurturing — new engagement detected.', user_name: 'System',
+      });
+      if (lead.assigned_to) {
+        createNotification({
+          user_id: lead.assigned_to,
+          title: `Lead re-activated: ${lead.lead_code || lead.id}`,
+          message: `${lead.first_name || 'Lead'} responded and is back in your active queue.`,
+          type: 'info', lead_id: leadId, entity_type: 'lead', entity_id: leadId, link: `/leads/${leadId}`,
+        }).catch(() => {});
+      }
+    }
+
     res.status(201).json(newAct);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create activity' });
@@ -524,6 +566,52 @@ router.post('/:id/auto-assign', requireRole(2), async (req, res) => {
 });
 
 // ============================================================================
+// Manual assign — set the working agent and/or the owner explicitly.
+// ============================================================================
+router.post('/:id/assign', requireRole(1), async (req, res) => {
+  const { assigned_to, owner } = req.body;
+  try {
+    const lead = await Lead.findOne({ id: req.params.id });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (lead.status === 'Converted') {
+      return res.status(409).json({ error: 'Lead is converted and read-only.' });
+    }
+
+    const changes = [];
+    if (assigned_to !== undefined && assigned_to !== lead.assigned_to) {
+      changes.push(`assigned to ${assigned_to || 'unassigned'}`);
+      lead.assigned_to = assigned_to;
+    }
+    if (owner !== undefined && owner !== lead.owner) {
+      changes.push(`owner set to ${owner || 'none'}`);
+      lead.owner = owner;
+    }
+    if (changes.length === 0) return res.json(lead);
+    await lead.save();
+
+    await Activity.create({
+      id: generateId('act'), lead_id: lead.id, type: 'Assignment',
+      text: `Lead ${changes.join(' and ')}.`, user_name: req.user.name,
+    });
+
+    // Notify the new assignee so the lead surfaces in their queue.
+    if (assigned_to && assigned_to !== req.user.name) {
+      createNotification({
+        user_id: assigned_to,
+        title: `Lead assigned to you: ${lead.lead_code || lead.id}`,
+        message: `${lead.first_name || 'A lead'} (${lead.destination || 'enquiry'}) was assigned to you by ${req.user.name}.`,
+        type: 'info', lead_id: lead.id, entity_type: 'lead', entity_id: lead.id, link: `/leads/${lead.id}`,
+      }).catch(() => {});
+    }
+
+    auditLog(null, req, 'ASSIGN', 'leads', lead.id, changes.join('; '));
+    res.json(lead);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================================
 // Stage 4 — Qualify / Unqualify with SLA-based follow-up
 // ============================================================================
 router.post('/:id/qualify', requireRole(1), async (req, res) => {
@@ -540,9 +628,15 @@ router.post('/:id/qualify', requireRole(1), async (req, res) => {
     lead.qualification_status = decision;
     lead.qualification_reason = reason;
     lead.lead_score = newScore;
+    lead.rating = ratingForScore(newScore);
+
+    // An existing opportunity (if any) is surfaced for the UI, but qualification
+    // no longer auto-creates one — conversion is an explicit action.
+    let opportunity = null;
 
     if (decision === 'Unqualified') {
-      lead.status = 'Lost';
+      // §3.3 — Unqualified is the terminal "dead" status; a reason is required.
+      lead.status = 'Unqualified';
       lead.pipeline_stage = 'Lost';
     } else if (decision === 'Qualified') {
       lead.status = 'Qualified';
@@ -557,6 +651,8 @@ router.post('/:id/qualify', requireRole(1), async (req, res) => {
         notes: `Auto-created on qualification (SLA ${sla_hours}h)`,
         created_by: req.user.name
       });
+
+      opportunity = await Opportunity.findOne({ lead_id: lead.id });
     }
     await lead.save();
 
@@ -569,7 +665,7 @@ router.post('/:id/qualify', requireRole(1), async (req, res) => {
     });
 
     auditLog(null, req, 'QUALIFY', 'leads', lead.id, `${decision} (score ${newScore})`);
-    res.json({ lead, score: newScore });
+    res.json({ lead, score: newScore, opportunity });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

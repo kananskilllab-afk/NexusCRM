@@ -10,6 +10,7 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const { router: authRouter } = require('./routes/auth');
 const leadsRouter = require('./routes/leads');
+const opportunitiesRouter = require('./routes/opportunities');
 const usersRouter = require('./routes/users');
 const customersRouter = require('./routes/customers');
 const suppliersRouter = require('./routes/suppliers');
@@ -21,6 +22,9 @@ const travelServicesRouter = require('./routes/travel_services');
 const voyageRouter = require('./routes/voyage/index');
 const quotesRouter = require('./routes/quotes');
 const invoicesRouter = require('./routes/invoices');
+const notificationsRouter = require('./routes/notifications');
+const integrationsRouter = require('./routes/integrations');
+const communicationsRouter = require('./routes/communications');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +33,7 @@ const PORT = process.env.PORT || 5000;
 const mongoose = require('mongoose');
 const { seedDatabase } = require('./db/seedCRM');
 const { initializeDefaultTemplates } = require('./utils/automation');
+const { startScheduler } = require('./utils/scheduler');
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -41,6 +46,7 @@ mongoose.connect(MONGODB_URI)
     console.log('🍃 Connected to MongoDB Atlas successfully');
     await seedDatabase();
     await initializeDefaultTemplates();
+    startScheduler();
   })
   .catch(err => {
     console.error('❌ Failed to connect to MongoDB Atlas:', err);
@@ -56,6 +62,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/leads', leadsRouter);
 // Public (unauthenticated) share-link routes — Stage 8 customer review
 if (leadsRouter.publicRoutes) app.use('/api/public', leadsRouter.publicRoutes);
+app.use('/api/opportunities', opportunitiesRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/suppliers', suppliersRouter);
@@ -67,6 +74,9 @@ app.use('/api/travel-services', travelServicesRouter);
 app.use('/api/voyage', voyageRouter);
 app.use('/api/quotes', quotesRouter);
 app.use('/api/invoices', invoicesRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/integrations', integrationsRouter);
+app.use('/api/communications', communicationsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -1,211 +1,335 @@
-.dashboard-container {
+/* ═══════════════════════════════════════════════════════════════
+   Dashboard — page styles
+   All colours reference tokens from styles/tokens.css
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Container ──────────────────────────────────────────────── */
+.db-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.kpi-grid-modern {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.kpi-card-modern {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px !important;
-  text-align: center;
-}
-
-.icon-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.8rem;
-  margin-bottom: 5px;
-}
-
-.primary-icon {
-  color: var(--primary);
-  border: 1px solid var(--primary-light);
-  padding: 4px;
-  border-radius: 8px;
-  font-size: 2.2rem;
-}
-
-.kpi-num {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.kpi-label-modern {
-  font-weight: 600;
-  color: #333;
-  font-size: 1.1rem;
-}
-
-/* Dashboard Buttons */
-.dashboard-actions {
-  display: flex;
-  padding: 0 10px;
-}
-
-.btn-load {
-  background-color: var(--primary);
-  color: white;
-  padding: 8px 24px;
-  font-size: 0.85rem;
-  border-radius: 24px;
-  border: none;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.btn-load:hover {
-  background-color: var(--primary-dark);
-}
-
-/* Checkbox Styling */
-.checkbox-custom {
-  display: block;
-  position: relative;
-  padding-left: 28px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: #666;
-  user-select: none;
-}
-
-.checkbox-custom input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-  height: 0;
-  width: 0;
-}
-
-.checkmark {
-  position: absolute;
-  top: 1px;
-  left: 0;
-  height: 18px;
-  width: 18px;
-  background-color: #fff;
-  border: 1px solid var(--primary);
+/* ── Loading bar ────────────────────────────────────────────── */
+.db-loading-bar {
+  height: 3px;
   border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--kanan-green),
+    var(--kanan-sky),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: dbLoadSlide 1.2s ease-in-out infinite;
+}
+@keyframes dbLoadSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-.checkbox-custom input:checked ~ .checkmark {
-  background-color: var(--primary);
+/* ── Shared card shell ──────────────────────────────────────── */
+.db-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #E5E7EB);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: var(--shadow-card, 0 1px 4px rgba(0,0,0,.06));
+  padding: 20px 22px;
 }
 
-.checkmark:after {
-  content: "";
-  position: absolute;
-  display: none;
+/* ── Empty state ────────────────────────────────────────────── */
+.db-empty {
+  text-align: center;
+  color: var(--text-muted, #6B7280);
+  font-size: 0.85rem;
+  padding: 24px 0;
 }
 
-.checkbox-custom input:checked ~ .checkmark:after {
-  display: block;
-}
-
-.checkbox-custom .checkmark:after {
-  left: 6px;
-  top: 2px;
-  width: 4px;
-  height: 9px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-/* Utility Grid */
-.utility-grid {
+/* ── 1. KPI Grid ────────────────────────────────────────────── */
+.db-kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
-.utility-card {
-  padding: 0 !important;
+/* Left-border accent: --_accent is set inline by KpiCard */
+.db-kpi-accented {
+  border-left: 4px solid var(--_accent, var(--kanan-blue)) !important;
+}
+
+/* ── 2 + 3. Charts row ──────────────────────────────────────── */
+.db-charts-row {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+
+.db-chart-main,
+.db-chart-side {
   overflow: hidden;
-  height: 180px;
+}
+
+/* ── 4 + 5. Middle row ──────────────────────────────────────── */
+.db-mid-row {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+
+/* ── Pipeline funnel ────────────────────────────────────────── */
+.db-funnel-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-.util-head {
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.util-title {
+.db-funnel-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.8rem;
 }
 
-.add-purple-btn {
-  background-color: #9c27b0;
-  color: white;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
+.db-funnel-label {
+  width: 120px;
+  flex-shrink: 0;
+  color: var(--text-secondary, #374151);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.util-body {
-  padding: 15px 20px;
+.db-funnel-track {
   flex: 1;
+  height: 12px;
+  background: var(--bg-main, #F5F7FA);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.db-funnel-bar {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.6s ease;
+  min-width: 4px;
+}
+
+.db-funnel-count {
+  width: 28px;
+  text-align: right;
+  font-weight: 700;
+  color: var(--text-primary, #1A1A2E);
+  font-size: 0.8rem;
+}
+
+.db-funnel-pct {
+  width: 36px;
+  text-align: right;
+  color: var(--text-muted, #6B7280);
+  font-size: 0.75rem;
+}
+
+/* ── Activity feed ──────────────────────────────────────────── */
+.db-activity-wrap {
+  overflow: hidden;
+}
+
+.db-activity-list {
+  list-style: none;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  text-align: center;
+  gap: 2px;
+  margin-top: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.db-activity-list::-webkit-scrollbar { width: 4px; }
+.db-activity-list::-webkit-scrollbar-track { background: transparent; }
+.db-activity-list::-webkit-scrollbar-thumb { background: var(--border-color, #E5E7EB); border-radius: 4px; }
+
+.db-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm, 6px);
+  transition: background 0.15s;
+}
+.db-activity-item:hover { background: var(--bg-subtle, #F9FAFB); }
+
+.db-activity-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
-.util-subtitle {
+.db-activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-activity-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #1A1A2E);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-activity-msg {
   font-size: 0.75rem;
-  color: #999;
-  margin-top: -10px;
+  color: var(--text-muted, #6B7280);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.util-view-more {
-  color: var(--primary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  margin-top: 5px;
-  font-weight: 500;
+.db-activity-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.empty-msg {
+.db-activity-time {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6B7280);
+  white-space: nowrap;
+}
+
+.db-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--kanan-orange, #EF7F1A);
+  flex-shrink: 0;
+}
+
+/* ── 6. Agent leaderboard ───────────────────────────────────── */
+.db-table-wrap {
+  overflow-x: auto;
+  margin-top: 14px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.85rem;
-  color: #666;
-  margin-top: auto;
-  margin-bottom: 10px;
 }
 
+.db-table thead tr {
+  background: var(--bg-subtle, #F5F7FA);
+}
+
+.db-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #6B7280);
+  border-bottom: 1px solid var(--border-color, #E5E7EB);
+  white-space: nowrap;
+}
+
+.db-table td {
+  padding: 11px 14px;
+  color: var(--text-secondary, #374151);
+  border-bottom: 1px solid var(--border-color, #E5E7EB);
+  vertical-align: middle;
+}
+
+.db-table tbody tr:last-child td { border-bottom: none; }
+
+.db-table tbody tr:nth-child(even) td {
+  background: var(--bg-subtle, #F5F7FA);
+}
+
+.db-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--kanan-sky, #00A0E3) 5%, transparent);
+}
+
+.db-table-empty {
+  text-align: center;
+  color: var(--text-muted, #6B7280);
+  padding: 24px !important;
+}
+
+.db-rank {
+  font-weight: 700;
+  color: var(--text-muted, #6B7280);
+  width: 32px;
+}
+
+.db-agent-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.db-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kanan-navy, #393185), var(--kanan-sky, #00A0E3));
+  color: var(--kanan-white);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.db-agent-name {
+  font-weight: 600;
+  color: var(--text-primary, #1A1A2E);
+}
+
+.db-revenue-cell {
+  font-weight: 600;
+  color: var(--kanan-green, #009846);
+}
+
+.db-conv-pill {
+  color: var(--kanan-white);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1200px) {
-  .utility-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .db-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .db-charts-row,
+  .db-mid-row {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .kpi-grid-modern {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .utility-grid {
-    grid-template-columns: 1fr;
-  }
+  .db-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .db-funnel-label { width: 80px; }
+}
+
+@media (max-width: 480px) {
+  .db-kpi-grid { grid-template-columns: 1fr; }
 }

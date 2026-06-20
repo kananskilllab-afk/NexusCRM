@@ -4,11 +4,27 @@ const Supplier = require('../models/Supplier');
 const SupplierRate = require('../models/SupplierRate');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 
-// All routes require auth; level 3 (Ops Manager) required for Suppliers
+// All routes require auth; level 3 (Ops Manager) required for suppliers.
 router.use(authenticate);
 router.use(requireRole(2));
 
-// GET /api/suppliers
+const preferredValue = (value) => (
+  value === true || value === 1 || value === '1' || value === 'true' ? 1 : 0
+);
+
+const validateContacts = (phoneContacts, emailContacts, res) => {
+  if (Array.isArray(phoneContacts) && phoneContacts.length > 10) {
+    res.status(400).json({ error: 'Maximum 10 phone numbers allowed' });
+    return false;
+  }
+  if (Array.isArray(emailContacts) && emailContacts.length > 10) {
+    res.status(400).json({ error: 'Maximum 10 email IDs allowed' });
+    return false;
+  }
+  return true;
+};
+
+// GET /api/suppliers?type=
 router.get('/', async (req, res) => {
   try {
     const suppliers = await Supplier.find({}).sort({ name: 1 }).lean();
@@ -42,7 +58,7 @@ router.get('/', async (req, res) => {
       return { ...supplier, rates };
     }));
 
-    res.json(suppliersWithRates);
+    res.json(normalized);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch suppliers' });
   }
@@ -86,6 +102,9 @@ router.post('/', async (req, res) => {
 // PATCH /api/suppliers/:id
 router.patch('/:id', async (req, res) => {
   const supplierId = req.params.id;
+  const { phone_contacts, email_contacts } = req.body;
+
+  if (!validateContacts(phone_contacts, email_contacts, res)) return;
 
   const allowed = [
     'name', 'product_name', 'email', 'phone', 'service_type', 'gst', 'address',
@@ -93,7 +112,8 @@ router.patch('/:id', async (req, res) => {
     'payment_terms', 'commission_pct', 'phone_contacts', 'email_contacts'
   ];
   const updates = {};
-  allowed.forEach(key => {
+
+  allowed.forEach((key) => {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
   });
 
@@ -114,7 +134,7 @@ router.patch('/:id', async (req, res) => {
     );
     if (!updated) return res.status(404).json({ error: 'Supplier not found' });
 
-    auditLog(null, req, 'UPDATE', 'suppliers', supplierId, `Updated supplier details`);
+    auditLog(null, req, 'UPDATE', 'suppliers', supplierId, 'Updated supplier details');
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: 'Failed to update supplier' });
@@ -127,17 +147,14 @@ router.delete('/:id', async (req, res) => {
 
   try {
     await Supplier.deleteOne({ id: supplierId });
-    // Also delete supplier rates
     await SupplierRate.deleteMany({ supplier_id: supplierId });
-    
+
     auditLog(null, req, 'DELETE', 'suppliers', supplierId, 'Supplier deleted');
     res.json({ message: 'Supplier deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete supplier' });
   }
 });
-
-// --- Supplier Rates ---
 
 // POST /api/suppliers/:id/rates
 router.post('/:id/rates', async (req, res) => {
@@ -149,7 +166,14 @@ router.post('/:id/rates', async (req, res) => {
 
   try {
     const newRate = await SupplierRate.create({
-      id: rateId, supplier_id: supplierId, service, details, rate, currency, valid_from, valid_to
+      id: rateId,
+      supplier_id: supplierId,
+      service,
+      details,
+      rate,
+      currency,
+      valid_from,
+      valid_to,
     });
 
     auditLog(null, req, 'CREATE', 'supplier_rates', rateId, `Added rate for service: ${service}`);

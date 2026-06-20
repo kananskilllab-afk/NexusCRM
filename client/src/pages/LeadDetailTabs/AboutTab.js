@@ -7,11 +7,14 @@ const AboutTab = ({ lead }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     first_name: lead.first_name, last_name: lead.last_name,
-    mobile: lead.mobile, email: lead.email,
+    mobile: lead.mobile, alternate_phone: lead.alternate_phone || '', email: lead.email,
     destination: lead.destination, lead_source: lead.lead_source || '',
     no_adults: lead.no_adults, no_children: lead.no_children,
     travel_start_date: lead.travel_start_date || '',
     travel_end_date: lead.travel_end_date || '',
+    budget_range: lead.budget_range || '',
+    preferred_channel: lead.preferred_channel || '',
+    next_follow_up_date: lead.next_follow_up_date ? String(lead.next_follow_up_date).slice(0, 10) : '',
     priority: lead.priority, assigned_to: lead.assigned_to || ''
   });
 
@@ -42,29 +45,36 @@ const AboutTab = ({ lead }) => {
             { label: 'First Name', key: 'first_name' },
             { label: 'Last Name', key: 'last_name' },
             { label: 'Mobile', key: 'mobile' },
+            { label: 'Alternate Phone', key: 'alternate_phone' },
             { label: 'Email', key: 'email' },
             { label: 'Destination', key: 'destination' },
             { label: 'Lead Source', key: 'lead_source' },
+            { label: 'Budget Band', key: 'budget_range', options: ['', '<50k', '50k-1L', '1L-2L', '2L+'] },
+            { label: 'Preferred Channel', key: 'preferred_channel', options: ['', 'Call', 'WhatsApp', 'Email'] },
             { label: 'Adults', key: 'no_adults', type: 'number' },
             { label: 'Children', key: 'no_children', type: 'number' },
             { label: 'Travel Start', key: 'travel_start_date', type: 'date' },
             { label: 'Travel End', key: 'travel_end_date', type: 'date' },
-            { label: 'Priority', key: 'priority' },
-            { label: 'Assigned To', key: 'assigned_to' }
+            { label: 'Next Follow-up', key: 'next_follow_up_date', type: 'date' },
+            { label: 'Priority', key: 'priority', options: ['Hot', 'Normal', 'Cold'] },
+            { label: 'Assigned To', key: 'assigned_to' },
+            { label: 'Rating', key: 'rating', readOnly: true },
+            { label: 'Lead Score', key: 'lead_score', readOnly: true },
+            { label: 'Qualification', key: 'qualification_status', readOnly: true }
           ].map(field => (
             <div key={field.key} className="info-item">
               <label>{field.label}</label>
-              {isEditing ? (
-                field.key === 'priority' ? (
-                  <select value={form[field.key]} onChange={e => setForm({ ...form, [field.key]: e.target.value })}>
-                    <option>Hot</option><option>Normal</option><option>Cold</option>
+              {isEditing && !field.readOnly ? (
+                field.options ? (
+                  <select value={form[field.key] || ''} onChange={e => setForm({ ...form, [field.key]: e.target.value })}>
+                    {field.options.map(o => <option key={o} value={o}>{o || '—'}</option>)}
                   </select>
                 ) : (
                   <input type={field.type || 'text'} value={form[field.key] || ''} onChange={e => setForm({ ...form, [field.key]: e.target.value })} />
                 )
               ) : (
                 <span className={field.key === 'priority' ? `priority-badge ${(lead[field.key] || '').toLowerCase()}` : ''}>
-                  {lead[field.key] || '—'}
+                  {field.type === 'date' && lead[field.key] ? String(lead[field.key]).slice(0, 10) : (lead[field.key] ?? '—')}
                 </span>
               )}
             </div>
