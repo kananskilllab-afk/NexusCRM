@@ -3,27 +3,13 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import AppLayout from './components/layout/AppLayout';
 import { LeadProvider, useLeads, ROLE_HIERARCHY } from './context/LeadContext';
 import { VoyageProvider } from './context/VoyageContext';
-import NotFoundPage from './pages/voyage/system/NotFoundPage';
-import ForbiddenPage from './pages/voyage/system/ForbiddenPage';
-import Register from './pages/voyage/auth/Register';
-import ForgotPassword from './pages/voyage/auth/ForgotPassword';
-import PipelineBoard from './pages/voyage/pipeline/PipelineBoard';
-import ContactDetail from './pages/voyage/contacts/ContactDetail';
-import BookingsList from './pages/voyage/bookings/BookingsList';
-import BookingDetail from './pages/voyage/bookings/BookingDetail';
-import ItineraryBuilder from './pages/voyage/itinerary/ItineraryBuilder';
-import PublicItinerary from './pages/voyage/itinerary/PublicItinerary';
-import Quotes from './pages/voyage/finance/Quotes';
-import Invoices from './pages/voyage/finance/Invoices';
-import Commissions from './pages/voyage/finance/Commissions';
-import CommunicationsHub from './pages/voyage/comms/CommunicationsHub';
-import EmailSequenceBuilder from './pages/voyage/comms/EmailSequenceBuilder';
-import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
-import SupplierContracts from './pages/voyage/suppliers/SupplierContracts';
-import DocumentVault from './pages/voyage/documents/DocumentVault';
-import EmailManager from './pages/voyage/emails/EmailManager';
 import Profile from './pages/Profile';
 import CookieConsent from './components/common/CookieConsent';
+import MainLayout from './layouts/MainLayout';
+import { ToastProvider } from './context/ToastContext';
+import BookingsList from './pages/voyage/bookings/BookingsList';
+import CommunicationsHub from './pages/voyage/comms/CommunicationsHub';
+import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
 
 /* ── Lazy page imports ───────────────────────────────────────────────────── */
 const Dashboard          = lazy(() => import('./pages/Dashboard'));
