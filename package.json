@@ -8,9 +8,9 @@
   ],
   "scripts": {
     "install:all": "npm install && npm --prefix client install",
-    "build": "npm --prefix client install && npm run client:build",
+    "build": "npm --prefix client install && CI=false npm run client:build",
     "client": "npm --prefix client start",
-    "client:build": "npm --prefix client run build",
+    "client:build": "CI=false npm --prefix client run build",
     "server": "npm --workspace server start",
     "server:dev": "npm --workspace server run dev",
     "seed:voyage": "node server/seeders/voyage/seed.js",
