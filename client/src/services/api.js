@@ -259,5 +259,62 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to log supplier confirmation');
     return res.json();
+  },
+
+  // Suppliers
+  getSuppliers: async () => {
+    const res = await fetch(`${API_URL}/suppliers`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch suppliers');
+    return res.json();
+  },
+
+  createSupplier: async (supplierData) => {
+    const res = await fetch(`${API_URL}/suppliers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(supplierData)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create supplier');
+    }
+    return res.json();
+  },
+
+  updateSupplier: async (id, updates) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update supplier');
+    }
+    return res.json();
+  },
+
+  deleteSupplier: async (id) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete supplier');
+    }
+    return res.json();
+  },
+  updateProfile: async (payload) => {
+    const res = await fetch(`${API_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update profile');
+    }
+    return res.json();
   }
 };

@@ -33,6 +33,7 @@ import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
 import SupplierContracts from './pages/voyage/suppliers/SupplierContracts';
 import DocumentVault from './pages/voyage/documents/DocumentVault';
 import EmailManager from './pages/voyage/emails/EmailManager';
+import Profile from './pages/Profile';
 import CookieConsent from './components/common/CookieConsent';
 
 // Protected Route Component
@@ -61,6 +62,34 @@ const SecurityWrapper = ({ children }) => {
     dispatch({ type: 'LOGOUT' });
     navigate('/login');
   }, [dispatch, navigate]);
+
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+    const fetchLatestUser = async () => {
+      try {
+        const stateStr = localStorage.getItem('nexusCRM_State_v2');
+        if (stateStr) {
+          const parsed = JSON.parse(stateStr);
+          if (parsed.token) {
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
+            const res = await fetch(`${API_URL}/auth/me`, {
+              headers: { 'Authorization': `Bearer ${parsed.token}` }
+            });
+            if (res.ok) {
+              const userData = await res.json();
+              dispatch({ 
+                type: 'LOGIN', 
+                payload: { token: parsed.token, user: userData } 
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching latest user details:', err);
+      }
+    };
+    fetchLatestUser();
+  }, []);
 
   useEffect(() => {
     if (!state.isAuthenticated) return;
@@ -110,6 +139,12 @@ function AppRoutes() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <MainLayout><Dashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <MainLayout><Profile /></MainLayout>
           </ProtectedRoute>
         } />
         

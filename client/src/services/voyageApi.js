@@ -293,4 +293,9 @@ export const voyageApi = {
     }
     return res.json();
   },
+  getEmailUsers: async () => {
+    const res = await fetch(`${API_URL}/emails/users`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch email users');
+    return res.json();
+  },
 };

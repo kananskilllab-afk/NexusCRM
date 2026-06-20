@@ -8,6 +8,8 @@ import {
 } from 'react-icons/fi';
 
 const SendEmailModal = ({ onClose, supplier }) => {
+  const { state } = useLeads();
+  const signature = state.currentUser?.email_signature;
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [toEmail, setToEmail] = useState('');
@@ -74,11 +76,12 @@ const SendEmailModal = ({ onClose, supplier }) => {
 
     setSending(true);
     try {
+      const finalBody = signature ? `${body}<br/><br/>${signature}` : body;
       await voyageApi.sendEmail({
         to_email: finalTo,
         cc_emails: allCc.filter(e => e !== finalTo).join(','),
         subject,
-        custom_body: body,
+        custom_body: finalBody,
         template_id: selectedTemplate || undefined
       });
       alert('Email sent successfully!');
@@ -221,6 +224,28 @@ const SendEmailModal = ({ onClose, supplier }) => {
               required
             />
           </div>
+
+          {signature && (
+            <div className="form-group">
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                Email Signature (Always Included)
+              </label>
+              <div 
+                style={{ 
+                  marginTop: '8px', 
+                  padding: '10px 14px', 
+                  borderRadius: '6px', 
+                  border: '1px solid var(--divider)', 
+                  background: 'rgba(0,0,0,0.02)', 
+                  fontSize: '0.8rem', 
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap'
+                }}
+                dangerouslySetInnerHTML={{ __html: signature }}
+              />
+            </div>
+          )}
 
           {/* Footer */}
           <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>

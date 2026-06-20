@@ -169,9 +169,11 @@ function leadReducer(state, action) {
       };
     
     case 'UPDATE_USER':
+      const isSelf = state.currentUser && state.currentUser.id === action.payload.id;
       return {
         ...state,
         users: state.users.map(u => u.id === action.payload.id ? { ...u, ...action.payload.data } : u),
+        ...(isSelf && { currentUser: { ...state.currentUser, ...action.payload.data } }),
         auditLog: [logAudit('UPDATE', 'users', action.payload.id, `User identity updated: ${action.payload.data.name || 'properties'}`), ...state.auditLog]
       };
     

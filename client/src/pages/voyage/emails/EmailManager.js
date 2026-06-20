@@ -13,6 +13,7 @@ const EmailManager = () => {
   const { state } = useLeads();
   const userRole = state.currentUser?.role || 'Viewer';
   const userLevel = ROLE_HIERARCHY[userRole] || 0;
+  const signature = state.currentUser?.email_signature;
 
   const [activeView, setActiveView] = useState('templates');
   const [templates, setTemplates] = useState([]);
@@ -25,22 +26,37 @@ const EmailManager = () => {
   const [form, setForm] = useState({ name: '', subject: '', body_html: '', category: 'other' });
   const [sendForm, setSendForm] = useState({ template_id: '', to_email: '', subject: '', booking_id: '' });
 
+  // Filters State
+  const [filterUser, setFilterUser] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [users, setUsers] = useState([]);
+  const [hoveredCard, setHoveredCard] = useState(null);
+
   useEffect(() => {
     const load = async () => {
       try {
-        const [t, h, l] = await Promise.all([
+        const promises = [
           voyageApi.getEmailTemplates(),
           voyageApi.getEmailHistory(),
           api.getLeads().catch(() => [])
-        ]);
-        setTemplates(t);
-        setHistory(h);
-        setLeads(l);
+        ];
+        if (userLevel >= 4) {
+          promises.push(voyageApi.getEmailUsers().catch(() => []));
+        }
+        const results = await Promise.all(promises);
+        setTemplates(results[0]);
+        setHistory(results[1]);
+        setLeads(results[2]);
+        if (userLevel >= 4) {
+          setUsers(results[3] || []);
+        }
       } catch (e) { console.error(e); }
       setLoading(false);
     };
     load();
-  }, []);
+  }, [userLevel]);
 
   const handleCreateTemplate = async () => {
     if (!form.name || !form.subject || !form.body_html) return alert('Name, Subject, and Body are required.');
@@ -68,7 +84,8 @@ const EmailManager = () => {
         template_id: sendForm.template_id,
         to_email: sendForm.to_email,
         subject: sendForm.subject,
-        booking_id: sendForm.booking_id || undefined
+        booking_id: sendForm.booking_id || undefined,
+        include_signature: true
       });
       alert(result.message);
       const updated = await voyageApi.getEmailHistory();
@@ -81,6 +98,36 @@ const EmailManager = () => {
   const STATUS_BADGES = {
     sent: 'success', delivered: 'success', opened: 'info',
     clicked: 'info', queued: 'warning', bounced: 'warning', failed: 'warning'
+  };
+
+  // Client-side filtering of loaded history
+  const filteredHistory = history.filter(h => {
+    if (userLevel >= 4 && filterUser && h.sent_by_id !== filterUser) {
+      return false;
+    }
+    if (filterStatus && h.status !== filterStatus) {
+      return false;
+    }
+    if (filterStartDate && h.created_at < filterStartDate) {
+      return false;
+    }
+    if (filterEndDate && h.created_at > filterEndDate) {
+      return false;
+    }
+    return true;
+  });
+
+  // Calculate stats based on active view's filtered items
+  const viewHistory = filteredHistory.filter(h => activeView === 'bulk' ? h.is_bulk : !h.is_bulk);
+  
+  const stats = {
+    total: viewHistory.length,
+    sent: viewHistory.filter(h => ['sent', 'delivered', 'opened', 'clicked', 'bounced'].includes(h.status)).length,
+    delivered: viewHistory.filter(h => ['delivered', 'opened', 'clicked'].includes(h.status)).length,
+    opened: viewHistory.filter(h => ['opened', 'clicked'].includes(h.status)).length,
+    failed: viewHistory.filter(h => h.status === 'failed').length,
+    queued: viewHistory.filter(h => h.status === 'queued').length,
+    bounced: viewHistory.filter(h => h.status === 'bounced').length,
   };
 
   return (
@@ -153,6 +200,27 @@ const EmailManager = () => {
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Subject</label>
               <input type="text" placeholder="Booking Confirmation" value={sendForm.subject} onChange={e => setSendForm(f => ({ ...f, subject: e.target.value }))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
             </div>
+            {signature && (
+              <div style={{ gridColumn: 'span 3', marginTop: '10px' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  Email Signature (Always Included)
+                </label>
+                <div 
+                  style={{ 
+                    marginTop: '8px', 
+                    padding: '10px 14px', 
+                    borderRadius: '6px', 
+                    border: '1px solid var(--border-color)', 
+                    background: 'rgba(0,0,0,0.01)', 
+                    fontSize: '0.8rem', 
+                    color: 'var(--text-secondary)',
+                    fontFamily: 'monospace',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: signature }}
+                />
+              </div>
+            )}
           </div>
           <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
             <button className="btn btn-primary" onClick={handleSendEmail}><FiSend /> Send Now</button>
@@ -192,6 +260,132 @@ const EmailManager = () => {
             <button className="btn btn-outline" onClick={() => setShowAdd(false)}><FiX /> Cancel</button>
           </div>
         </div>
+      )}
+
+      {/* Analytics Dashboard + Filters Panel (for history and bulk views) */}
+      {(activeView === 'history' || activeView === 'bulk') && (
+        <>
+          {/* Filters Card */}
+          <div className="card" style={{ padding: '20px', marginBottom: '20px', background: '#f8fafc' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
+              
+              {/* User Filter (Super Admin / Admin only) */}
+              {userLevel >= 4 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '220px', flex: '1 1 0' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Filter by User</label>
+                  <select 
+                    value={filterUser} 
+                    onChange={e => setFilterUser(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem', width: '100%' }}
+                  >
+                    <option value="">All Users</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Status Filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '180px', flex: '1 1 0' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Filter by Status</label>
+                <select 
+                  value={filterStatus} 
+                  onChange={e => setFilterStatus(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem', width: '100%' }}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="sent">Sent</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="opened">Opened</option>
+                  <option value="queued">Queued</option>
+                  <option value="bounced">Bounced</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+
+              {/* Start Date */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>From Date</label>
+                <input 
+                  type="date" 
+                  value={filterStartDate} 
+                  onChange={e => setFilterStartDate(e.target.value)}
+                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem', width: '100%' }}
+                />
+              </div>
+
+              {/* End Date */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '160px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>To Date</label>
+                <input 
+                  type="date" 
+                  value={filterEndDate} 
+                  onChange={e => setFilterEndDate(e.target.value)}
+                  style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem', width: '100%' }}
+                />
+              </div>
+
+              {/* Clear filters */}
+              {(filterUser || filterStatus || filterStartDate || filterEndDate) && (
+                <button 
+                  className="btn btn-outline" 
+                  onClick={() => {
+                    setFilterUser('');
+                    setFilterStatus('');
+                    setFilterStartDate('');
+                    setFilterEndDate('');
+                  }}
+                  style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FiX /> Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Stats Dashboard Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px'
+          }}>
+            {[
+              { label: 'Total Sent', value: stats.sent, emoji: '📤', color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', text: '#1e3a8a', key: 'sent' },
+              { label: 'Delivered', value: stats.delivered, emoji: '✅', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', text: '#064e3b', key: 'delivered' },
+              { label: 'Opened', value: stats.opened, emoji: '👁️', color: '#06b6d4', bg: '#ecfeff', border: '#a5f3fc', text: '#083344', key: 'opened' },
+              { label: 'Failed', value: stats.failed, emoji: '❌', color: '#ef4444', bg: '#fef2f2', border: '#fecaca', text: '#7f1d1d', key: 'failed' },
+              { label: 'Queued', value: stats.queued, emoji: '⏳', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', text: '#78350f', key: 'queued' },
+              { label: 'Bounced', value: stats.bounced, emoji: '🔙', color: '#6366f1', bg: '#e0e7ff', border: '#c7d2fe', text: '#312e81', key: 'bounced' }
+            ].map((card, index) => (
+              <div 
+                key={card.key}
+                onMouseEnter={() => setHoveredCard(index)}
+                onMouseLeave={() => setHoveredCard(null)}
+                style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: card.bg,
+                  border: `1px solid ${hoveredCard === index ? card.color : card.border}`,
+                  boxShadow: hoveredCard === index 
+                    ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    : '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  transform: hoveredCard === index ? 'translateY(-2px)' : 'none',
+                  transition: 'all 0.2s ease-in-out',
+                  cursor: 'default',
+                }}
+              >
+                <span style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{card.emoji}</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: card.text }}>{card.label}</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 'bold', color: card.color }}>{card.value}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Templates View */}
@@ -246,13 +440,16 @@ const EmailManager = () => {
               </tr>
             </thead>
             <tbody>
-              {history.filter(h => !h.is_bulk).map(h => (
-                <tr key={h.id}>
+              {filteredHistory.filter(h => !h.is_bulk).map(h => (
+                <tr key={h.id} style={{ backgroundColor: h.status === 'failed' ? 'rgba(239, 68, 68, 0.05)' : undefined }}>
                   <td style={{ fontWeight: 'bold' }}><FiMail style={{ marginRight: 6, color: 'var(--primary)' }} />{h.to_email}</td>
                   <td>{h.subject}</td>
                   <td>{h.template || 'Custom'}</td>
                   <td>{h.contact || '—'}</td>
-                  <td>{h.sent_by || '—'}</td>
+                  <td>
+                    <div style={{ fontWeight: '500' }}>{h.sent_by_name || '—'}</div>
+                    {h.sent_by && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{h.sent_by}</div>}
+                  </td>
                   <td>
                     <span className={`badge badge-${STATUS_BADGES[h.status] || 'warning'}`}>{h.status}</span>
                     {h.status === 'failed' && h.error_message && (
@@ -264,7 +461,7 @@ const EmailManager = () => {
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{h.sent_at ? new Date(h.sent_at).toLocaleString() : h.created_at}</td>
                 </tr>
               ))}
-              {history.filter(h => !h.is_bulk).length === 0 && !loading && (
+              {filteredHistory.filter(h => !h.is_bulk).length === 0 && !loading && (
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: '#999' }}>No individual emails sent yet.</td></tr>
               )}
             </tbody>
@@ -288,13 +485,16 @@ const EmailManager = () => {
               </tr>
             </thead>
             <tbody>
-              {history.filter(h => h.is_bulk).map(h => (
-                <tr key={h.id}>
+              {filteredHistory.filter(h => h.is_bulk).map(h => (
+                <tr key={h.id} style={{ backgroundColor: h.status === 'failed' ? 'rgba(239, 68, 68, 0.05)' : undefined }}>
                   <td style={{ fontWeight: 'bold' }}><FiMail style={{ marginRight: 6, color: 'var(--primary)' }} />{h.to_email}</td>
                   <td>{h.subject}</td>
                   <td>{h.template || 'Custom'}</td>
                   <td>{h.contact || '—'}</td>
-                  <td>{h.sent_by || '—'}</td>
+                  <td>
+                    <div style={{ fontWeight: '500' }}>{h.sent_by_name || '—'}</div>
+                    {h.sent_by && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{h.sent_by}</div>}
+                  </td>
                   <td>
                     <span className={`badge badge-${STATUS_BADGES[h.status] || 'warning'}`}>{h.status}</span>
                     {h.status === 'failed' && h.error_message && (
@@ -306,7 +506,7 @@ const EmailManager = () => {
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{h.sent_at ? new Date(h.sent_at).toLocaleString() : h.created_at}</td>
                 </tr>
               ))}
-              {history.filter(h => h.is_bulk).length === 0 && !loading && (
+              {filteredHistory.filter(h => h.is_bulk).length === 0 && !loading && (
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: '50px', color: '#999' }}>No bulk emails sent yet.</td></tr>
               )}
             </tbody>

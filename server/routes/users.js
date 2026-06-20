@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
 // POST /api/users - Create a new user
 router.post('/', async (req, res) => {
   const id = generateId('U');
-  const { name, email, password, role = 'Viewer', status = 'Active', area, mobile, assigned_to, smtp_host, smtp_port, smtp_user, smtp_pass } = req.body;
+  const { name, email, password, role = 'Viewer', status = 'Active', area, mobile, assigned_to, smtp_host, smtp_port, smtp_user, smtp_pass, email_signature, profile_image, signature_fields } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -42,7 +42,10 @@ router.post('/', async (req, res) => {
       smtp_host,
       smtp_port,
       smtp_user,
-      smtp_pass
+      smtp_pass,
+      email_signature,
+      profile_image,
+      signature_fields
     });
 
     auditLog(null, req, 'CREATE', 'users', id, `Created user: ${name} (${role})`);
@@ -66,7 +69,7 @@ router.patch('/:id', async (req, res) => {
     const currentUser = await CRMUser.findOne({ id: userId });
     if (!currentUser) return res.status(404).json({ error: 'User not found' });
 
-    const { name, email, role, status, area, mobile, assigned_to, password, smtp_host, smtp_port, smtp_user, smtp_pass } = req.body;
+    const { name, email, role, status, area, mobile, assigned_to, password, smtp_host, smtp_port, smtp_user, smtp_pass, email_signature, profile_image, signature_fields } = req.body;
     const updates = {};
     
     if (name !== undefined) updates.name = name;
@@ -88,6 +91,9 @@ router.patch('/:id', async (req, res) => {
     if (smtp_port !== undefined) updates.smtp_port = smtp_port;
     if (smtp_user !== undefined) updates.smtp_user = smtp_user;
     if (smtp_pass !== undefined) updates.smtp_pass = smtp_pass;
+    if (email_signature !== undefined) updates.email_signature = email_signature;
+    if (profile_image !== undefined) updates.profile_image = profile_image;
+    if (signature_fields !== undefined) updates.signature_fields = signature_fields;
     
     if (password) {
       updates.password = bcrypt.hashSync(password, 10);

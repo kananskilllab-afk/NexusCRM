@@ -76,7 +76,10 @@ async function sendAutomatedEmail(lead, templateName, customVariables = {}) {
       });
     };
 
-    const processedHtml = replaceVars(template.body_html);
+    let processedHtml = replaceVars(template.body_html);
+    if (agent && agent.email_signature) {
+      processedHtml = `${processedHtml}<br/><br/>${agent.email_signature}`;
+    }
     const processedSubject = replaceVars(template.subject || 'No Subject');
 
     // 4. Log in EmailSend
