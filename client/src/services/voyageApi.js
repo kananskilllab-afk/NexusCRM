@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.origin.includes('localhost') ? 'http://localhost:5005/api' : '/api');
 const API_URL = `${API_BASE_URL}/voyage`;
 
 const getHeaders = () => {

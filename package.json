@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "install:all": "npm install && npm --prefix client install",
+    "build": "npm run client:build",
     "client": "npm --prefix client start",
     "client:build": "npm --prefix client run build",
     "server": "npm --workspace server start",
