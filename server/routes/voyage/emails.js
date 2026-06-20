@@ -3,6 +3,7 @@ const router = express.Router();
 const nodemailer = require('nodemailer');
 const mongoose = require('mongoose');
 const { authenticateToken, generateId } = require('../../middleware/auth');
+const { ROLE_HIERARCHY } = require('../../routes/auth');
 const { EmailTemplate, EmailSend, Tenant, Contact, Booking } = require('../../models/voyage');
 const CRMUser = require('../../models/CRMUser');
 const Lead = require('../../models/Lead');
@@ -99,6 +100,21 @@ router.delete('/templates/:id', authenticateToken, async (req, res) => {
 
 // ─── EMAIL SENDS / HISTORY ───────────────────────────────────────────────────
 
+// GET /api/voyage/emails/users — list all CRM users (Admin/Super Admin only)
+router.get('/users', authenticateToken, async (req, res) => {
+  try {
+    const userRole = req.user?.role || 'Viewer';
+    const userLevel = ROLE_HIERARCHY[userRole] || 0;
+    if (userLevel < 4) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const users = await CRMUser.find({ status: 'Active' }, 'name email').sort({ name: 1 }).lean();
+    res.json(users.map(u => ({ id: u._id.toString(), name: u.name, email: u.email })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/voyage/emails/history — list all sent emails
 router.get('/history', authenticateToken, async (req, res) => {
   try {
@@ -106,10 +122,26 @@ router.get('/history', authenticateToken, async (req, res) => {
     if (req.query.contact_id) filter.contact_id = req.query.contact_id;
     if (req.query.booking_id) filter.booking_id = req.query.booking_id;
 
+    const userRole = req.user?.role || 'Viewer';
+    const userLevel = ROLE_HIERARCHY[userRole] || 0;
+
+    if (userLevel < 4) {
+      const currentUser = await CRMUser.findOne({ id: req.user.id });
+      if (currentUser) {
+        filter.sent_by = currentUser._id;
+      } else {
+        return res.json([]);
+      }
+    } else {
+      if (req.query.sent_by) {
+        filter.sent_by = req.query.sent_by;
+      }
+    }
+
     const sends = await EmailSend.find(filter)
       .populate('template_id', 'name category')
       .populate('contact_id', 'full_name')
-      .populate({ path: 'sent_by', model: 'CRMUser', select: 'email' })
+      .populate({ path: 'sent_by', model: 'CRMUser', select: 'email name' })
       .sort({ created_at: -1 })
       .lean();
 
@@ -121,6 +153,8 @@ router.get('/history', authenticateToken, async (req, res) => {
       category: s.template_id ? s.template_id.category : 'other',
       contact: s.contact_id ? s.contact_id.full_name : '',
       sent_by: s.sent_by ? s.sent_by.email : '',
+      sent_by_name: s.sent_by ? s.sent_by.name : '',
+      sent_by_id: s.sent_by ? s.sent_by._id.toString() : '',
       is_bulk: s.is_bulk || false,
       status: s.status,
       error_message: s.error_message || '',
@@ -214,7 +248,12 @@ router.post('/send', authenticateToken, async (req, res) => {
     variablesMap['destination'] = destination || 'N/A';
     variablesMap['total_sell'] = totalSell;
 
-    const processedHtml = replaceTemplateVariables(rawHtml, variablesMap);
+    let processedHtml = replaceTemplateVariables(rawHtml, variablesMap);
+    
+    if (currentUser && currentUser.email_signature) {
+      processedHtml = `${processedHtml}<br/><br/>${currentUser.email_signature}`;
+    }
+    
     const processedSubject = replaceTemplateVariables(finalSubject || 'No Subject', variablesMap);
 
     // 5. Create database record as "queued"
@@ -411,7 +450,10 @@ router.post('/send-bulk', authenticateToken, async (req, res) => {
           'total_sell': totalSell
         };
 
-        const processedHtml = replaceTemplateVariables(rawHtml, variablesMap);
+        let processedHtml = replaceTemplateVariables(rawHtml, variablesMap);
+        if (currentUser && currentUser.email_signature) {
+          processedHtml = `${processedHtml}<br/><br/>${currentUser.email_signature}`;
+        }
         const processedSubject = replaceTemplateVariables(finalSubject || 'No Subject', variablesMap);
 
         // Create db log as queued

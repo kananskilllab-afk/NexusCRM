@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
 const API_URL = `${API_BASE_URL}/voyage`;
 
 const getHeaders = () => {
@@ -362,6 +362,11 @@ export const voyageApi = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to send bulk emails');
     }
+    return res.json();
+  },
+  getEmailUsers: async () => {
+    const res = await fetch(`${API_URL}/emails/users`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch email users');
     return res.json();
   },
 };

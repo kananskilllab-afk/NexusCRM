@@ -37,7 +37,16 @@ const Users = () => {
     smtp_host: '',
     smtp_port: '',
     smtp_user: '',
-    smtp_pass: ''
+    smtp_pass: '',
+    email_signature: '',
+    profile_image: '',
+    sig_name: '',
+    sig_title: '',
+    sig_company: '',
+    sig_website: '',
+    sig_phone: '',
+    sig_logo: '',
+    sig_linkedin: ''
   });
 
   useEffect(() => {
@@ -74,7 +83,16 @@ const Users = () => {
       smtp_host: '',
       smtp_port: '',
       smtp_user: '',
-      smtp_pass: ''
+      smtp_pass: '',
+      email_signature: '',
+      profile_image: '',
+      sig_name: '',
+      sig_title: '',
+      sig_company: '',
+      sig_website: '',
+      sig_phone: '',
+      sig_logo: '',
+      sig_linkedin: ''
     });
     setShowModal(true);
   };
@@ -95,7 +113,16 @@ const Users = () => {
       smtp_host: user.smtp_host || '',
       smtp_port: user.smtp_port || '',
       smtp_user: user.smtp_user || '',
-      smtp_pass: user.smtp_pass || ''
+      smtp_pass: user.smtp_pass || '',
+      email_signature: user.email_signature || '',
+      profile_image: user.profile_image || '',
+      sig_name: user.signature_fields?.name || '',
+      sig_title: user.signature_fields?.title || '',
+      sig_company: user.signature_fields?.company || '',
+      sig_website: user.signature_fields?.website || '',
+      sig_phone: user.signature_fields?.phone || '',
+      sig_logo: user.signature_fields?.logo || '',
+      sig_linkedin: user.signature_fields?.linkedin || ''
     });
     setEditingUserId(user.id);
     setShowModal(true);
@@ -112,6 +139,40 @@ const Users = () => {
       return;
     }
 
+    // Generate premium HTML signature dynamically from structured inputs
+    const sigName = formData.sig_name || `${formData.firstName} ${formData.lastName}`.trim();
+    const sigTitle = formData.sig_title || '';
+    const sigCompany = formData.sig_company || '';
+    const sigWebsite = formData.sig_website || '';
+    const sigPhone = formData.sig_phone || '';
+    const sigLogo = formData.sig_logo || '';
+    const sigLinkedin = formData.sig_linkedin || '';
+
+    let generatedHtml = '';
+    if (sigName || sigTitle || sigPhone || sigCompany) {
+      generatedHtml = `<div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333; margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 15px; display: flex; gap: 15px; align-items: center;">`;
+      if (sigLogo) {
+        generatedHtml += `<img src="${sigLogo}" alt="${sigCompany || 'Logo'}" style="max-height: 60px; max-width: 120px; border-radius: 4px; object-fit: contain;" />`;
+      }
+      generatedHtml += `<div>`;
+      generatedHtml += `<strong style="font-size: 1rem; color: #1d4ed8;">${sigName}</strong><br/>`;
+      if (sigTitle || sigCompany) {
+        generatedHtml += `<span style="font-size: 0.85rem; color: #666; font-weight: 500;">${sigTitle}</span>`;
+        if (sigTitle && sigCompany) generatedHtml += ` | `;
+        if (sigCompany) generatedHtml += `<span style="font-size: 0.85rem; color: #666;">${sigCompany}</span>`;
+        generatedHtml += `<br/>`;
+      }
+      generatedHtml += `<span style="font-size: 0.8rem; color: #888;">`;
+      const details = [];
+      if (sigPhone) details.push(`Direct: ${sigPhone}`);
+      if (sigWebsite) details.push(`<a href="${sigWebsite}" style="color: #3b82f6; text-decoration: none;" target="_blank">${sigWebsite.replace(/^https?:\/\//, '')}</a>`);
+      if (sigLinkedin) details.push(`<a href="${sigLinkedin}" style="color: #3b82f6; text-decoration: none;" target="_blank">LinkedIn</a>`);
+      generatedHtml += details.join(' | ');
+      generatedHtml += `</span></div></div>`;
+    } else {
+      generatedHtml = formData.email_signature || '';
+    }
+
     const payload = {
       name: `${formData.firstName} ${formData.lastName}`.trim(),
       email: formData.email,
@@ -123,7 +184,18 @@ const Users = () => {
       smtp_host: formData.smtp_host,
       smtp_port: formData.smtp_port ? parseInt(formData.smtp_port) : undefined,
       smtp_user: formData.smtp_user,
-      smtp_pass: formData.smtp_pass
+      smtp_pass: formData.smtp_pass,
+      email_signature: generatedHtml,
+      profile_image: formData.profile_image,
+      signature_fields: {
+        name: sigName,
+        title: sigTitle,
+        company: sigCompany,
+        website: sigWebsite,
+        phone: sigPhone,
+        logo: sigLogo,
+        linkedin: sigLinkedin
+      }
     };
 
     if (formData.password) {
@@ -186,11 +258,19 @@ const Users = () => {
     return (
       <div className="user-view-container">
         <div className="user-view-header card">
-           <div className="header-left">
-              <FiUsers size={32} style={{ color: '#666' }} />
+           <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              {selectedUser.profile_image ? (
+                <img 
+                  src={selectedUser.profile_image} 
+                  alt="Profile" 
+                  style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                />
+              ) : (
+                <FiUsers size={32} style={{ color: '#666' }} />
+              )}
               <div>
-                <h3>View User</h3>
-                <p>User are the point of entry for your CRM.</p>
+                <h3>{selectedUser.name}</h3>
+                <p>{selectedUser.role} &bull; {selectedUser.email}</p>
               </div>
            </div>
            <div className="header-actions">
@@ -218,6 +298,20 @@ const Users = () => {
                    <div className="info-item"><label>Assign To</label><div>{selectedUser.assigned_to || '—'}</div></div>
                    <div className="info-item"><label>Area</label><div>{selectedUser.area || '—'}</div></div>
                    <div className="info-item"><label>SMTP Configuration</label><div>{selectedUser.smtp_user ? `Configured (${selectedUser.smtp_user})` : 'Not Configured (System Default)'}</div></div>
+                   <div className="info-item" style={{ gridColumn: 'span 2' }}>
+                      <label>Profile Photo</label>
+                      {selectedUser.profile_image ? (
+                        <div style={{ marginTop: '5px' }}>
+                          <img 
+                            src={selectedUser.profile_image} 
+                            alt="Profile" 
+                            style={{ width: '120px', height: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic', marginTop: '5px' }}>No photo configured.</div>
+                      )}
+                    </div>
                     {selectedUser.smtp_user && (
                       <>
                         <div className="info-item"><label>SMTP Host</label><div>{selectedUser.smtp_host || '—'}</div></div>
@@ -238,6 +332,23 @@ const Users = () => {
                         </div>
                       </>
                     )}
+                    <div className="info-item" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
+                      <label style={{ fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Email Signature</label>
+                      <div 
+                        style={{ 
+                          padding: '12px', 
+                          border: '1px solid var(--divider)', 
+                          borderRadius: '6px', 
+                          background: 'rgba(0,0,0,0.02)', 
+                          fontFamily: 'var(--font-mono, monospace)', 
+                          fontSize: '0.85rem', 
+                          whiteSpace: 'pre-wrap', 
+                          marginTop: '5px',
+                          color: 'var(--text-primary)'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: selectedUser.email_signature || '<i style="color:var(--text-secondary)">No signature configured.</i>' }}
+                      />
+                    </div>
                 </div>
               )}
            </div>
@@ -344,7 +455,21 @@ const Users = () => {
               <tr key={user.id} onClick={() => setSelectedUserId(user.id)} className="clickable-row">
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div className="user-avatar-small">{user.name ? user.name.charAt(0) : 'U'}</div>
+                    {user.profile_image ? (
+                      <img 
+                        src={user.profile_image} 
+                        alt="Avatar" 
+                        style={{ 
+                          width: '32px', 
+                          height: '32px', 
+                          borderRadius: '50%', 
+                          objectFit: 'cover', 
+                          border: '1px solid var(--border-color)' 
+                        }} 
+                      />
+                    ) : (
+                      <div className="user-avatar-small">{user.name ? user.name.charAt(0) : 'U'}</div>
+                    )}
                     <strong>{user.name}</strong>
                   </div>
                 </td>
@@ -476,6 +601,16 @@ const Users = () => {
                   />
                 </div>
 
+                <div className="form-group" style={{ marginTop: '10px' }}>
+                   <label>Profile Photo URL</label>
+                   <input 
+                     type="text" 
+                     placeholder="e.g. https://domain.com/photo.jpg"
+                     value={formData.profile_image} 
+                     onChange={e => setFormData({ ...formData, profile_image: e.target.value })} 
+                   />
+                </div>
+
                 <div style={{ borderTop: '2px dashed var(--border-color)', margin: '15px 0', paddingTop: '15px' }}>
                   <h4 style={{ fontWeight: 800, marginBottom: '10px' }}>Personal Agent SMTP Settings</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '15px' }}>
@@ -529,6 +664,81 @@ const Users = () => {
                           {showSmtpPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                         </button>
                       </div>
+                    </div>
+                  </div>
+                  <div style={{ borderTop: '2px dashed var(--border-color)', margin: '15px 0', paddingTop: '15px' }}>
+                    <h4 style={{ fontWeight: 800, marginBottom: '10px' }}>Email Signature Builder</h4>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '15px' }}>
+                      Fill in the fields below. The system will automatically construct a premium HTML signature.
+                    </p>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Signature Display Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Sachin More"
+                          value={formData.sig_name || ''} 
+                          onChange={e => setFormData({ ...formData, sig_name: e.target.value })} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Job Title / Designation</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Ops Staff"
+                          value={formData.sig_title || ''} 
+                          onChange={e => setFormData({ ...formData, sig_title: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row" style={{ marginTop: '10px' }}>
+                      <div className="form-group">
+                        <label>Company Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Kanan.co"
+                          value={formData.sig_company || ''} 
+                          onChange={e => setFormData({ ...formData, sig_company: e.target.value })} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Company Website URL</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. https://kanan.co"
+                          value={formData.sig_website || ''} 
+                          onChange={e => setFormData({ ...formData, sig_website: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row" style={{ marginTop: '10px' }}>
+                      <div className="form-group">
+                        <label>Direct Phone / Mobile</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. +91 99999 99999"
+                          value={formData.sig_phone || ''} 
+                          onChange={e => setFormData({ ...formData, sig_phone: e.target.value })} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Logo / Photo Image URL</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. https://kanan.co/logo.png"
+                          value={formData.sig_logo || ''} 
+                          onChange={e => setFormData({ ...formData, sig_logo: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginTop: '10px' }}>
+                      <label>LinkedIn Profile URL</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. https://linkedin.com/in/username"
+                        value={formData.sig_linkedin || ''} 
+                        onChange={e => setFormData({ ...formData, sig_linkedin: e.target.value })} 
+                      />
                     </div>
                   </div>
                 </div>

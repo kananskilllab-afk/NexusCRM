@@ -3,7 +3,26 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import AppLayout from './components/layout/AppLayout';
 import { LeadProvider, useLeads, ROLE_HIERARCHY } from './context/LeadContext';
 import { VoyageProvider } from './context/VoyageContext';
-import { ToastProvider } from './context/ToastContext';
+import NotFoundPage from './pages/voyage/system/NotFoundPage';
+import ForbiddenPage from './pages/voyage/system/ForbiddenPage';
+import Register from './pages/voyage/auth/Register';
+import ForgotPassword from './pages/voyage/auth/ForgotPassword';
+import PipelineBoard from './pages/voyage/pipeline/PipelineBoard';
+import ContactDetail from './pages/voyage/contacts/ContactDetail';
+import BookingsList from './pages/voyage/bookings/BookingsList';
+import BookingDetail from './pages/voyage/bookings/BookingDetail';
+import ItineraryBuilder from './pages/voyage/itinerary/ItineraryBuilder';
+import PublicItinerary from './pages/voyage/itinerary/PublicItinerary';
+import Quotes from './pages/voyage/finance/Quotes';
+import Invoices from './pages/voyage/finance/Invoices';
+import Commissions from './pages/voyage/finance/Commissions';
+import CommunicationsHub from './pages/voyage/comms/CommunicationsHub';
+import EmailSequenceBuilder from './pages/voyage/comms/EmailSequenceBuilder';
+import SettingsDashboard from './pages/voyage/settings/SettingsDashboard';
+import SupplierContracts from './pages/voyage/suppliers/SupplierContracts';
+import DocumentVault from './pages/voyage/documents/DocumentVault';
+import EmailManager from './pages/voyage/emails/EmailManager';
+import Profile from './pages/Profile';
 import CookieConsent from './components/common/CookieConsent';
 
 /* ── Lazy page imports ───────────────────────────────────────────────────── */
@@ -85,6 +104,34 @@ const SecurityWrapper = ({ children }) => {
 
   useEffect(() => {
     if (!state.isAuthenticated) return;
+    const fetchLatestUser = async () => {
+      try {
+        const stateStr = localStorage.getItem('nexusCRM_State_v2');
+        if (stateStr) {
+          const parsed = JSON.parse(stateStr);
+          if (parsed.token) {
+            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
+            const res = await fetch(`${API_URL}/auth/me`, {
+              headers: { 'Authorization': `Bearer ${parsed.token}` }
+            });
+            if (res.ok) {
+              const userData = await res.json();
+              dispatch({ 
+                type: 'LOGIN', 
+                payload: { token: parsed.token, user: userData } 
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching latest user details:', err);
+      }
+    };
+    fetchLatestUser();
+  }, []);
+
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
 
     const TIMEOUT_MS = 30 * 60 * 1000;
     const checkTimeout = () => {
@@ -115,50 +162,168 @@ function AppRoutes() {
 
   return (
     <SecurityWrapper>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login"           element={<Login />} />
-          <Route path="/register"        element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        
+        <Route path="/" element={
+          <ProtectedRoute>
+            <MainLayout><Dashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
 
-          <Route path="/"         element={<PR><AppLayout><Dashboard /></AppLayout></PR>} />
-          <Route path="/dashboard" element={<PR><AppLayout><Dashboard /></AppLayout></PR>} />
-          <Route path="/leads"    element={<PR level={1}><AppLayout><Leads /></AppLayout></PR>} />
-          <Route path="/leads-legacy" element={<PR level={1}><AppLayout><LeadList /></AppLayout></PR>} />
-          <Route path="/leads/:id" element={<PR level={1}><AppLayout><LeadDetail /></AppLayout></PR>} />
-          <Route path="/scheduler" element={<PR level={2}><AppLayout><Scheduler /></AppLayout></PR>} />
-          <Route path="/customers" element={<PR level={1}><AppLayout><Customers /></AppLayout></PR>} />
-          <Route path="/customers/:id" element={<PR level={1}><AppLayout><CustomerDetail /></AppLayout></PR>} />
-          <Route path="/pipeline" element={<PR level={1}><AppLayout><Pipeline /></AppLayout></PR>} />
-          <Route path="/pipeline-legacy" element={<PR level={1}><AppLayout><PipelineBoard /></AppLayout></PR>} />
-          <Route path="/opportunities" element={<PR level={1}><AppLayout><OpportunitiesBoard /></AppLayout></PR>} />
-          <Route path="/contacts/:id" element={<PR level={1}><AppLayout><ContactDetail /></AppLayout></PR>} />
-          <Route path="/bookings" element={<PR level={1}><AppLayout><Bookings /></AppLayout></PR>} />
-          <Route path="/bookings/:id" element={<PR level={1}><AppLayout><BookingDetail /></AppLayout></PR>} />
-          <Route path="/itineraries" element={<PR level={1}><AppLayout><Itineraries /></AppLayout></PR>} />
-          <Route path="/itinerary/:id/builder" element={<PR level={1}><AppLayout><ItineraryBuilder /></AppLayout></PR>} />
-          <Route path="/it/:token" element={<PublicItinerary />} />
-          <Route path="/finance/quotes" element={<PR level={1}><AppLayout><Quotes /></AppLayout></PR>} />
-          <Route path="/quotes"         element={<Navigate to="/finance/quotes" replace />} />
-          <Route path="/finance/invoices" element={<PR level={1}><AppLayout><Invoices /></AppLayout></PR>} />
-          <Route path="/invoices"         element={<Navigate to="/finance/invoices" replace />} />
-          <Route path="/finance/commissions" element={<PR level={2}><AppLayout><Commissions /></AppLayout></PR>} />
-          <Route path="/comms" element={<PR level={1}><AppLayout><Communications /></AppLayout></PR>} />
-          <Route path="/communications"   element={<Navigate to="/comms" replace />} />
-          <Route path="/comms/sequences" element={<PR level={2}><AppLayout><EmailSequenceBuilder /></AppLayout></PR>} />
-          <Route path="/settings" element={<PR level={3}><AppLayout><Settings /></AppLayout></PR>} />
-          <Route path="/suppliers" element={<PR level={3}><AppLayout><Suppliers /></AppLayout></PR>} />
-          <Route path="/supplier-contracts" element={<PR level={2}><AppLayout><SupplierContracts /></AppLayout></PR>} />
-          <Route path="/documents" element={<PR level={1}><AppLayout><DocumentVault /></AppLayout></PR>} />
-          <Route path="/emails" element={<PR level={1}><AppLayout><EmailManager /></AppLayout></PR>} />
-          <Route path="/manage/packages" element={<PR level={4}><AppLayout><ManagePackages /></AppLayout></PR>} />
-          <Route path="/manage/hotels" element={<PR level={4}><AppLayout><ManageHotels /></AppLayout></PR>} />
-          <Route path="/users" element={<PR level={5}><AppLayout><Users /></AppLayout></PR>} />
-          <Route path="/reports" element={<PR level={1}><AppLayout><Reports /></AppLayout></PR>} />
-          <Route path="/403" element={<AppLayout><ForbiddenPage /></AppLayout>} />
-          <Route path="*"    element={<AppLayout><NotFoundPage /></AppLayout>} />
-        </Routes>
-      </Suspense>
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <MainLayout><Dashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <MainLayout><Profile /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/leads" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><LeadList /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/leads/:id" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><LeadDetail /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/scheduler" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><Scheduler /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customers" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Customers /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/pipeline" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><PipelineBoard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/contacts/:id" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><ContactDetail /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/bookings" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><BookingsList /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/bookings/:id" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><BookingDetail /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/itinerary/:id/builder" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><ItineraryBuilder /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        {/* Public Route */}
+        <Route path="/it/:token" element={<PublicItinerary />} />
+        
+        {/* Finance Routes */}
+        <Route path="/finance/quotes" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Quotes /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/finance/invoices" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Invoices /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/finance/commissions" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><Commissions /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        {/* Comms & Settings Routes */}
+        <Route path="/comms" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><CommunicationsHub /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/comms/sequences" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><EmailSequenceBuilder /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute requiredLevel={3}>
+            <MainLayout><SettingsDashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/suppliers" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><Suppliers /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/supplier-contracts" element={
+          <ProtectedRoute requiredLevel={2}>
+            <MainLayout><SupplierContracts /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/documents" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><DocumentVault /></MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/emails" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><EmailManager /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/manage/packages" element={
+          <ProtectedRoute requiredLevel={4}>
+            <MainLayout><ManagePackages /></MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/manage/hotels" element={
+          <ProtectedRoute requiredLevel={4}>
+            <MainLayout><ManageHotels /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/users" element={
+          <ProtectedRoute requiredLevel={5}>
+            <MainLayout><Users /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/reports" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><Reports /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/403" element={<MainLayout><ForbiddenPage /></MainLayout>} />
+        <Route path="*" element={<MainLayout><NotFoundPage /></MainLayout>} />
+      </Routes>
     </SecurityWrapper>
   );
 }

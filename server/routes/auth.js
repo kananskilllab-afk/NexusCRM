@@ -42,7 +42,10 @@ router.post('/login', async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      email_signature: user.email_signature,
+      profile_image: user.profile_image,
+      signature_fields: user.signature_fields
     };
 
     res.json({ token, user: safeUser });
@@ -73,10 +76,65 @@ router.get('/me', async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      email_signature: user.email_signature,
+      profile_image: user.profile_image,
+      signature_fields: user.signature_fields
     });
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// PUT /api/auth/profile - Update profile details (Super Admin only)
+router.put('/profile', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'No token' });
+
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Check if the user is Super Admin
+    if (decoded.role !== 'Super Admin') {
+      return res.status(403).json({ error: 'Access denied. Only Super Admin can change properties.' });
+    }
+
+    const user = await CRMUser.findOne({ id: decoded.id });
+    if (!user || user.status !== 'Active') return res.status(404).json({ error: 'User not found' });
+
+    const { name, mobile, area, password, smtp_host, smtp_port, smtp_user, smtp_pass, email_signature, profile_image, signature_fields } = req.body;
+    
+    if (name !== undefined) user.name = name;
+    if (mobile !== undefined) user.mobile = mobile;
+    if (area !== undefined) user.area = area;
+    if (smtp_host !== undefined) user.smtp_host = smtp_host;
+    if (smtp_port !== undefined) user.smtp_port = smtp_port ? parseInt(smtp_port) : undefined;
+    if (smtp_user !== undefined) user.smtp_user = smtp_user;
+    if (smtp_pass !== undefined) user.smtp_pass = smtp_pass;
+    if (email_signature !== undefined) user.email_signature = email_signature;
+    if (profile_image !== undefined) user.profile_image = profile_image;
+    if (signature_fields !== undefined) user.signature_fields = signature_fields;
+
+    if (password) {
+      const bcrypt = require('bcryptjs');
+      user.password = bcrypt.hashSync(password, 10);
+    }
+
+    await user.save();
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      email_signature: user.email_signature,
+      profile_image: user.profile_image,
+      signature_fields: user.signature_fields
+    });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token or update failed' });
   }
 });
 

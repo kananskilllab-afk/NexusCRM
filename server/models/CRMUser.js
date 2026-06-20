@@ -18,7 +18,18 @@ const CRMUserSchema = new mongoose.Schema(
     smtp_host: { type: String },
     smtp_port: { type: Number },
     smtp_user: { type: String },
-    smtp_pass: { type: String }
+    smtp_pass: { type: String },
+    email_signature: { type: String },
+    profile_image: { type: String },
+    signature_fields: {
+      name: { type: String },
+      title: { type: String },
+      company: { type: String },
+      website: { type: String },
+      phone: { type: String },
+      logo: { type: String },
+      linkedin: { type: String }
+    }
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );

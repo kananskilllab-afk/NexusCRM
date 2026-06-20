@@ -6,7 +6,7 @@ const { authenticate, requireRole, auditLog, generateId } = require('../middlewa
 
 // All routes require auth; level 3 (Ops Manager) required for suppliers.
 router.use(authenticate);
-router.use(requireRole(3));
+router.use(requireRole(2));
 
 const preferredValue = (value) => (
   value === true || value === 1 || value === '1' || value === 'true' ? 1 : 0
@@ -27,29 +27,33 @@ const validateContacts = (phoneContacts, emailContacts, res) => {
 // GET /api/suppliers?type=
 router.get('/', async (req, res) => {
   try {
-    const { type } = req.query;
-    const filter = {};
-    if (type && type !== 'All') filter.service_type = type;
-
-    const suppliers = await Supplier.find(filter).sort({ is_preferred: -1, name: 1 }).lean();
-
-    const normalized = await Promise.all(suppliers.map(async (supplier) => {
+    const suppliers = await Supplier.find({}).sort({ name: 1 }).lean();
+    
+    // Normalize and backfill fields from old DB schema (contact_email / primary_contact_phone)
+    const normalized = suppliers.map(s => {
+      let needsUpdate = false;
       const updateData = {};
-
-      if (!supplier.email && supplier.contact_email) {
-        supplier.email = supplier.contact_email;
-        updateData.email = supplier.contact_email;
+      
+      if (!s.email && s.contact_email) {
+        s.email = s.contact_email;
+        updateData.email = s.contact_email;
+        needsUpdate = true;
       }
-
-      if (!supplier.phone && supplier.primary_contact_phone) {
-        supplier.phone = supplier.primary_contact_phone;
-        updateData.phone = supplier.primary_contact_phone;
+      
+      if (!s.phone && s.primary_contact_phone) {
+        s.phone = s.primary_contact_phone;
+        updateData.phone = s.primary_contact_phone;
+        needsUpdate = true;
       }
-
-      if (Object.keys(updateData).length > 0) {
-        Supplier.updateOne({ _id: supplier._id }, { $set: updateData }).catch(() => {});
+      
+      if (needsUpdate) {
+        Supplier.updateOne({ _id: s._id }, { $set: updateData }).catch(() => {});
       }
+      return s;
+    });
 
+    // Attach rates to suppliers
+    const suppliersWithRates = await Promise.all(normalized.map(async (supplier) => {
       const rates = await SupplierRate.find({ supplier_id: supplier.id }).lean();
       return { ...supplier, rates };
     }));
@@ -63,57 +67,29 @@ router.get('/', async (req, res) => {
 // POST /api/suppliers
 router.post('/', async (req, res) => {
   const id = generateId('S');
-  const {
-    name,
-    product_name,
-    type,
-    service_type,
-    email,
-    phone,
-    city,
-    location,
-    gst,
-    address,
-    address_1,
-    address_2,
-    address_3,
-    address_4,
-    payment_terms,
-    commission_pct,
-    phone_contacts = [],
-    email_contacts = [],
-    api_source,
-    gds_source,
-    is_preferred,
-    status,
+  const { 
+    name, product_name, email, phone, service_type, gst, address,
+    address_1, address_2, address_3, address_4, city,
+    payment_terms, commission_pct, phone_contacts, email_contacts
   } = req.body;
-  const resolvedType = service_type || type;
 
-  if (!name || !resolvedType) return res.status(400).json({ error: 'Name and type required' });
-  if (!validateContacts(phone_contacts, email_contacts, res)) return;
+  if (!name || !service_type) return res.status(400).json({ error: 'Name and service type required' });
+
+  if (phone_contacts && phone_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 phone numbers allowed' });
+  }
+  if (email_contacts && email_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 email IDs allowed' });
+  }
 
   try {
     const newSupplier = await Supplier.create({
-      id,
-      name,
-      product_name,
-      email,
-      phone,
-      gst,
-      address,
-      address_1,
-      address_2,
-      address_3,
-      address_4,
-      service_type: resolvedType,
-      city: city || location || '',
+      id, name, product_name, email, phone, service_type, gst, address,
+      address_1, address_2, address_3, address_4, city,
       payment_terms: payment_terms !== undefined ? String(payment_terms) : undefined,
-      commission_pct: parseFloat(commission_pct) || 0,
-      phone_contacts,
-      email_contacts,
-      api_source: api_source || gds_source || '',
-      is_preferred: preferredValue(is_preferred),
-      status: status || 'Active',
+      commission_pct: commission_pct || 0,
+      phone_contacts: phone_contacts || [],
+      email_contacts: email_contacts || []
     });
 
     auditLog(null, req, 'CREATE', 'suppliers', id, `Added supplier: ${name}`);
@@ -133,8 +109,7 @@ router.patch('/:id', async (req, res) => {
   const allowed = [
     'name', 'product_name', 'email', 'phone', 'service_type', 'gst', 'address',
     'address_1', 'address_2', 'address_3', 'address_4', 'city', 'status',
-    'payment_terms', 'commission_pct', 'phone_contacts', 'email_contacts',
-    'api_source', 'is_preferred',
+    'payment_terms', 'commission_pct', 'phone_contacts', 'email_contacts'
   ];
   const updates = {};
 
@@ -142,12 +117,12 @@ router.patch('/:id', async (req, res) => {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
   });
 
-  if (req.body.type !== undefined && updates.service_type === undefined) updates.service_type = req.body.type;
-  if (req.body.location !== undefined && updates.city === undefined) updates.city = req.body.location;
-  if (req.body.gds_source !== undefined && updates.api_source === undefined) updates.api_source = req.body.gds_source;
-  if (updates.commission_pct !== undefined) updates.commission_pct = parseFloat(updates.commission_pct) || 0;
-  if (updates.payment_terms !== undefined) updates.payment_terms = String(updates.payment_terms);
-  if (updates.is_preferred !== undefined) updates.is_preferred = preferredValue(updates.is_preferred);
+  if (req.body.phone_contacts && req.body.phone_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 phone numbers allowed' });
+  }
+  if (req.body.email_contacts && req.body.email_contacts.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 email IDs allowed' });
+  }
 
   if (Object.keys(updates).length === 0) return res.json({ message: 'No updates provided' });
 

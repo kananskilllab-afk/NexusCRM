@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
 
 const getHeaders = () => {
   const stateStr = localStorage.getItem('nexusCRM_State_v2');
@@ -484,31 +484,60 @@ export const api = {
     return res.json();
   },
 
-  // Settings
-  getSettings: async () => {
-    const res = await fetch(`${API_URL}/settings`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch settings');
-    return res.json();
-  },
-  updateSettings: async (payload) => {
-    const res = await fetch(`${API_URL}/settings`, {
-      method: 'PATCH', headers: getHeaders(), body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('Failed to update settings');
+  // Suppliers
+  getSuppliers: async () => {
+    const res = await fetch(`${API_URL}/suppliers`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch suppliers');
     return res.json();
   },
 
-  // Team
-  getTeam: async () => {
-    const res = await fetch(`${API_URL}/team`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch team');
-    return res.json();
-  },
-  inviteTeamMember: async (payload) => {
-    const res = await fetch(`${API_URL}/team/invite`, {
-      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+  createSupplier: async (supplierData) => {
+    const res = await fetch(`${API_URL}/suppliers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(supplierData)
     });
-    if (!res.ok) throw new Error('Failed to send invite');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create supplier');
+    }
     return res.json();
   },
+
+  updateSupplier: async (id, updates) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update supplier');
+    }
+    return res.json();
+  },
+
+  deleteSupplier: async (id) => {
+    const res = await fetch(`${API_URL}/suppliers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete supplier');
+    }
+    return res.json();
+  },
+  updateProfile: async (payload) => {
+    const res = await fetch(`${API_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update profile');
+    }
+    return res.json();
+  }
 };
