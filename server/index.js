@@ -78,6 +78,11 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/integrations', integrationsRouter);
 app.use('/api/communications', communicationsRouter);
 
+// Home route message
+app.get('/', (req, res) => {
+  res.send('<h1>Nexus CRM API Server</h1><p>The backend server is running successfully. Access APIs under <code>/api</code>.</p>');
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Nexus CRM API is running', timestamp: new Date().toISOString() });
