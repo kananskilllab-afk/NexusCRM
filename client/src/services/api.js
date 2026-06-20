@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
+const API_URL = process.env.REACT_APP_API_URL || (window.location.origin.includes('localhost') ? 'http://localhost:5005/api' : '/api');
 
 const getHeaders = () => {
   const stateStr = localStorage.getItem('nexusCRM_State_v2');

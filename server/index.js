@@ -89,6 +89,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Nexus CRM API Server running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Nexus CRM API Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
