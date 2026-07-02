@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiX, FiSave, FiTrash2, FiUser, FiMapPin, FiPlus, FiTag, FiUsers } from 'react-icons/fi';
 import { useLeads, ROLE_HIERARCHY } from '../../context/LeadContext';
+import { api } from '../../services/api';
 import '../../components/modals/Modal.css';
 
 // §5.1 seven-stage pipeline.
@@ -44,13 +45,23 @@ const lineItemsTotal = (items) =>
  * Pass `customer` to lock the deal to an existing customer account.
  */
 const OpportunityModal = ({ isOpen, mode, opp, customer, onClose, onSave, onDelete }) => {
-  const { state } = useLeads();
+  const { state, dispatch } = useLeads();
   // §9 — cost/margin visible only to managers and above (level ≥ 3).
   const canSeeCost = (ROLE_HIERARCHY[state.currentUser?.role] || 0) >= 3;
 
   const [form, setForm] = useState(blankForm());
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Ensure users are loaded for the Owner dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+    if ((state.users || []).length === 0) {
+      api.getUsers()
+        .then(u => { if (Array.isArray(u) && u.length > 0) dispatch({ type: 'SET_USERS', payload: u }); })
+        .catch(() => {});
+    }
+  }, [isOpen, state.users, dispatch]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -268,8 +279,13 @@ const OpportunityModal = ({ isOpen, mode, opp, customer, onClose, onSave, onDele
             </div>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Owner</label>
-              <input type="text" placeholder="Agent name" value={form.owner}
-                onChange={(e) => setForm({ ...form, owner: e.target.value })} />
+              <select value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })}>
+                <option value="">— Unassigned —</option>
+                {Array.from(new Set([
+                  ...(state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name),
+                  ...(form.owner ? [form.owner] : [])
+                ])).map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
             </div>
           </div>
 

@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 
 const emailSendSchema = new mongoose.Schema(
   {
-    tenant_id:   { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
+    tenant_id:   { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
     template_id: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' },
     contact_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Contact' },
     booking_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-    sent_by:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    sent_by:     { type: mongoose.Schema.Types.ObjectId, ref: 'CRMUser' },
     is_bulk:     { type: Boolean, default: false },
     to_email:    { type: String, required: true, lowercase: true },
     subject:     { type: String, required: true },

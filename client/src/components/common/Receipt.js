@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { FiDownload, FiPrinter, FiX } from 'react-icons/fi';
+import { BRAND } from '../../config/branding';
 import './Receipt.css';
 
 const Receipt = ({ lead, payment, onClose }) => {
@@ -50,18 +51,17 @@ const Receipt = ({ lead, payment, onClose }) => {
           </button>
         </div>
 
-        <div className="receipt-container" id="printable-receipt">
+        <div className="receipt-container" id="printable-receipt" style={{ position: 'relative' }}>
+          <div className="receipt-watermark" style={{ backgroundImage: 'url(/logo_letterhead.png)' }}></div>
           <div className="receipt-header">
             <div className="company-branding">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img src="/logo.png" alt="Logo" style={{ height: '40px' }} />
-                <h2 style={{ margin: 0 }}>Kanan <span>Travel CRM</span></h2>
+                <img src="/logo.png" alt="Logo" style={{ height: '45px', objectFit: 'contain' }} />
               </div>
               <div className="company-details">
-                <p>123 Travel Tower, Business Hub</p>
-                <p>New Delhi, Delhi 110001</p>
-                <p><strong>GSTIN:</strong> 07AAAAA0000A1Z5</p>
-                <p><strong>Support:</strong> +91 98765 43210</p>
+                <p>{BRAND.address}</p>
+                <p><strong>GSTIN:</strong> {BRAND.gstin}</p>
+                <p><strong>Support:</strong> {BRAND.phone} &middot; {BRAND.email}</p>
               </div>
             </div>
             <div className="receipt-title">
@@ -184,7 +184,7 @@ const Receipt = ({ lead, payment, onClose }) => {
             <p>2. Please quote the Lead ID and Receipt Number for all future correspondence.</p>
             <p>3. Payments are subject to realization. Cancellation policies apply as per supplier terms.</p>
             <p style={{ marginTop: '15px', textAlign: 'center', fontWeight: 600, color: '#1e293b' }}>
-              Thank you for choosing Kanan Travel CRM. Have a safe and wonderful trip!
+              Thank you for choosing {BRAND.name}. Have a safe and wonderful trip!
             </p>
           </div>
         </div>

@@ -1,22 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiCheck, FiX, FiFileText, FiPercent } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { api } from '../../../services/api';
 
 const SupplierContracts = () => {
   const [contracts, setContracts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     supplier_id: '', name: '', net_rate_multiplier: '1.0', commission_override_pct: '', markup_floor_pct: '', valid_from: '', valid_until: '', notes: ''
   });
 
   useEffect(() => {
-    voyageApi.getContracts()
-      .then(data => { setContracts(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
+    const load = async () => {
+      try {
+        const [c, s] = await Promise.all([
+          voyageApi.getContracts().catch(() => []),
+          api.getSuppliers().catch(() => []),
+        ]);
+        setContracts(c);
+        setSuppliers(s);
+      } catch (_) {}
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const handleAdd = async () => {
+    if (!form.supplier_id) return alert('Please select a supplier.');
+    if (!form.name) return alert('Contract name is required.');
+    setSaving(true);
     try {
       await voyageApi.createContract({
         ...form,
@@ -27,7 +42,12 @@ const SupplierContracts = () => {
       const updated = await voyageApi.getContracts();
       setContracts(updated);
       setShowAdd(false);
-    } catch (e) { alert(e.message); }
+      setForm({ supplier_id: '', name: '', net_rate_multiplier: '1.0', commission_override_pct: '', markup_floor_pct: '', valid_from: '', valid_until: '', notes: '' });
+    } catch (e) {
+      alert(e.message || 'Failed to create contract');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -52,6 +72,16 @@ const SupplierContracts = () => {
         <div className="card" style={{ padding: '20px', marginBottom: '20px', border: '2px dashed var(--primary)' }}>
           <h4 style={{ marginTop: 0 }}>Create Contract</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Supplier *</label>
+              <select value={form.supplier_id} onChange={e => setForm(f => ({ ...f, supplier_id: e.target.value }))}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+                <option value="">— Select Supplier —</option>
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.service_type || 'General'})</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Contract Name *</label>
               <input type="text" placeholder="e.g. Emirates Q3 2026" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
@@ -82,7 +112,7 @@ const SupplierContracts = () => {
             <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Additional terms or notes..." rows={2} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
           </div>
           <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" onClick={handleAdd}><FiCheck /> Save</button>
+            <button className="btn btn-primary" onClick={handleAdd} disabled={saving}><FiCheck /> {saving ? 'Saving…' : 'Save'}</button>
             <button className="btn btn-outline" onClick={() => setShowAdd(false)}><FiX /> Cancel</button>
           </div>
         </div>
@@ -103,6 +133,9 @@ const SupplierContracts = () => {
             </tr>
           </thead>
           <tbody>
+            {loading && (
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#999' }}>Loading…</td></tr>
+            )}
             {contracts.map(c => (
               <tr key={c.id}>
                 <td style={{ fontWeight: 'bold' }}><FiFileText style={{ marginRight: 6, color: 'var(--primary)' }} />{c.name}</td>

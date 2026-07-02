@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { FiX, FiSave, FiGlobe, FiHome, FiFileText, FiMap, FiUser, FiActivity, FiRotateCcw } from 'react-icons/fi';
 import './Modal.css';
 import { hasConsent, loadDraft, saveDraft, clearDraft, loadDefaults, saveDefaults } from '../../utils/cookies';
+import { useLeads } from '../../context/LeadContext';
+import { api } from '../../services/api';
 
 const ENQUIRY_OPTIONS = [
   { id: 'Flight', icon: <FiGlobe /> },
@@ -41,6 +43,7 @@ const blankForm = (defaults = {}) => ({
 });
 
 const AddLeadModal = ({ isOpen, onClose, onSave }) => {
+  const { state, dispatch } = useLeads();
   const [activeType, setActiveType] = useState('Package');
   const [formData, setFormData] = useState(() => blankForm());
   const [error, setError] = useState('');
@@ -79,6 +82,16 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
     if (!isOpen || !hasConsent()) return;
     saveDraft(FORM_ID, { activeType, formData });
   }, [isOpen, activeType, formData]);
+
+  // Ensure users are loaded for the Assign To dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+    if ((state.users || []).length === 0) {
+      api.getUsers()
+        .then(u => { if (Array.isArray(u) && u.length > 0) dispatch({ type: 'SET_USERS', payload: u }); })
+        .catch(() => {});
+    }
+  }, [isOpen, state.users, dispatch]);
 
   if (!isOpen) return null;
 
@@ -269,6 +282,16 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
             <div className="form-row" style={{ marginTop: 10 }}>
               <div className="form-group" style={{ flex: 2 }}><label>Tags (comma separated)</label><input type="text" placeholder="VIP, Honeymoon, Tech" value={formData.tags || ''} onChange={e => setFormData({ ...formData, tags: e.target.value })} /></div>
+              <div className="form-group">
+                <label>Assign To</label>
+                <select value={formData.assigned_to} onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}>
+                  <option value="">— Unassigned —</option>
+                  {Array.from(new Set([
+                    ...(state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name),
+                    ...(formData.assigned_to ? [formData.assigned_to] : [])
+                  ])).map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
 
             <div style={{ marginTop: 12, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

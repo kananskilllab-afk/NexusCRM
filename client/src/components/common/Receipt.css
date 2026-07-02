@@ -19,6 +19,7 @@
 }
 
 .receipt-container {
+  position: relative;
   padding: 40px;
   background: white;
   max-width: 800px;
@@ -28,6 +29,30 @@
   line-height: 1.5;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.receipt-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.receipt-header,
+.receipt-info-grid,
+.items-table,
+.receipt-footer,
+.notes-section {
+  position: relative;
+  z-index: 1;
 }
 
 .receipt-header {
@@ -206,6 +231,12 @@
     padding: 40px !important;
     box-shadow: none !important;
     border: none !important;
+  }
+  .receipt-watermark {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    opacity: 0.06 !important;
   }
   .receipt-actions {
     display: none !important;

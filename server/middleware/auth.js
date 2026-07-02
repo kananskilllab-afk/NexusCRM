@@ -20,6 +20,7 @@ const authenticate = (req, res, next) => {
 // Require minimum role level
 const requireRole = (minLevel) => (req, res, next) => {
   const userLevel = ROLE_HIERARCHY[req.user?.role] || 0;
+  console.log(`[RBAC Debug] User: ${req.user?.name || 'Unknown'}, Role: ${req.user?.role || 'None'}, Level: ${userLevel}, Required: ${minLevel}`);
   if (userLevel < minLevel) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }

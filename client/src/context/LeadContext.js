@@ -332,10 +332,10 @@ const loadInitialState = () => {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      return { 
-        ...initialState, 
-        ...parsed, 
-        users: initialState.users // Keep users static for now or sync from DB
+      return {
+        ...initialState,
+        ...parsed,
+        users: Array.isArray(parsed.users) ? parsed.users : []
       };
     } catch (e) { console.error(e); }
   }
@@ -346,8 +346,21 @@ export const LeadProvider = ({ children }) => {
   const [state, dispatch] = useReducer(leadReducer, loadInitialState());
 
   useEffect(() => {
-    localStorage.setItem('nexusCRM_State_v2', JSON.stringify(state));
-  }, [state]);
+    // Only persist auth-critical fields — leads/customers grow large and hit storage limits
+    const toSave = {
+      isAuthenticated: state.isAuthenticated,
+      currentUser: state.currentUser,
+      token: state.token,
+      loginTimestamp: state.loginTimestamp,
+      preferredCurrency: state.preferredCurrency,
+    };
+    try {
+      localStorage.setItem('nexusCRM_State_v2', JSON.stringify(toSave));
+    } catch (e) {
+      // QuotaExceededError — session continues but won't survive a refresh
+      console.warn('localStorage quota exceeded');
+    }
+  }, [state.isAuthenticated, state.currentUser, state.token, state.loginTimestamp, state.preferredCurrency]);
 
   return (
     <LeadContext.Provider value={{ state, dispatch }}>

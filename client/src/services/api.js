@@ -1,13 +1,31 @@
 const API_URL = process.env.REACT_APP_API_URL || (window.location.origin.includes('localhost') ? 'http://localhost:5005/api' : '/api');
 
+let activeToken = null;
+
+// Global fetch interceptor to handle 401 Unauthorized errors and force redirect to login
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+  const res = await originalFetch(...args);
+  if (res.status === 401 && !args[0].includes('/auth/login')) {
+    activeToken = null;
+    localStorage.removeItem('nexusCRM_State_v2');
+    if (!window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
+  }
+  return res;
+};
+
 const getHeaders = () => {
-  const stateStr = localStorage.getItem('nexusCRM_State_v2');
-  let token = null;
-  if(stateStr) {
-    try {
-      const state = JSON.parse(stateStr);
-      token = state.token;
-    } catch(e) {}
+  let token = activeToken;
+  if (!token) {
+    const stateStr = localStorage.getItem('nexusCRM_State_v2');
+    if (stateStr) {
+      try {
+        const state = JSON.parse(stateStr);
+        token = state.token;
+      } catch (e) {}
+    }
   }
   
   return {
@@ -19,13 +37,23 @@ const getHeaders = () => {
 export const api = {
   // Auth
   login: async (email, password) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
-    return res.json();
+    let res;
+    try {
+      res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+    } catch (_) {
+      throw new Error('Cannot reach the server. Make sure the backend is running.');
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || (res.status === 503 ? 'Server is starting up, please try again in a moment.' : 'Login failed'));
+    }
+    const data = await res.json();
+    activeToken = data.token;
+    return data;
   },
   
   // Leads
@@ -52,8 +80,8 @@ export const api = {
   },
 
   assignLead: async (id, payload) => {
-    const res = await fetch(`${API_URL}/leads/${id}/assign`, {
-      method: 'POST', headers: getHeaders(), body: JSON.stringify(payload)
+    const res = await fetch(`${API_URL}/leads/${id}`, {
+      method: 'PATCH', headers: getHeaders(), body: JSON.stringify(payload)
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -210,35 +238,6 @@ export const api = {
     return res.json();
   },
 
-  // Suppliers
-  getSuppliers: async (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_URL}/suppliers${qs ? '?' + qs : ''}`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch suppliers');
-    return res.json();
-  },
-  createSupplier: async (data) => {
-    const res = await fetch(`${API_URL}/suppliers`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
-    if (!res.ok) throw new Error('Failed to create supplier');
-    return res.json();
-  },
-  updateSupplier: async (id, data) => {
-    const res = await fetch(`${API_URL}/suppliers/${id}`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to update supplier');
-    return res.json();
-  },
-  deleteSupplier: async (id) => {
-    const res = await fetch(`${API_URL}/suppliers/${id}`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to delete supplier');
-    return res.json();
-  },
 
   // Communications
   getConversations: async () => {
@@ -282,6 +281,35 @@ export const api = {
   getUsers: async () => {
     const res = await fetch(`${API_URL}/users`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch users');
+    return res.json();
+  },
+
+  testSmtp: async (smtpConfig) => {
+    const res = await fetch(`${API_URL}/users/test-smtp`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(smtpConfig)
+    });
+    return res.json();
+  },
+
+  // Google Calendar
+  getGoogleAuthUrl: async () => {
+    const res = await fetch(`${API_URL}/google/auth-url`, { headers: getHeaders() });
+    return res.json();
+  },
+  getGoogleStatus: async () => {
+    const res = await fetch(`${API_URL}/google/status`, { headers: getHeaders() });
+    return res.json();
+  },
+  syncToGoogle: async (events) => {
+    const res = await fetch(`${API_URL}/google/sync`, {
+      method: 'POST', headers: getHeaders(), body: JSON.stringify({ events }),
+    });
+    return res.json();
+  },
+  disconnectGoogle: async () => {
+    const res = await fetch(`${API_URL}/google/disconnect`, { method: 'DELETE', headers: getHeaders() });
     return res.json();
   },
 
@@ -528,6 +556,51 @@ export const api = {
     }
     return res.json();
   },
+  // --- Packages ---
+  getPackages: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_URL}/packages${qs ? '?' + qs : ''}`, { headers: getHeaders() });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to fetch packages'); }
+    return res.json();
+  },
+  createPackage: async (payload) => {
+    const res = await fetch(`${API_URL}/packages`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to create package'); }
+    return res.json();
+  },
+  updatePackage: async (id, payload) => {
+    const res = await fetch(`${API_URL}/packages/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to update package'); }
+    return res.json();
+  },
+  deletePackage: async (id) => {
+    const res = await fetch(`${API_URL}/packages/${id}`, { method: 'DELETE', headers: getHeaders() });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to delete package'); }
+    return res.json();
+  },
+
+  // --- Hotels ---
+  getHotels: async () => {
+    const res = await fetch(`${API_URL}/hotels`, { headers: getHeaders() });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to fetch hotels'); }
+    return res.json();
+  },
+  createHotel: async (payload) => {
+    const res = await fetch(`${API_URL}/hotels`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to create hotel'); }
+    return res.json();
+  },
+  updateHotel: async (id, payload) => {
+    const res = await fetch(`${API_URL}/hotels/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to update hotel'); }
+    return res.json();
+  },
+  deleteHotel: async (id) => {
+    const res = await fetch(`${API_URL}/hotels/${id}`, { method: 'DELETE', headers: getHeaders() });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Failed to delete hotel'); }
+    return res.json();
+  },
+
   updateProfile: async (payload) => {
     const res = await fetch(`${API_URL}/auth/profile`, {
       method: 'PUT',

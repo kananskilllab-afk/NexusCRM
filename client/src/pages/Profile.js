@@ -374,6 +374,33 @@ const Profile = () => {
                 </button>
               </div>
             </div>
+          {isSuperAdmin && (
+            <div style={{ marginTop: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={async () => {
+                  if (!formData.smtp_host || !formData.smtp_user || !formData.smtp_pass) {
+                    alert('Fill in SMTP Host, Username, and Password before testing.');
+                    return;
+                  }
+                  try {
+                    const result = await api.testSmtp({
+                      smtp_host: formData.smtp_host,
+                      smtp_port: formData.smtp_port,
+                      smtp_user: formData.smtp_user,
+                      smtp_pass: formData.smtp_pass
+                    });
+                    alert(result.ok ? `✅ ${result.message}` : `❌ ${result.error}`);
+                  } catch (e) {
+                    alert('❌ Test failed: ' + e.message);
+                  }
+                }}
+              >
+                Test SMTP Connection
+              </button>
+            </div>
+          )}
           </div>
         </div>
 

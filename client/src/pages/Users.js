@@ -22,6 +22,30 @@ const Users = () => {
     reports: true,
     logout: true
   });
+  const [isEditingPermissions, setIsEditingPermissions] = useState(false);
+  const [tempPermissions, setTempPermissions] = useState({ access: [], reports: [] });
+
+  const handleEditPermissions = () => {
+    setTempPermissions({ 
+      access: selectedUser?.access_control || ['Billing', 'Invoice', 'Voucher', 'Supplier', 'All Contact', 'Reports'], 
+      reports: selectedUser?.allow_reports || ['Lead Wise', 'Lead Created Wise', 'Purchase Report', 'Supplier Paid Report', 'Customer Payment Report', 'Sale Report', 'Bill Payment Reminder Report', 'Cancel Refund', 'Birthday and Anniversary Report']
+    });
+    setIsEditingPermissions(true);
+  };
+
+  const handleSavePermissions = async () => {
+    try {
+      const updated = await api.updateUser(selectedUser.id, { 
+        access_control: tempPermissions.access, 
+        allow_reports: tempPermissions.reports 
+      });
+      dispatch({ type: 'UPDATE_USER', payload: { id: selectedUser.id, data: updated } });
+      setIsEditingPermissions(false);
+      alert('Permissions saved successfully');
+    } catch (err) {
+      alert(err.message || 'Failed to save permissions');
+    }
+  };
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -274,8 +298,18 @@ const Users = () => {
               </div>
            </div>
            <div className="header-actions">
-              <button className="btn btn-outline" onClick={() => setSelectedUserId(null)}>Back to List</button>
-              <button className="btn btn-outline" onClick={() => handleOpenEditModal(selectedUser)}><FiEdit2 /> Edit</button>
+              <button className="btn btn-outline" onClick={() => { setSelectedUserId(null); setIsEditingPermissions(false); }}>Back to List</button>
+              {isEditingPermissions ? (
+                <>
+                  <button className="btn btn-outline" onClick={() => setIsEditingPermissions(false)}>Cancel Permissions</button>
+                  <button className="btn btn-primary" onClick={handleSavePermissions}>Save Permissions</button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-outline" onClick={handleEditPermissions}><FiShield /> Edit Permissions</button>
+                  <button className="btn btn-outline" onClick={() => handleOpenEditModal(selectedUser)}><FiEdit2 /> Edit Info</button>
+                </>
+              )}
            </div>
         </div>
 
@@ -366,12 +400,25 @@ const Users = () => {
                    {[
                      'Billing', 'Invoice', 'Voucher', 
                      'Supplier', 'All Contact', 'Reports'
-                   ].map(p => (
-                     <div key={p} className="permission-item">
-                        <input type="checkbox" defaultChecked />
-                        <label>{p}</label>
-                     </div>
-                   ))}
+                   ].map(p => {
+                     const isChecked = isEditingPermissions 
+                        ? tempPermissions.access.includes(p)
+                        : (selectedUser.access_control || []).includes(p);
+                     return (
+                       <div key={p} className="permission-item">
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked} 
+                            disabled={!isEditingPermissions}
+                            onChange={(e) => {
+                              if (e.target.checked) setTempPermissions(prev => ({ ...prev, access: [...prev.access, p] }));
+                              else setTempPermissions(prev => ({ ...prev, access: prev.access.filter(x => x !== p) }));
+                            }}
+                          />
+                          <label>{p}</label>
+                       </div>
+                     );
+                   })}
                 </div>
               )}
            </div>
@@ -391,12 +438,25 @@ const Users = () => {
                      'Supplier Paid Report', 'Customer Payment Report', 'Sale Report',
                      'Bill Payment Reminder Report', 'Profit Loss', 'Cancel Refund',
                      'Birthday and Anniversary Report'
-                   ].map(r => (
-                     <div key={r} className={`permission-item ${r === 'Profit Loss' ? 'disabled' : ''}`}>
-                        <input type="checkbox" defaultChecked={r !== 'Profit Loss'} />
-                        <label>{r}</label>
-                     </div>
-                   ))}
+                   ].map(r => {
+                     const isChecked = isEditingPermissions 
+                        ? tempPermissions.reports.includes(r)
+                        : (selectedUser.allow_reports || []).includes(r);
+                     return (
+                       <div key={r} className={`permission-item ${r === 'Profit Loss' ? 'disabled' : ''}`}>
+                          <input 
+                            type="checkbox" 
+                            checked={r === 'Profit Loss' ? false : isChecked} 
+                            disabled={!isEditingPermissions || r === 'Profit Loss'}
+                            onChange={(e) => {
+                              if (e.target.checked) setTempPermissions(prev => ({ ...prev, reports: [...prev.reports, r] }));
+                              else setTempPermissions(prev => ({ ...prev, reports: prev.reports.filter(x => x !== r) }));
+                            }}
+                          />
+                          <label>{r}</label>
+                       </div>
+                     );
+                   })}
                 </div>
               )}
            </div>
@@ -593,12 +653,16 @@ const Users = () => {
 
                 <div className="form-group">
                   <label>Assign To</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Vicky ray(admin)"
-                    value={formData.assigned_to} 
-                    onChange={e => setFormData({ ...formData, assigned_to: e.target.value })} 
-                  />
+                  <select
+                    value={formData.assigned_to}
+                    onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
+                  >
+                    <option value="">— None —</option>
+                    {Array.from(new Set([
+                      ...(state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name),
+                      ...(formData.assigned_to ? [formData.assigned_to] : [])
+                    ])).map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
 
                 <div className="form-group" style={{ marginTop: '10px' }}>
@@ -665,6 +729,31 @@ const Users = () => {
                         </button>
                       </div>
                     </div>
+                  </div>
+                  <div style={{ marginTop: '10px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={async () => {
+                        if (!formData.smtp_host || !formData.smtp_user || !formData.smtp_pass) {
+                          alert('Fill in SMTP Host, Username, and Password before testing.');
+                          return;
+                        }
+                        try {
+                          const result = await api.testSmtp({
+                            smtp_host: formData.smtp_host,
+                            smtp_port: formData.smtp_port,
+                            smtp_user: formData.smtp_user,
+                            smtp_pass: formData.smtp_pass
+                          });
+                          alert(result.ok ? `✅ ${result.message}` : `❌ ${result.error}`);
+                        } catch (e) {
+                          alert('❌ Test failed: ' + e.message);
+                        }
+                      }}
+                    >
+                      Test SMTP Connection
+                    </button>
                   </div>
                   <div style={{ borderTop: '2px dashed var(--border-color)', margin: '15px 0', paddingTop: '15px' }}>
                     <h4 style={{ fontWeight: 800, marginBottom: '10px' }}>Email Signature Builder</h4>

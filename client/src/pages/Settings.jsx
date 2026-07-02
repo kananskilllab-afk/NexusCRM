@@ -14,6 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { StatusPill, Button } from '../components/ui';
 import { api } from '../services/api';
+import { BRAND } from '../config/branding';
 import './Settings.css';
 
 // ── Nav items ────────────────────────────────────────────────────────────────
@@ -28,12 +29,12 @@ const NAV = [
 
 // ── Default data ─────────────────────────────────────────────────────────────
 const DEFAULT_AGENCY = {
-  name:       'Kanan International',
-  legal_name: 'Kanan International Pvt Ltd',
-  gstin:      '24AABCK3843M1ZQ',
-  address:    '301, Siddhi Vinayak Complex, RC Dutt Road, Vadodara — 390 007, Gujarat',
-  phone:      '+91 265 234 5678',
-  email:      'info@kanan.co',
+  name:       BRAND.name,
+  legal_name: BRAND.legalName,
+  gstin:      BRAND.gstin,
+  address:    BRAND.address,
+  phone:      BRAND.phone,
+  email:      BRAND.email,
   currency:   'INR',
   timezone:   'Asia/Kolkata',
 };
