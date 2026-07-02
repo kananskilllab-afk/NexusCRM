@@ -84,13 +84,9 @@ async function sendAutomatedEmail(lead, templateName, customVariables = {}) {
 
     // 4. Log in EmailSend
     const tenant = await Tenant.findOne();
-    if (!tenant) {
-      console.warn(`[Automation] Tenant not found. Skipping automated email "${templateName}".`);
-      return;
-    }
 
     const emailSend = await EmailSend.create({
-      tenant_id: tenant._id,
+      ...(tenant ? { tenant_id: tenant._id } : {}),
       template_id: template._id,
       sent_by: agent ? agent._id : undefined,
       is_bulk: false,
@@ -158,7 +154,6 @@ async function initializeDefaultTemplates() {
     }
 
     const tenant = await Tenant.findOne();
-    if (!tenant) return;
 
     const defaults = [
       {
@@ -195,7 +190,7 @@ async function initializeDefaultTemplates() {
       const exists = await EmailTemplate.findOne({ name: item.name });
       if (!exists) {
         await EmailTemplate.create({
-          tenant_id: tenant._id,
+          ...(tenant ? { tenant_id: tenant._id } : {}),
           ...item
         });
         console.log(`[Automation] Default template "${item.name}" created successfully.`);

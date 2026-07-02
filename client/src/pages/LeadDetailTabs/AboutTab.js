@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useLeads } from '../../context/LeadContext';
+import { api } from '../../services/api';
 import { FiEdit2, FiSave, FiX } from 'react-icons/fi';
 
 const AboutTab = ({ lead }) => {
-  const { dispatch } = useLeads();
+  const { state, dispatch } = useLeads();
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     first_name: lead.first_name, last_name: lead.last_name,
     mobile: lead.mobile, alternate_phone: lead.alternate_phone || '', email: lead.email,
@@ -18,13 +20,24 @@ const AboutTab = ({ lead }) => {
     priority: lead.priority, assigned_to: lead.assigned_to || ''
   });
 
-  const handleSave = () => {
-    dispatch({ type: 'UPDATE_LEAD', payload: { id: lead.id, data: form } });
-    dispatch({ type: 'ADD_ACTIVITY', payload: { leadId: lead.id, activity: { text: 'Lead details updated', user: 'Admin' } } });
-    setIsEditing(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const updated = await api.updateLead(lead.id, form);
+      dispatch({ type: 'UPDATE_LEAD', payload: { id: lead.id, data: updated } });
+      dispatch({ type: 'ADD_ACTIVITY', payload: { leadId: lead.id, activity: { text: 'Lead details updated', user: 'Admin' } } });
+      setIsEditing(false);
+    } catch (err) {
+      alert(err.message || 'Failed to save lead details');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!lead) return null;
+
+  const activeUserNames = (state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name);
+  const assignToOptions = ['', ...Array.from(new Set([...activeUserNames, ...(form.assigned_to ? [form.assigned_to] : [])]))];
 
   return (
     <div className="tab-content about-tab">
@@ -35,7 +48,7 @@ const AboutTab = ({ lead }) => {
             <button className="btn btn-outline btn-sm" onClick={() => setIsEditing(true)}><FiEdit2 /> Edit</button>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="btn btn-primary btn-sm" onClick={handleSave}><FiSave /> Save</button>
+              <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}><FiSave /> {saving ? 'Saving…' : 'Save'}</button>
               <button className="btn btn-outline btn-sm" onClick={() => setIsEditing(false)}><FiX /> Cancel</button>
             </div>
           )}
@@ -57,7 +70,7 @@ const AboutTab = ({ lead }) => {
             { label: 'Travel End', key: 'travel_end_date', type: 'date' },
             { label: 'Next Follow-up', key: 'next_follow_up_date', type: 'date' },
             { label: 'Priority', key: 'priority', options: ['Hot', 'Normal', 'Cold'] },
-            { label: 'Assigned To', key: 'assigned_to' },
+            { label: 'Assigned To', key: 'assigned_to', options: assignToOptions },
             { label: 'Rating', key: 'rating', readOnly: true },
             { label: 'Lead Score', key: 'lead_score', readOnly: true },
             { label: 'Qualification', key: 'qualification_status', readOnly: true }

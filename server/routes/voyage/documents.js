@@ -27,9 +27,6 @@ router.get('/', authenticateToken, async (req, res) => {
     if (req.query.contact_id) filter.contact_id = req.query.contact_id;
 
     const docs = await Document.find(filter)
-      .populate('booking_id', 'destination')
-      .populate('contact_id', 'full_name')
-      .populate('uploaded_by', 'email')
       .sort({ created_at: -1 })
       .lean();
 
@@ -40,9 +37,9 @@ router.get('/', authenticateToken, async (req, res) => {
       mime_type: d.mime_type || '',
       size_bytes: d.size_bytes || 0,
       size_display: d.size_bytes ? (d.size_bytes / 1024).toFixed(1) + ' KB' : '—',
-      booking: d.booking_id ? d.booking_id.destination : '',
-      contact: d.contact_id ? d.contact_id.full_name : '',
-      uploaded_by: d.uploaded_by ? d.uploaded_by.email : '',
+      booking: '',
+      contact: '',
+      uploaded_by: d.uploaded_by_name || d.uploaded_by || '',
       storage_key: d.storage_key,
       created_at: d.created_at ? new Date(d.created_at).toISOString().split('T')[0] : ''
     }));
@@ -57,12 +54,19 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const tenant = await Tenant.findOne();
+    // Try to find a tenant; don't crash if none exists
+    let tenantId = undefined;
+    try {
+      const tenant = await Tenant.findOne();
+      if (tenant) tenantId = tenant._id;
+    } catch (_) { /* tenant collection may not exist */ }
+
     const doc = await Document.create({
-      tenant_id: tenant._id,
+      tenant_id: tenantId,
       booking_id: req.body.booking_id || undefined,
       contact_id: req.body.contact_id || undefined,
-      uploaded_by: req.user.id.match(/^[0-9a-fA-F]{24}$/) ? req.user.id : undefined,
+      uploaded_by: req.user.id || req.user.name,
+      uploaded_by_name: req.user.name || '',
       type: req.body.type || 'other',
       storage_key: req.file.filename,
       filename: req.file.originalname,
@@ -72,6 +76,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
 
     res.status(201).json({ id: doc._id.toString(), message: 'Document uploaded successfully' });
   } catch (err) {
+    console.error('❌ Document upload error:', err);
     res.status(500).json({ error: err.message });
   }
 });

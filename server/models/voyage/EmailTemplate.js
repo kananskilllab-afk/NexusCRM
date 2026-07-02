@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const emailTemplateSchema = new mongoose.Schema(
   {
-    tenant_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
+    tenant_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
     name:       { type: String, required: true, trim: true },
     subject:    { type: String, required: true },
     body_html:  { type: String, required: true },

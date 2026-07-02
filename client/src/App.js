@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import { LeadProvider, useLeads, ROLE_HIERARCHY } from './context/LeadContext';
+import { api } from './services/api';
 import { VoyageProvider } from './context/VoyageContext';
 import Profile from './pages/Profile';
 import CookieConsent from './components/common/CookieConsent';
@@ -88,6 +89,14 @@ const SecurityWrapper = ({ children }) => {
     navigate('/login');
   }, [dispatch, navigate]);
 
+  // Populate the global users list so Owner/Assign-To dropdowns work everywhere
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+    api.getUsers()
+      .then(u => dispatch({ type: 'SET_USERS', payload: Array.isArray(u) ? u : [] }))
+      .catch(() => {});
+  }, [state.isAuthenticated, dispatch]);
+
   useEffect(() => {
     if (!state.isAuthenticated) return;
     const fetchLatestUser = async () => {
@@ -148,6 +157,7 @@ function AppRoutes() {
 
   return (
     <SecurityWrapper>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -198,6 +208,12 @@ function AppRoutes() {
         <Route path="/pipeline" element={
           <ProtectedRoute requiredLevel={1}>
             <MainLayout><PipelineBoard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/opportunities" element={
+          <ProtectedRoute requiredLevel={1}>
+            <MainLayout><OpportunitiesBoard /></MainLayout>
           </ProtectedRoute>
         } />
 
@@ -310,6 +326,7 @@ function AppRoutes() {
         <Route path="/403" element={<MainLayout><ForbiddenPage /></MainLayout>} />
         <Route path="*" element={<MainLayout><NotFoundPage /></MainLayout>} />
       </Routes>
+      </Suspense>
     </SecurityWrapper>
   );
 }

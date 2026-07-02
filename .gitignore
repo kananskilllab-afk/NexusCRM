@@ -35,3 +35,10 @@ diagram.html
 implementation_plan.md
 task.md
 walkthrough.md
+
+# Scratch and local files
+scratch/
+FIX_LOG.md
+nul
+server/uploads/*
+!server/uploads/.gitkeep

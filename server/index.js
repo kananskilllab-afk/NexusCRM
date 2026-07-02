@@ -25,6 +25,9 @@ const invoicesRouter = require('./routes/invoices');
 const notificationsRouter = require('./routes/notifications');
 const integrationsRouter = require('./routes/integrations');
 const communicationsRouter = require('./routes/communications');
+const packagesRouter = require('./routes/packages');
+const hotelsRouter = require('./routes/hotels');
+const googleRouter = require('./routes/google');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,21 +44,32 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-mongoose.connect(MONGODB_URI)
+let dbReady = false;
+
+mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000 })
   .then(async () => {
     console.log('🍃 Connected to MongoDB Atlas successfully');
+    dbReady = true;
     await seedDatabase();
     await initializeDefaultTemplates();
     startScheduler();
   })
   .catch(err => {
-    console.error('❌ Failed to connect to MongoDB Atlas:', err);
+    console.error('❌ Failed to connect to MongoDB Atlas:', err.message);
   });
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Return 503 immediately if DB is not up yet (avoids 10-second Mongoose buffer timeout)
+app.use((req, res, next) => {
+  if (!dbReady && req.path !== '/api/health') {
+    return res.status(503).json({ error: 'Database connection not ready. Check MONGODB_URI and Atlas network access.' });
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -77,6 +91,9 @@ app.use('/api/invoices', invoicesRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/integrations', integrationsRouter);
 app.use('/api/communications', communicationsRouter);
+app.use('/api/packages', packagesRouter);
+app.use('/api/hotels', hotelsRouter);
+app.use('/api/google', googleRouter);
 
 // Home route message
 app.get('/', (req, res) => {

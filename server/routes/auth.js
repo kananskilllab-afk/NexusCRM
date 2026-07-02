@@ -86,7 +86,7 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// PUT /api/auth/profile - Update profile details (Super Admin only)
+// PUT /api/auth/profile - Any authenticated user can update their own profile
 router.put('/profile', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token' });
@@ -94,17 +94,12 @@ router.put('/profile', async (req, res) => {
   try {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Check if the user is Super Admin
-    if (decoded.role !== 'Super Admin') {
-      return res.status(403).json({ error: 'Access denied. Only Super Admin can change properties.' });
-    }
 
     const user = await CRMUser.findOne({ id: decoded.id });
     if (!user || user.status !== 'Active') return res.status(404).json({ error: 'User not found' });
 
     const { name, mobile, area, password, smtp_host, smtp_port, smtp_user, smtp_pass, email_signature, profile_image, signature_fields } = req.body;
-    
+
     if (name !== undefined) user.name = name;
     if (mobile !== undefined) user.mobile = mobile;
     if (area !== undefined) user.area = area;
@@ -117,7 +112,6 @@ router.put('/profile', async (req, res) => {
     if (signature_fields !== undefined) user.signature_fields = signature_fields;
 
     if (password) {
-      const bcrypt = require('bcryptjs');
       user.password = bcrypt.hashSync(password, 10);
     }
 
@@ -134,7 +128,7 @@ router.put('/profile', async (req, res) => {
       signature_fields: user.signature_fields
     });
   } catch (err) {
-    res.status(401).json({ error: 'Invalid token or update failed' });
+    res.status(500).json({ error: 'Failed to update profile: ' + err.message });
   }
 });
 

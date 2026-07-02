@@ -63,7 +63,7 @@ router.post('/templates', authenticateToken, async (req, res) => {
   try {
     const tenant = await Tenant.findOne();
     const template = await EmailTemplate.create({
-      tenant_id: tenant._id,
+      ...(tenant ? { tenant_id: tenant._id } : {}),
       name,
       subject,
       body_html,
@@ -91,7 +91,8 @@ router.put('/templates/:id', authenticateToken, async (req, res) => {
 // DELETE /api/voyage/emails/templates/:id
 router.delete('/templates/:id', authenticateToken, async (req, res) => {
   try {
-    await EmailTemplate.findByIdAndDelete(req.params.id);
+    const deleted = await EmailTemplate.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Template not found' });
     res.json({ message: 'Template deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -134,7 +135,9 @@ router.get('/history', authenticateToken, async (req, res) => {
       }
     } else {
       if (req.query.sent_by) {
-        filter.sent_by = req.query.sent_by;
+        // sent_by is an ObjectId ref; look up the CRM user by their string id
+        const targetUser = await CRMUser.findOne({ id: req.query.sent_by }).lean();
+        if (targetUser) filter.sent_by = targetUser._id;
       }
     }
 
@@ -258,7 +261,7 @@ router.post('/send', authenticateToken, async (req, res) => {
 
     // 5. Create database record as "queued"
     const emailSend = await EmailSend.create({
-      tenant_id: tenant._id,
+      ...(tenant ? { tenant_id: tenant._id } : {}),
       template_id: template_id || undefined,
       contact_id: contact ? contact._id : undefined,
       booking_id: booking ? booking._id : undefined,
@@ -458,7 +461,7 @@ router.post('/send-bulk', authenticateToken, async (req, res) => {
 
         // Create db log as queued
         emailSend = await EmailSend.create({
-          tenant_id: tenant._id,
+          ...(tenant ? { tenant_id: tenant._id } : {}),
           template_id: template_id || undefined,
           contact_id: contact ? contact._id : undefined,
           booking_id: booking ? booking._id : undefined,

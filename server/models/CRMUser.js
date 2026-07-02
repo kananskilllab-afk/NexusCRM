@@ -29,6 +29,15 @@ const CRMUserSchema = new mongoose.Schema(
       phone: { type: String },
       logo: { type: String },
       linkedin: { type: String }
+    },
+    access_control: { type: [String], default: ['Billing', 'Invoice', 'Voucher', 'Supplier', 'All Contact', 'Reports'] },
+    allow_reports: { type: [String], default: ['Lead Wise', 'Lead Created Wise', 'Purchase Report', 'Supplier Paid Report', 'Customer Payment Report', 'Sale Report', 'Bill Payment Reminder Report', 'Cancel Refund', 'Birthday and Anniversary Report'] },
+    google_tokens: {
+      access_token: { type: String },
+      refresh_token: { type: String },
+      expiry_date: { type: Number },
+      token_type: { type: String },
+      scope: { type: String },
     }
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

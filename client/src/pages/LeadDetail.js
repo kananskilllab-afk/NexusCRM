@@ -46,14 +46,15 @@ const LeadDetail = () => {
 
   const [showTemplates, setShowTemplates] = useState(null); // 'WhatsApp' or 'Email'
   const [showConvert, setShowConvert] = useState(false);
-  const [users, setUsers] = useState([]);
   const [opp, setOpp] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Load the user list (for owner/assignee pickers); degrade gracefully.
+  // Load users into shared context so all child tabs (AboutTab etc.) also benefit.
   useEffect(() => {
-    api.getUsers().then((u) => setUsers(Array.isArray(u) ? u : [])).catch(() => setUsers([]));
-  }, []);
+    api.getUsers()
+      .then(u => { if (Array.isArray(u) && u.length > 0) dispatch({ type: 'SET_USERS', payload: u }); })
+      .catch(() => {});
+  }, [dispatch]);
 
   // Load the linked opportunity, if any.
   useEffect(() => {
@@ -129,7 +130,7 @@ const LeadDetail = () => {
 
   // User-name options for the pickers (active users + whoever is already set).
   const names = Array.from(new Set([
-    ...users.filter(u => !u.status || u.status === 'Active').map(u => u.name),
+    ...(state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name),
     lead.owner, lead.assigned_to,
   ].filter(Boolean)));
 
