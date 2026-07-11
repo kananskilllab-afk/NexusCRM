@@ -82,6 +82,9 @@ const TopNav = ({ toggleMobileMenu }) => {
         <button className="mobile-toggle-btn" onClick={toggleMobileMenu}>
           <FiMenu />
         </button>
+        <div className="mobile-logo-box">
+          <img src="/logo.png" alt="Logo" style={{ height: '32px', objectFit: 'contain' }} />
+        </div>
         <div className="search-box-minimal">
            <FiSearch />
            <input type="text" placeholder="Search leads..." />

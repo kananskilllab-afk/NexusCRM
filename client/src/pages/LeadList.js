@@ -259,52 +259,95 @@ const LeadList = () => {
             <p>Loading bookings...</p>
           </div>
         ) : filteredLeads.length > 0 ? (
-          <table className="leads-table">
-            <thead>
-              <tr>
-                <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleSelectAll} checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0} /></th>
-                <th>Booking ID</th>
-                <th>Customer</th>
-                <th>Phone</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Destination</th>
-                <th>Tour Start</th>
-                <th>Created</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <div className="desktop-table-view">
+              <table className="leads-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleSelectAll} checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0} /></th>
+                    <th>Booking ID</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                    <th>Destination</th>
+                    <th>Tour Start</th>
+                    <th>Created</th>
+                    <th className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map(lead => (
+                    <tr key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className={`clickable-row ${selectedLeads.includes(lead.id) ? 'selected' : ''}`}>
+                      <td onClick={e => toggleSelectLead(e, lead.id)}>
+                        <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly />
+                      </td>
+                      <td className="lead-no">{lead.id}</td>
+                      <td className="contact-name">{lead.first_name} {lead.last_name}</td>
+                      <td>{lead.mobile}</td>
+                      <td>{lead.lead_source}</td>
+                      <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span></td>
+                      <td>{lead.assigned_to}</td>
+                      <td>{lead.destination}</td>
+                      <td>{lead.travel_start_date || '—'}</td>
+                      <td>
+                        <div style={{ fontSize: '0.75rem' }}>{new Date(lead.created_at).toLocaleDateString()}</div>
+                      </td>
+                      <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                         <div className="action-icons-grid" style={{ justifyContent: 'flex-end' }}>
+                            <div className="icon-box green" title="View" onClick={() => navigate(`/leads/${lead.id}`)}><FiEye size={12}/></div>
+                            <div className="icon-box yellow" title="Edit" onClick={() => navigate(`/leads/${lead.id}`)}><FiEdit2 size={12}/></div>
+                            {userLevel >= 4 && (
+                              <div className="icon-box red" title="Delete" onClick={() => handleDeleteLead(lead.id)}><FiTrash2 size={12}/></div>
+                            )}
+                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mobile-card-list">
               {filteredLeads.map(lead => (
-                <tr key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className={`clickable-row ${selectedLeads.includes(lead.id) ? 'selected' : ''}`}>
-                  <td onClick={e => toggleSelectLead(e, lead.id)}>
-                    <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly />
-                  </td>
-                  <td className="lead-no">{lead.id}</td>
-                  <td className="contact-name">{lead.first_name} {lead.last_name}</td>
-                  <td>{lead.mobile}</td>
-                  <td>{lead.lead_source}</td>
-                  <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span></td>
-                  <td>{lead.assigned_to}</td>
-                  <td>{lead.destination}</td>
-                  <td>{lead.travel_start_date || '—'}</td>
-                  <td>
-                    <div style={{ fontSize: '0.75rem' }}>{new Date(lead.created_at).toLocaleDateString()}</div>
-                  </td>
-                  <td className="actions-cell" onClick={e => e.stopPropagation()}>
-                     <div className="action-icons-grid" style={{ justifyContent: 'flex-end' }}>
-                        <div className="icon-box green" title="View" onClick={() => navigate(`/leads/${lead.id}`)}><FiEye size={12}/></div>
-                        <div className="icon-box yellow" title="Edit" onClick={() => navigate(`/leads/${lead.id}`)}><FiEdit2 size={12}/></div>
-                        {userLevel >= 4 && (
-                          <div className="icon-box red" title="Delete" onClick={() => handleDeleteLead(lead.id)}><FiTrash2 size={12}/></div>
-                        )}
-                     </div>
-                  </td>
-                </tr>
+                <div key={lead.id} className="mobile-lead-card" onClick={() => navigate(`/leads/${lead.id}`)}>
+                  <div className="mobile-card-header">
+                    <span className="lead-no">{lead.id}</span>
+                    <span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span>
+                  </div>
+                  <div className="mobile-card-body">
+                    <div className="detail-row">
+                      <span className="detail-label">Customer:</span>
+                      <span className="detail-value">{lead.first_name} {lead.last_name}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Phone:</span>
+                      <span className="detail-value">{lead.mobile}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Destination:</span>
+                      <span className="detail-value">{lead.destination}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Assigned To:</span>
+                      <span className="detail-value">{lead.assigned_to || '—'}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Tour Start:</span>
+                      <span className="detail-value">{lead.travel_start_date || '—'}</span>
+                    </div>
+                  </div>
+                  <div className="mobile-card-actions" onClick={e => e.stopPropagation()}>
+                    <button className="btn btn-outline btn-sm" onClick={() => navigate(`/leads/${lead.id}`)}>View Details</button>
+                    {userLevel >= 4 && (
+                      <button className="btn btn-outline btn-sm btn-danger" onClick={() => handleDeleteLead(lead.id)} style={{ color: 'var(--color-red)', borderColor: 'var(--color-red)' }}>Delete</button>
+                    )}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         ) : (
           <div className="empty-state">
             <FiLayers size={48} color="#ccc" />

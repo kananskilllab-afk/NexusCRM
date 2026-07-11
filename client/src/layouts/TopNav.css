@@ -115,7 +115,16 @@
 .urole { font-size: 0.72rem; color: var(--text-muted); }
 .user-profile-utility svg { color: var(--text-muted); }
 
+.mobile-logo-box {
+  display: none;
+  align-items: center;
+}
+
 @media (max-width: 1024px) {
   .mobile-toggle-btn { display: flex; }
   .search-box-minimal { display: none; }
+  .mobile-logo-box {
+    display: flex;
+    margin-left: 8px;
+  }
 }

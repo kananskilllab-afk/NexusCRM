@@ -42,6 +42,13 @@ a { color: inherit; }
 .scroll-x::-webkit-scrollbar { height: 6px; }
 .scroll-x::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; border: none; }
 
+.leads-table-wrapper, .table-container, .responsive-table {
+  overflow-x: auto;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
 /* ===== Responsiveness ===== */
 @media (max-width: 1024px) {
   .content-wrapper { margin-left: 0 !important; padding: 1.25rem; }
@@ -66,6 +73,9 @@ a { color: inherit; }
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
+}
+.card:has(table) {
+  overflow-x: auto !important;
 }
 
 /* ===== Buttons ===== */
