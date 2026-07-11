@@ -27,6 +27,14 @@
       "dest": "/favicon.ico"
     },
     {
+      "src": "/logo.png",
+      "dest": "/logo.png"
+    },
+    {
+      "src": "/logo_letterhead.png",
+      "dest": "/logo_letterhead.png"
+    },
+    {
       "src": "/logo192.png",
       "dest": "/logo192.png"
     },

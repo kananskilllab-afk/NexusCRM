@@ -63,9 +63,10 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Return 503 immediately if DB is not up yet (avoids 10-second Mongoose buffer timeout)
+// Return 503 if DB is disconnected (not connected and not connecting)
 app.use((req, res, next) => {
-  if (!dbReady && req.path !== '/api/health') {
+  const state = mongoose.connection.readyState;
+  if (state !== 1 && state !== 2 && req.path !== '/api/health') {
     return res.status(503).json({ error: 'Database connection not ready. Check MONGODB_URI and Atlas network access.' });
   }
   next();
