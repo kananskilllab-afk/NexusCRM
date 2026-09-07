@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 import './Modal.css';
 
 const STAGES = ['Qualification', 'Itinerary', 'Quote Sent', 'Negotiation', 'Verbal Confirm'];
-const OPP_TYPES = ['Package', 'Flight', 'Hotel', 'Visa'];
+const OPP_TYPES = ['Package', 'Flight', 'Hotel', 'Visa', 'Passport Assistance'];
 
 /**
  * §4.6 conversion screen: confirm the matched/new Account and set up the initial

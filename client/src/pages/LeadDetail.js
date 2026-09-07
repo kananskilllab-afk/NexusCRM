@@ -175,6 +175,10 @@ const LeadDetail = () => {
       setShowLostModal(true);
       return;
     }
+    if (newStatus === 'Converted') {
+      handleConvertToOpportunity();
+      return;
+    }
     if (!allowedNext.includes(newStatus)) {
       addToast(`Cannot move from "${lead.status}" to "${newStatus}".`, 'error');
       return;

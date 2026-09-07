@@ -37,12 +37,12 @@ const FORECAST_CATEGORY = {
 // §5.5 fixed loss-reason picklist, mandatory on Closed-Lost.
 const LOSS_REASONS = ['Price', 'Timing', 'Went with competitor', 'Plan cancelled', 'No response', 'Budget'];
 const COMPETITORS = ['Other agency', 'OTA', 'DIY', 'None'];
-const OPP_TYPES = ['Flight', 'Hotel', 'Visa', 'Package'];
+const OPP_TYPES = ['Flight', 'Hotel', 'Visa', 'Package', 'Passport Assistance'];
 
 // §5.3 OpportunityLineItem — one per trip segment. Sum of line totals is the
 // Opportunity Amount and also feeds the Quote. unit_cost/markup are the
 // restricted margin fields (hidden from junior agents at the API layer).
-const SEGMENT_TYPES = ['Package', 'Flight', 'Hotel', 'Activity', 'Transfer', 'Tour', 'Visa', 'Insurance', 'Other'];
+const SEGMENT_TYPES = ['Package', 'Flight', 'Hotel', 'Activity', 'Transfer', 'Tour', 'Visa', 'Passport Assistance', 'Insurance', 'Other'];
 const LineItemSchema = new mongoose.Schema(
   {
     package_id:   { type: String }, // optional link to a future Package master
