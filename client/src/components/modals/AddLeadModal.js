@@ -254,6 +254,8 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
                   </div>
                 </div>
               </div>
+            )}
+
             {activeType === 'Passport Assistance' && (
               <div className="dynamic-fields card" style={{ background: 'var(--bg-main)', border: '1px dashed var(--primary)', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
                 <div className="form-row">

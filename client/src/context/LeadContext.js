@@ -238,13 +238,6 @@ function leadReducer(state, action) {
         suppliers: [...state.suppliers, action.payload]
       };
 
-    case 'SET_SUPPLIERS':
-      return {
-        ...state,
-        isLoading: false,
-        suppliers: action.payload
-      };
-
     case 'UPDATE_SUPPLIER':
       return {
         ...state,
