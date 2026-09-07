@@ -49,6 +49,7 @@ const LeadSchema = new mongoose.Schema(
     // Stage 4 — qualification & scoring
     qualification_status: { type: String, enum: ['Pending', 'Qualified', 'Unqualified'], default: 'Pending' },
     qualification_reason: { type: String },
+    lost_reason: { type: String },
     lead_score:   { type: Number, default: 0, min: 0, max: 100 },
     // Stage 5 — Kanban pipeline
     pipeline_stage: { type: String, enum: ['Inquiry', 'Quoted', 'Negotiation', 'Won', 'Lost'], default: 'Inquiry' },

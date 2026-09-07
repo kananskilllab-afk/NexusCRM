@@ -58,6 +58,40 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/leads/reminders/due - retrieve leads/followups due today or overdue
+router.get('/reminders/due', async (req, res) => {
+  const userLevel = ROLE_HIERARCHY[req.user.role] || 0;
+  try {
+    const now = new Date();
+    // End of today
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const query = {
+      status: { $nin: ['Converted', 'Lost', 'Cancelled', 'Unqualified'] }
+    };
+    if (userLevel < 3) {
+      query.assigned_to = req.user.name;
+    }
+
+    // Leads where next_follow_up_date is <= end of today
+    query.next_follow_up_date = { $lte: endOfToday, $ne: null };
+
+    const dueLeads = await Lead.find(query)
+      .select('id lead_code first_name last_name mobile destination next_follow_up_date priority status assigned_to')
+      .sort({ next_follow_up_date: 1 })
+      .limit(20)
+      .lean();
+
+    res.json({
+      count: dueLeads.length,
+      items: dueLeads
+    });
+  } catch (err) {
+    console.error('Error fetching due reminders:', err);
+    res.status(500).json({ error: 'Failed to fetch due reminders' });
+  }
+});
+
 // GET /api/leads/:id - single lead with full detail
 router.get('/:id', async (req, res) => {
   const leadId = req.params.id;
@@ -149,7 +183,75 @@ router.post('/', requireRole(1), async (req, res) => {
     res.status(201).json(newLead);
   } catch (err) {
     console.error('Create lead failed:', err);
-    res.status(500).json({ error: 'Failed to create lead' });
+    let errMsg = err.message || 'Failed to create lead';
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0] || 'field';
+      errMsg = `A record with this ${field} already exists.`;
+    }
+    res.status(400).json({ error: errMsg });
+  }
+});
+
+// POST /api/leads/:id/followups - save follow-up remark and update reminder date
+router.post('/:id/followups', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
+  const { method = 'Phone', notes, outcome, nextDate, next_date } = req.body;
+
+  if (!notes || !notes.trim()) {
+    return res.status(400).json({ error: 'Follow-up notes/remarks are required.' });
+  }
+
+  try {
+    const lead = await Lead.findOne({ id: leadId });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const fuId = generateId('fu');
+    const scheduledNext = nextDate || next_date || null;
+    const nowIso = new Date().toISOString();
+
+    const followUp = await FollowUp.create({
+      id: fuId,
+      lead_id: leadId,
+      date: nowIso,
+      method,
+      notes: notes.trim(),
+      outcome: outcome || 'Interested',
+      next_date: scheduledNext,
+      status: 'Pending',
+      created_by: req.user.name
+    });
+
+    // Update next_follow_up_date on the Lead if scheduled
+    if (scheduledNext) {
+      lead.next_follow_up_date = new Date(scheduledNext);
+      await lead.save();
+    }
+
+    // Log Activity for lead timeline
+    await Activity.create({
+      id: generateId('act'),
+      lead_id: leadId,
+      type: 'Follow-Up',
+      text: `${method} follow-up: "${notes.trim().slice(0, 100)}" (Outcome: ${outcome || 'Done'})`,
+      user_name: req.user.name
+    });
+
+    auditLog(null, req, 'CREATE', 'followups', fuId, `Follow-up logged on lead ${lead.lead_code || leadId}`);
+
+    res.status(201).json({ success: true, followUp, lead });
+  } catch (err) {
+    console.error('Save follow-up error:', err);
+    res.status(500).json({ error: err.message || 'Failed to save follow-up' });
+  }
+});
+
+// GET /api/leads/:id/followups - get all follow-ups for a lead
+router.get('/:id/followups', async (req, res) => {
+  try {
+    const followUps = await FollowUp.find({ lead_id: req.params.id }).sort({ date: -1 }).lean();
+    res.json(followUps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve follow-ups' });
   }
 });
 
@@ -171,7 +273,7 @@ router.patch('/:id', requireRole(1), async (req, res) => {
       'enquiry_data','no_adults','no_children','no_infants','notes','tags',
       'budget_range','preferred_channel','do_not_contact','next_follow_up_date','region','language',
       'utm_source','utm_medium','utm_campaign','referrer_url',
-      'qualification_status','qualification_reason','lead_score',
+      'qualification_status','qualification_reason','lost_reason','lead_score',
       'pipeline_stage','gstin','place_of_supply'];
 
     const updates = {};
@@ -196,11 +298,12 @@ router.patch('/:id', requireRole(1), async (req, res) => {
 
     // If status changed, log it
     if (req.body.status && req.body.status !== lead.status) {
+      const reasonSuffix = req.body.lost_reason ? ` (Reason: ${req.body.lost_reason})` : '';
       await Activity.create({
         id: generateId('act'),
         lead_id: leadId,
         type: 'Status',
-        text: `Status changed: ${lead.status} → ${req.body.status}`,
+        text: `Status changed: ${lead.status} → ${req.body.status}${reasonSuffix}`,
         user_name: req.user.name
       });
 

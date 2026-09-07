@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
-import { FiEdit2, FiMessageCircle, FiArrowLeft, FiAlertCircle, FiMail, FiTarget, FiUser, FiUserCheck, FiCheck } from 'react-icons/fi';
+import { useToast } from '../context/ToastContext';
+import { 
+  FiEdit2, FiMessageCircle, FiArrowLeft, FiAlertCircle, FiMail, 
+  FiTarget, FiUser, FiUserCheck, FiCheck, FiSave, FiRotateCcw, FiXCircle, FiMessageSquare
+} from 'react-icons/fi';
 import { api } from '../services/api';
 import TemplateSelector from '../components/common/TemplateSelector';
 import ConversionModal from '../components/modals/ConversionModal';
@@ -19,9 +23,9 @@ import './LeadDetail.css';
 
 const TABS = ['About', 'History', 'Reminders', 'Files', 'Notes', 'Traveller', 'Follow up', 'Quote', 'Suppliers', 'Billing'];
 
-// §3.3 lead lifecycle — the forward track + two off-track branches.
+// §3.3 lead lifecycle — forward track + off-track branches
 const LIFECYCLE = ['New', 'Attempting Contact', 'Working', 'Qualified', 'Converted'];
-const BRANCHES = ['Nurturing', 'Unqualified'];
+const BRANCHES = ['Nurturing', 'Unqualified', 'Lost', 'Cancelled'];
 
 const STAGE_COLORS = {
   'Qualification': '#00A0E3', 'Itinerary': '#0E8BD4', 'Quote Sent': '#E19D19',
@@ -44,10 +48,20 @@ const LeadDetail = () => {
   const isOwner = lead && (lead.assigned_to === state.currentUser?.name || lead.owner === state.currentUser?.name);
   const hasAccess = userLevel > 2 || isOwner || userRole === 'Admin' || userRole === 'Super Admin' || userRole === 'Accountant';
 
+  const addToast = useToast();
   const [showTemplates, setShowTemplates] = useState(null); // 'WhatsApp' or 'Email'
   const [showConvert, setShowConvert] = useState(false);
   const [opp, setOpp] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // Quick Remark state
+  const [quickRemarkText, setQuickRemarkText] = useState('');
+  const [quickNextDate, setQuickNextDate] = useState('');
+
+  // Lost Inquiry Modal state
+  const [showLostModal, setShowLostModal] = useState(false);
+  const [lostReason, setLostReason] = useState('Price too high / Budget issue');
+  const [lostNotes, setLostNotes] = useState('');
 
   // Load users into shared context so all child tabs (AboutTab etc.) also benefit.
   useEffect(() => {
@@ -65,10 +79,55 @@ const LeadDetail = () => {
     }
   }, [lead?.opportunity_id]);
 
-
   const handleConvertToOpportunity = () => {
     if (lead?.opportunity_id) { navigate(`/opportunities?open=${lead.opportunity_id}`); return; }
     setShowConvert(true);
+  };
+
+  // Quick Remark Save
+  const handleSaveQuickRemark = async () => {
+    if (!quickRemarkText.trim()) return;
+    setBusy(true);
+    try {
+      await api.addFollowUp(id, {
+        method: 'Phone',
+        notes: quickRemarkText.trim(),
+        outcome: 'Working',
+        nextDate: quickNextDate || undefined
+      });
+      const updated = await api.updateLead(id, {
+        notes: quickRemarkText.trim(),
+        next_follow_up_date: quickNextDate || undefined
+      });
+      dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
+      addToast('Remark saved and added to timeline!', 'success');
+      setQuickRemarkText('');
+      setQuickNextDate('');
+    } catch (err) {
+      addToast(err.message || 'Failed to save remark', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Lost Confirm
+  const handleConfirmLost = async () => {
+    setBusy(true);
+    try {
+      const combinedReason = `${lostReason}${lostNotes ? ': ' + lostNotes.trim() : ''}`;
+      const updated = await api.updateLead(id, {
+        status: 'Lost',
+        lost_reason: combinedReason,
+        qualification_reason: combinedReason
+      });
+      dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
+      setShowLostModal(false);
+      addToast(`Lead marked as Lost (${lostReason})`, 'info');
+    } catch (err) {
+      addToast(err.message || 'Failed to mark as lost', 'error');
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Persist an assignment change (owner / assigned_to) to the server.
@@ -77,18 +136,19 @@ const LeadDetail = () => {
     try {
       const updated = await api.assignLead(id, payload);
       dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
+      addToast('Lead assignment updated', 'success');
     } catch (err) {
-      alert(err.message || 'Failed to update assignment');
+      addToast(err.message || 'Failed to update assignment', 'error');
     } finally {
       setBusy(false);
     }
-  }, [id, dispatch]);
+  }, [id, dispatch, addToast]);
 
   const handleSendComm = (templateName, body) => {
     dispatch({ type: 'LOG_COMMUNICATION', payload: { leadId: id, comm: { id: Date.now(), type: showTemplates, template: templateName, status: 'Sent', sentAt: new Date().toISOString(), to: showTemplates === 'Email' ? lead.email : lead.mobile, body } } });
     dispatch({ type: 'ADD_ACTIVITY', payload: { leadId: id, activity: { id: Date.now(), date: new Date().toISOString(), text: `${showTemplates} sent: ${templateName}`, user: state.currentUser?.name } } });
     setShowTemplates(null);
-    alert(`${showTemplates} sent successfully using template: ${templateName}`);
+    addToast(`${showTemplates} sent successfully (${templateName})`, 'success');
   };
 
   const [activeTab, setActiveTab] = useState(isAccountant ? 'Billing' : 'About');
@@ -111,16 +171,21 @@ const LeadDetail = () => {
 
   const changeStatus = async (newStatus) => {
     if (newStatus === lead.status) return;
+    if (newStatus === 'Lost') {
+      setShowLostModal(true);
+      return;
+    }
     if (!allowedNext.includes(newStatus)) {
-      alert(`Invalid transition: Cannot move from "${lead.status}" to "${newStatus}".\nAllowed: ${allowedNext.join(', ') || 'none'}`);
+      addToast(`Cannot move from "${lead.status}" to "${newStatus}".`, 'error');
       return;
     }
     setBusy(true);
     try {
       const updated = await api.updateLead(id, { status: newStatus });
       dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
+      addToast(`Status updated to "${newStatus}"`, 'success');
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      addToast(err.message || 'Failed to update status', 'error');
     } finally {
       setBusy(false);
     }
@@ -161,10 +226,56 @@ const LeadDetail = () => {
         onClose={() => setShowConvert(false)}
         onConverted={(o) => {
           setShowConvert(false);
-          alert(`Opportunity ${o?.opp_code || ''} ready. Opening the deal pipeline.`);
+          addToast(`Opportunity ${o?.opp_code || ''} ready. Opening deal pipeline.`, 'success');
           navigate('/opportunities');
         }}
       />
+
+      {/* Lost Reason Modal */}
+      {showLostModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowLostModal(false)} style={{ zIndex: 1000 }}>
+          <div className="modal-content card" style={{ maxWidth: '480px', padding: '24px' }}>
+            <h3 style={{ marginBottom: 10, color: '#E53935', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FiXCircle /> Mark Inquiry as Lost
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 14 }}>
+              Record why this inquiry was not closed. This helps in pipeline auditing and future re-targeting.
+            </p>
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Primary Lost Reason*</label>
+              <select 
+                value={lostReason} 
+                onChange={(e) => setLostReason(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <option>Price too high / Budget issue</option>
+                <option>Went with competitor (Other Agency/OTA)</option>
+                <option>Trip cancelled / postponed</option>
+                <option>No response after multiple calls</option>
+                <option>Visa rejection / Documentation issue</option>
+                <option>Flight/Hotel sold out or dates not matching</option>
+                <option>Other reason</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Additional Counselor Notes</label>
+              <textarea
+                rows={3}
+                value={lostNotes}
+                onChange={(e) => setLostNotes(e.target.value)}
+                placeholder="e.g. Discussed with client, booked elsewhere for ₹10k less..."
+                style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-color)', fontFamily: 'inherit', fontSize: '0.85rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button className="btn btn-outline" onClick={() => setShowLostModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleConfirmLost} style={{ background: '#E53935', borderColor: '#E53935' }}>
+                Confirm &amp; Mark as Lost
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="lead-detail-header">
         <div className="header-top">
           <div className="lead-identity">
@@ -189,7 +300,9 @@ const LeadDetail = () => {
               title={lead.opportunity_id ? 'Open the linked opportunity' : 'Create a pipeline opportunity from this lead'}>
               <FiTarget /> {lead.opportunity_id ? 'View Opportunity' : 'Convert to Opportunity'}
             </button>
-            <button className="btn btn-primary"><FiEdit2 /> Edit Lead</button>
+            <button className="btn btn-outline btn-danger" onClick={() => setShowLostModal(true)} style={{ color: '#E53935', borderColor: '#E53935' }}>
+              <FiXCircle /> Mark Lost
+            </button>
           </div>
         </div>
 
@@ -199,6 +312,70 @@ const LeadDetail = () => {
           <PersonPicker label="Assigned to" icon={<FiUser size={13} style={{ marginRight: 3 }} />} value={lead.assigned_to} field="assigned_to" />
           {isConverted && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(read-only — lead converted)</span>}
         </div>
+
+        {/* Dedicated Quick Remarks Box (Requirement 9) */}
+        <div className="card" style={{ padding: '12px 16px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 8, margin: '10px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
+              <FiMessageSquare color="var(--primary)" /> Counselor Remarks &amp; Process Update
+            </span>
+            {lead.next_follow_up_date && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>
+                Next Follow-Up: {new Date(lead.next_follow_up_date).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <textarea
+              value={quickRemarkText}
+              onChange={(e) => setQuickRemarkText(e.target.value)}
+              placeholder="Enter current remark (e.g. Called client, agreed on hotel rate, sent revised quotation)..."
+              rows={2}
+              style={{ flex: '1 1 320px', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)', fontFamily: 'inherit', fontSize: '0.85rem' }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 160 }}>
+              <input
+                type="datetime-local"
+                value={quickNextDate}
+                onChange={(e) => setQuickNextDate(e.target.value)}
+                title="Schedule Next Follow-Up"
+                style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.78rem' }}
+              />
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleSaveQuickRemark}
+                disabled={busy || !quickRemarkText.trim()}
+                style={{ justifyContent: 'center' }}>
+                <FiSave size={13} /> Save Remark
+              </button>
+            </div>
+          </div>
+          {lead.notes && (
+            <div style={{ marginTop: 8, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <strong>Latest Remark:</strong> {lead.notes}
+            </div>
+          )}
+        </div>
+
+        {/* Accidental Qualified safeguard banner (Requirement 6) */}
+        {lead.status === 'Qualified' && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0, 152, 70, 0.08)', border: '1px solid #009846', padding: '10px 16px', borderRadius: 8, margin: '10px 0' }}>
+            <div>
+              <strong style={{ color: '#009846', fontSize: '0.88rem' }}>✓ Lead is Qualified</strong>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                You can convert this lead to a deal or undo if clicked accidentally.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-sm btn-primary" onClick={handleConvertToOpportunity}>
+                <FiTarget /> Convert to Deal
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={() => changeStatus('Working')} title="Undo and move back to Working">
+                <FiRotateCcw /> Undo to Working
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Lifecycle progress bar (§3.3) */}
         <div className="status-pipeline scroll-x">

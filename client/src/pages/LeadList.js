@@ -6,6 +6,7 @@ import {
   FiUserPlus, FiGrid, FiPrinter, FiX
 } from 'react-icons/fi';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
+import { useToast } from '../context/ToastContext';
 import AddLeadModal from '../components/modals/AddLeadModal';
 import { api } from '../services/api';
 import { voyageApi } from '../services/voyageApi';
@@ -13,6 +14,7 @@ import './LeadList.css';
 
 const LeadList = () => {
   const { state, dispatch } = useLeads();
+  const addToast = useToast();
   const navigate = useNavigate();
 
   const userRole = state.currentUser?.role || 'Viewer';
@@ -81,7 +83,7 @@ const LeadList = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  // Robust Search Logic (Requirement 4)
+  // Robust Search Logic & Lost Inquiries Filter (Requirement 4)
   const filteredLeads = useMemo(() => {
     if (!state.leads) return [];
     
@@ -89,28 +91,47 @@ const LeadList = () => {
       const searchStr = filters.searchTable.toLowerCase();
       const matchesSearch = !searchStr || [
         lead.id,
+        lead.lead_code,
         lead.first_name,
         lead.last_name,
         lead.email,
         lead.mobile,
-        lead.destination
+        lead.destination,
+        lead.lost_reason,
+        lead.notes
       ].some(val => val?.toLowerCase().includes(searchStr));
+
+      // Tab filter
+      let matchesTab = true;
+      if (filters.statusFilterTab === 'Lost') {
+        matchesTab = ['Lost', 'Cancelled', 'Unqualified'].includes(lead.status);
+      } else if (filters.statusFilterTab === 'Active') {
+        matchesTab = !['Lost', 'Cancelled', 'Unqualified', 'Converted', 'Booked'].includes(lead.status);
+      } else if (filters.statusFilterTab === 'Qualified') {
+        matchesTab = lead.status === 'Qualified';
+      } else if (filters.statusFilterTab === 'Booked') {
+        matchesTab = ['Booked', 'Converted'].includes(lead.status);
+      }
 
       const matchesStatus = filters.status === 'All' || lead.status === filters.status;
       const matchesPriority = filters.priority === 'All' || lead.priority === filters.priority;
       
-      return matchesSearch && matchesStatus && matchesPriority;
+      return matchesSearch && matchesTab && matchesStatus && matchesPriority;
     });
-  }, [state.leads, filters.searchTable, filters.status, filters.priority]);
+  }, [state.leads, filters.searchTable, filters.status, filters.priority, filters.statusFilterTab]);
 
   const statusColors = { 
     New: '#10B981', 
+    'Attempting Contact': '#6366F1',
     Working: '#3B82F6', 
+    Qualified: '#009846',
     'Proposal Sent': '#8B5CF6', 
     Negotiating: '#F59E0B', 
     Booked: '#0D9488', 
-    Lost: '#6B7280',
-    Cancelled: 'var(--color-red)'
+    Converted: '#059669',
+    Lost: '#EF4444',
+    Cancelled: 'var(--color-red)',
+    Unqualified: '#9CA3AF'
   };
 
   const toggleSelectAll = (e) => {
@@ -142,7 +163,7 @@ const LeadList = () => {
 
   const handleSendBulkEmails = async () => {
     if (!selectedTemplateId) {
-      alert('Please select an email template.');
+      addToast('Please select an email template.', 'error');
       return;
     }
     setSendingBulk(true);
@@ -151,22 +172,23 @@ const LeadList = () => {
         booking_ids: selectedLeads,
         template_id: selectedTemplateId
       });
-      alert(response.message || `Bulk email process finished successfully!`);
+      addToast(response.message || `Bulk email process finished successfully!`, 'success');
       setSelectedLeads([]);
       setShowBulkEmailModal(false);
     } catch (e) {
-      alert(e.message || 'Failed to send bulk emails');
+      addToast(e.message || 'Failed to send bulk emails', 'error');
     }
     setSendingBulk(false);
   };
 
   const handleDeleteLead = async (id) => {
-    if (window.confirm('Are you sure you want to delete this booking?')) {
+    if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
         await api.deleteLead(id);
         dispatch({ type: 'SET_LEADS', payload: state.leads.filter(l => l.id !== id) });
+        addToast('Lead deleted successfully', 'info');
       } catch (err) {
-        alert('Failed to delete lead: ' + err.message);
+        addToast('Failed to delete lead: ' + err.message, 'error');
       }
     }
   };
@@ -194,7 +216,10 @@ const LeadList = () => {
             const newLead = await api.createLead(data);
             dispatch({ type: 'ADD_LEAD', payload: newLead });
             setIsModalOpen(false);
-          } catch (e) { alert(e.message); }
+            addToast(`Lead ${newLead.lead_code || newLead.id} created successfully!`, 'success');
+          } catch (e) {
+            addToast(e.message || 'Failed to create lead', 'error');
+          }
       }} />
 
       {/* Advanced Filter Section */}
@@ -228,6 +253,25 @@ const LeadList = () => {
         </div>
       )}
 
+      {/* Quick Status Filter Tabs (Requirement 4) */}
+      <div style={{ display: 'flex', gap: 8, margin: '14px 0 10px', flexWrap: 'wrap' }}>
+        {[
+          { label: 'All Inquiries', value: 'All' },
+          { label: 'Active Pipeline', value: 'Active' },
+          { label: 'Qualified', value: 'Qualified' },
+          { label: '⚠️ Lost Inquiries', value: 'Lost' },
+          { label: 'Won / Booked', value: 'Booked' }
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => handleInputChange('statusFilterTab', tab.value)}
+            className={`btn btn-sm ${filters.statusFilterTab === tab.value ? 'btn-primary' : 'btn-outline'}`}
+            style={{ borderRadius: 20, padding: '4px 14px', fontSize: '0.8rem', fontWeight: 600 }}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="table-controls card">
          <div className="limit-box">
             <label>Limit</label>
@@ -256,7 +300,7 @@ const LeadList = () => {
         {state.isLoading ? (
           <div className="loading-overlay">
             <div className="spinner"></div>
-            <p>Loading bookings...</p>
+            <p>Loading inquiries...</p>
           </div>
         ) : filteredLeads.length > 0 ? (
           <>
@@ -265,11 +309,12 @@ const LeadList = () => {
                 <thead>
                   <tr>
                     <th style={{ width: '40px' }}><input type="checkbox" onChange={toggleSelectAll} checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0} /></th>
-                    <th>Booking ID</th>
+                    <th>Lead ID</th>
                     <th>Customer</th>
                     <th>Phone</th>
                     <th>Source</th>
                     <th>Status</th>
+                    <th>Lost Reason / Remarks</th>
                     <th>Assigned To</th>
                     <th>Destination</th>
                     <th>Tour Start</th>
@@ -283,11 +328,22 @@ const LeadList = () => {
                       <td onClick={e => toggleSelectLead(e, lead.id)}>
                         <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly />
                       </td>
-                      <td className="lead-no">{lead.id}</td>
+                      <td className="lead-no">{lead.lead_code || lead.id}</td>
                       <td className="contact-name">{lead.first_name} {lead.last_name}</td>
                       <td>{lead.mobile}</td>
                       <td>{lead.lead_source}</td>
-                      <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span></td>
+                      <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] || '#6B7280' }}>{lead.status}</span></td>
+                      <td style={{ maxWidth: 180, fontSize: '0.78rem' }}>
+                        {['Lost', 'Cancelled', 'Unqualified'].includes(lead.status) ? (
+                          <span style={{ color: '#EF4444', fontWeight: 600 }}>
+                            {lead.lost_reason || lead.qualification_reason || 'Lost'}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {lead.notes ? (lead.notes.length > 30 ? lead.notes.slice(0, 30) + '...' : lead.notes) : '—'}
+                          </span>
+                        )}
+                      </td>
                       <td>{lead.assigned_to}</td>
                       <td>{lead.destination}</td>
                       <td>{lead.travel_start_date || '—'}</td>

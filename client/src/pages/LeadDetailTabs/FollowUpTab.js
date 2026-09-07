@@ -1,17 +1,32 @@
 import React, { useState } from 'react';
 import { useLeads } from '../../context/LeadContext';
+import { useToast } from '../../context/ToastContext';
+import { api } from '../../services/api';
 import { FiPlus, FiPhone, FiMail, FiMessageCircle } from 'react-icons/fi';
 
 const FollowUpTab = ({ lead }) => {
   const { dispatch } = useLeads();
+  const addToast = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ method: 'Phone', notes: '', outcome: 'Interested', nextDate: '' });
 
-  const handleAdd = () => {
-    if (!form.notes) return;
-    dispatch({ type: 'ADD_FOLLOWUP', payload: { leadId: lead.id, followUp: { ...form, id: Date.now(), date: new Date().toISOString() } } });
-    setForm({ method: 'Phone', notes: '', outcome: 'Interested', nextDate: '' });
-    setShowForm(false);
+  const handleAdd = async () => {
+    if (!form.notes.trim()) return;
+    try {
+      const res = await api.addFollowUp(lead.id, form);
+      dispatch({
+        type: 'ADD_FOLLOWUP',
+        payload: { leadId: lead.id, followUp: res.followUp || { ...form, id: Date.now(), date: new Date().toISOString() } }
+      });
+      if (res.lead) {
+        dispatch({ type: 'UPDATE_LEAD', payload: { id: lead.id, data: res.lead } });
+      }
+      setForm({ method: 'Phone', notes: '', outcome: 'Interested', nextDate: '' });
+      setShowForm(false);
+      addToast('Follow-up logged and saved to database!', 'success');
+    } catch (err) {
+      addToast(err.message || 'Failed to save follow-up', 'error');
+    }
   };
 
   const handleStartSequence = () => {
@@ -33,7 +48,7 @@ const FollowUpTab = ({ lead }) => {
       }
     });
 
-    alert('7-Day conversion sequence has been scheduled and added to the timeline.');
+    addToast('7-Day conversion sequence scheduled and added to timeline.', 'success');
   };
 
   const followUps = lead.followUps || [];

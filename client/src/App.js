@@ -89,11 +89,14 @@ const SecurityWrapper = ({ children }) => {
     navigate('/login');
   }, [dispatch, navigate]);
 
-  // Populate the global users list so Owner/Assign-To dropdowns work everywhere
+  // Populate global users and suppliers lists for dropdowns throughout the CRM
   useEffect(() => {
     if (!state.isAuthenticated) return;
     api.getUsers()
       .then(u => dispatch({ type: 'SET_USERS', payload: Array.isArray(u) ? u : [] }))
+      .catch(() => {});
+    api.getSuppliers()
+      .then(s => dispatch({ type: 'SET_SUPPLIERS', payload: Array.isArray(s) ? s : [] }))
       .catch(() => {});
   }, [state.isAuthenticated, dispatch]);
 

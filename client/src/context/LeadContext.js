@@ -6,12 +6,15 @@ const LeadContext = createContext();
    The lead lifecycle ends at Qualified; conversion to an Opportunity is an
    explicit action (the Convert button), which sets status to Converted. */
 const STATUS_TRANSITIONS = {
-  'New': ['Attempting Contact', 'Working', 'Unqualified'],
-  'Attempting Contact': ['Working', 'Nurturing', 'Unqualified'],
-  'Working': ['Qualified', 'Nurturing', 'Unqualified'],
-  'Nurturing': ['Working', 'Qualified', 'Unqualified'],
-  'Qualified': ['Unqualified'],
-  'Unqualified': ['New'],
+  'New': ['Attempting Contact', 'Working', 'Qualified', 'Unqualified', 'Lost', 'Cancelled'],
+  'Attempting Contact': ['Working', 'Nurturing', 'Qualified', 'Unqualified', 'Lost', 'Cancelled'],
+  'Working': ['Qualified', 'Nurturing', 'Unqualified', 'Booked', 'Converted', 'Lost', 'Cancelled'],
+  'Nurturing': ['Working', 'Qualified', 'Unqualified', 'Lost', 'Cancelled'],
+  'Qualified': ['Booked', 'Converted', 'Working', 'Unqualified', 'Lost', 'Cancelled'],
+  'Booked': ['Converted', 'Cancelled'],
+  'Unqualified': ['New', 'Working'],
+  'Lost': ['New', 'Working'],
+  'Cancelled': ['New'],
   'Converted': []
 };
 
@@ -61,6 +64,8 @@ function leadReducer(state, action) {
       return { ...state, isLoading: false, customers: action.payload };
     case 'SET_USERS':
       return { ...state, isLoading: false, users: action.payload };
+    case 'SET_SUPPLIERS':
+      return { ...state, suppliers: action.payload };
 
     case 'LOGIN':
       return { 

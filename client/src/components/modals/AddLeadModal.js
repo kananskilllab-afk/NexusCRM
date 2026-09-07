@@ -9,7 +9,8 @@ const ENQUIRY_OPTIONS = [
   { id: 'Flight', icon: <FiGlobe /> },
   { id: 'Hotel', icon: <FiHome /> },
   { id: 'Visa', icon: <FiFileText /> },
-  { id: 'Package', icon: <FiMap /> }
+  { id: 'Package', icon: <FiMap /> },
+  { id: 'Passport Assistance', icon: <FiActivity /> }
 ];
 
 const SOURCE_OPTIONS = ['Website', 'Facebook Ad', 'Google Ad', 'Referral', 'Walk-in', 'Phone Call', 'WhatsApp', 'Instagram', 'Email', 'Other'];
@@ -19,7 +20,7 @@ const FORM_ID = 'lead_create';
 const BUDGET_RANGES = ['<50k', '50k-1L', '1L-2L', '2L+'];
 const CONTACT_CHANNELS = ['Call', 'WhatsApp', 'Email'];
 
-const blankForm = (defaults = {}) => ({
+const blankForm = (defaults = {}, currentUser = null) => ({
   first_name: '',
   last_name: '',
   mobile: '',
@@ -30,7 +31,7 @@ const blankForm = (defaults = {}) => ({
   no_children: 0,
   priority: defaults.priority || 'Normal',
   lead_source: defaults.lead_source || 'Website',
-  assigned_to: defaults.assigned_to || 'Bhargav',
+  assigned_to: defaults.assigned_to || currentUser?.name || '',
   travel_start_date: '',
   travel_end_date: '',
   budget_range: '',
@@ -45,7 +46,7 @@ const blankForm = (defaults = {}) => ({
 const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   const { state, dispatch } = useLeads();
   const [activeType, setActiveType] = useState('Package');
-  const [formData, setFormData] = useState(() => blankForm());
+  const [formData, setFormData] = useState(() => blankForm({}, state.currentUser));
   const [error, setError] = useState('');
   const [restoredDraft, setRestoredDraft] = useState(false);
 
@@ -66,15 +67,15 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
     const draft = loadDraft(FORM_ID);
     if (draft && draft.formData) {
-      setFormData({ ...blankForm(), ...draft.formData });
+      setFormData({ ...blankForm({}, state.currentUser), ...draft.formData });
       if (draft.activeType) setActiveType(draft.activeType);
       setRestoredDraft(true);
     } else {
       const defaults = loadDefaults(FORM_ID);
-      setFormData(blankForm(defaults));
+      setFormData(blankForm(defaults, state.currentUser));
       if (defaults.activeType) setActiveType(defaults.activeType);
     }
-  }, [isOpen]);
+  }, [isOpen, state.currentUser]);
 
   // Auto-save the draft whenever the user edits anything (only after the
   // modal is open, and only if cookies are accepted).
@@ -97,7 +98,7 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.first_name || !formData.mobile || (activeType !== 'Visa' && !formData.destination)) {
+    if (!formData.first_name || !formData.mobile || (!['Visa', 'Passport Assistance'].includes(activeType) && !formData.destination)) {
       setError('First name, mobile, and destination are required.');
       return;
     }
@@ -250,6 +251,32 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
                     <select value={formData.enquiry_data?.hotel?.mealPlan || 'CP (Breakfast)'} onChange={e => updateSubData('mealPlan', e.target.value)}>
                       <option>CP (Breakfast)</option><option>MAP (Half Board)</option><option>AP (Full Board)</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+            {activeType === 'Passport Assistance' && (
+              <div className="dynamic-fields card" style={{ background: 'var(--bg-main)', border: '1px dashed var(--primary)', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
+                <div className="form-row">
+                  <div className="form-group"><label>Passport Service*</label>
+                    <select value={formData.enquiry_data?.passport?.service_type || 'Fresh Passport'} onChange={e => updateSubData('service_type', e.target.value)}>
+                      <option>Fresh Passport</option>
+                      <option>Passport Renewal / Re-issue</option>
+                      <option>Tatkaal Passport</option>
+                      <option>PCC (Police Clearance Certificate)</option>
+                      <option>ECR / Non-ECR Change</option>
+                      <option>Damaged / Lost Passport</option>
+                    </select>
+                  </div>
+                  <div className="form-group"><label>RPO Office / City</label>
+                    <input type="text" placeholder="e.g. Ahmedabad, Surat, Mumbai" value={formData.enquiry_data?.passport?.rpo_location || ''} onChange={e => updateSubData('rpo_location', e.target.value)} />
+                  </div>
+                </div>
+                <div className="form-row" style={{ marginTop: 8 }}>
+                  <div className="form-group"><label>Existing Passport No (If Renewal)</label>
+                    <input type="text" placeholder="e.g. N1234567" value={formData.enquiry_data?.passport?.existing_passport_no || ''} onChange={e => updateSubData('existing_passport_no', e.target.value)} />
+                  </div>
+                  <div className="form-group"><label>Target Appointment Date</label>
+                    <input type="date" value={formData.enquiry_data?.passport?.appointment_date || ''} onChange={e => updateSubData('appointment_date', e.target.value)} />
                   </div>
                 </div>
               </div>

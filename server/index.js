@@ -28,6 +28,7 @@ const communicationsRouter = require('./routes/communications');
 const packagesRouter = require('./routes/packages');
 const hotelsRouter = require('./routes/hotels');
 const googleRouter = require('./routes/google');
+const searchRouter = require('./routes/search');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -95,6 +96,7 @@ app.use('/api/communications', communicationsRouter);
 app.use('/api/packages', packagesRouter);
 app.use('/api/hotels', hotelsRouter);
 app.use('/api/google', googleRouter);
+app.use('/api/search', searchRouter);
 
 // Home route message
 app.get('/', (req, res) => {

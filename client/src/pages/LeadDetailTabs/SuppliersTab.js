@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLeads } from '../../context/LeadContext';
+import { api } from '../../services/api';
 import { FiPlus, FiTruck, FiStar } from 'react-icons/fi';
 
 const SuppliersTab = ({ lead }) => {
@@ -10,12 +11,27 @@ const SuppliersTab = ({ lead }) => {
   const allSuppliers = state.suppliers || [];
   const assigned = lead.assignedSuppliers || [];
 
+  useEffect(() => {
+    if (!state.suppliers || state.suppliers.length === 0) {
+      api.getSuppliers()
+        .then(s => { if (Array.isArray(s) && s.length > 0) dispatch({ type: 'SET_SUPPLIERS', payload: s }); })
+        .catch(() => {});
+    }
+  }, [state.suppliers, dispatch]);
+
   const handleAssign = () => {
     if (!form.supplierId || !form.serviceType) return;
     const supplier = allSuppliers.find(s => s.id === form.supplierId);
     dispatch({
       type: 'ASSIGN_SUPPLIER',
-      payload: { leadId: lead.id, supplierId: form.supplierId, supplierName: supplier?.name, serviceType: form.serviceType, rate: form.rate, notes: form.notes }
+      payload: { 
+        leadId: lead.id, 
+        supplier_id: form.supplierId, 
+        supplier_name: supplier?.name || form.supplierId, 
+        service_type: form.serviceType, 
+        rate: form.rate, 
+        notes: form.notes 
+      }
     });
     setForm({ supplierId: '', serviceType: '', rate: '', notes: '' });
     setShowForm(false);
@@ -58,22 +74,25 @@ const SuppliersTab = ({ lead }) => {
 
         <div style={{ marginTop: '1rem' }}>
           {assigned.map((a, idx) => {
-            const sup = allSuppliers.find(s => s.id === a.supplierId);
+            const supId = a.supplier_id || a.supplierId;
+            const sup = allSuppliers.find(s => s.id === supId);
+            const supplierDisplayName = a.supplier_name || a.supplierName || sup?.name || supId || 'Supplier';
+            const serviceType = a.service_type || a.serviceType || 'Service';
             return (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px', background: 'var(--bg-main)', borderRadius: '8px', marginBottom: '8px' }}>
                 <div style={{ width: 44, height: 44, background: 'var(--primary-light)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}><FiTruck size={20} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <p style={{ fontWeight: 600 }}>{sup?.name || a.supplierId}</p>
+                    <p style={{ fontWeight: 600 }}>{supplierDisplayName}</p>
                     {sup?.rating && <span style={{ fontSize: '0.8rem', color: '#F59E0B' }}><FiStar /> {sup.rating}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                    <span>{a.serviceType}</span>
+                    <span>{serviceType}</span>
                     {a.rate && <span>Rate: ₹{Number(a.rate).toLocaleString()}</span>}
                     {a.notes && <span>— {a.notes}</span>}
                   </div>
                 </div>
-                <span className="badge new">{sup?.type || 'Supplier'}</span>
+                <span className="badge new">{sup?.type || sup?.category || 'Partner'}</span>
               </div>
             );
           })}

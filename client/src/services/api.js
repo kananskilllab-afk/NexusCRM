@@ -75,7 +75,10 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(leadData)
     });
-    if (!res.ok) throw new Error('Failed to create lead');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create lead');
+    }
     return res.json();
   },
 
@@ -96,7 +99,41 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(updates)
     });
-    if (!res.ok) throw new Error('Failed to update lead');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update lead');
+    }
+    return res.json();
+  },
+
+  addFollowUp: async (leadId, data) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/followups`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to save follow-up');
+    }
+    return res.json();
+  },
+
+  getFollowUps: async (leadId) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/followups`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch follow-ups');
+    return res.json();
+  },
+
+  getDueFollowUps: async () => {
+    const res = await fetch(`${API_URL}/leads/reminders/due`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch due reminders');
+    return res.json();
+  },
+
+  searchGlobal: async (query) => {
+    const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Search failed');
     return res.json();
   },
 
