@@ -505,8 +505,18 @@ router.patch('/:id/stage', requireRole(1), async (req, res) => {
       }
     }
 
-    // The originating lead is read-only post-conversion (§4.5); we only log
-    // an activity against it for the audit trail — no field write-back.
+    // On Closed-Won, sync the originating lead to Booked
+    if (stage === 'Closed-Won' && opp.lead_id) {
+      await Lead.updateOne({ id: opp.lead_id }, { $set: { status: 'Booked' } });
+      await Activity.create({
+        id: generateId('act'),
+        lead_id: opp.lead_id,
+        type: 'Pipeline',
+        text: `Lead marked as Booked upon deal ${opp.opp_code} reaching Closed-Won`,
+        user_name: req.user.name,
+      });
+    }
+
     if (opp.lead_id && prevStage !== stage) {
       await Activity.create({
         id: generateId('act'),

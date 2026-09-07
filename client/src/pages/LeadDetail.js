@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import { useToast } from '../context/ToastContext';
@@ -58,10 +58,104 @@ const LeadDetail = () => {
   const [quickRemarkText, setQuickRemarkText] = useState('');
   const [quickNextDate, setQuickNextDate] = useState('');
 
-  // Lost Inquiry Modal state
+  // 1-Click WhatsApp state
+  const [showWhatsAppMenu, setShowWhatsAppMenu] = useState(false);
+
+  // Lost Inquiry Modal state & Seasonality Snooze
   const [showLostModal, setShowLostModal] = useState(false);
   const [lostReason, setLostReason] = useState('Price too high / Budget issue');
   const [lostNotes, setLostNotes] = useState('');
+  const [snoozeChoice, setSnoozeChoice] = useState('none');
+  const [customSnoozeDate, setCustomSnoozeDate] = useState('');
+
+  // 1-Click WhatsApp Templates
+  const WHATSAPP_TEMPLATES = [
+    { 
+      key: 'intro', 
+      label: '👋 First Greeting', 
+      getText: (l) => `Hi ${l.first_name || 'there'}! This is ${state.currentUser?.name || 'your travel advisor'} from Kanan Skill Lab Nexus Travel. Thank you for your inquiry regarding ${l.destination || 'your upcoming trip'}! How may I assist you with dates and requirements?` 
+    },
+    { 
+      key: 'quote', 
+      label: '📄 Quotation Follow-up', 
+      getText: (l) => `Dear ${l.first_name || 'Client'}, I have prepared your custom itinerary for ${l.destination || 'your trip'}. Have you had a chance to review the quotation? Please let me know if you would like any revisions.` 
+    },
+    { 
+      key: 'docs', 
+      label: '📑 Document Checklist', 
+      getText: (l) => `Hello ${l.first_name || 'Client'}, to proceed with your ${(l.enquiry_types || [])[0] || 'travel'} processing, kindly share your passport front/back copy and documents at your earliest convenience.` 
+    },
+    { 
+      key: 'pay', 
+      label: '💳 Payment Reminder', 
+      getText: (l) => `Hi ${l.first_name || 'Client'}, this is a friendly reminder regarding the confirmation deposit for your ${l.destination || 'travel'} booking to lock in current hotel and flight rates.` 
+    }
+  ];
+
+  const handleSendWhatsAppTemplate = async (template) => {
+    const rawNumber = (lead?.mobile || '').replace(/[^0-9]/g, '');
+    if (!rawNumber) {
+      addToast('Lead mobile number is missing.', 'error');
+      return;
+    }
+    const formattedNumber = rawNumber.startsWith('91') || rawNumber.length > 10 ? rawNumber : `91${rawNumber}`;
+    const text = template.getText(lead);
+    const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+    setShowWhatsAppMenu(false);
+
+    // Auto-log to communication and follow-up timeline
+    dispatch({
+      type: 'LOG_COMMUNICATION',
+      payload: {
+        leadId: id,
+        comm: {
+          id: Date.now(),
+          type: 'WhatsApp',
+          template: template.label,
+          status: 'Sent',
+          sentAt: new Date().toISOString(),
+          to: lead.mobile,
+          body: text
+        }
+      }
+    });
+
+    try {
+      await api.addFollowUp(id, {
+        method: 'WhatsApp',
+        notes: `1-Click WhatsApp sent: "${template.label}"`,
+        outcome: 'Sent'
+      });
+    } catch (e) {}
+
+    addToast(`WhatsApp opened with "${template.label}"`, 'success');
+  };
+
+  const QUICK_TAGS = ['#NoAnswer', '#CallTomorrow', '#BudgetHigh', '#DocsPending', '#QuoteSent', '#Interested'];
+  const handleAddQuickTag = (tag) => {
+    setQuickRemarkText(prev => prev ? `${prev} ${tag}` : tag);
+  };
+
+  // 6-Month Passport Expiry Guardrail
+  const passportExpiryAlert = useMemo(() => {
+    const expDate = lead?.passport_expiry_date || lead?.enquiry_data?.passport?.appointment_date;
+    const travelDate = lead?.travel_start_date;
+    if (!expDate || !travelDate) return null;
+    const exp = new Date(expDate);
+    const travel = new Date(travelDate);
+    if (isNaN(exp.getTime()) || isNaN(travel.getTime())) return null;
+    const diffDays = Math.ceil((exp - travel) / (1000 * 60 * 60 * 24));
+    if (diffDays < 180) {
+      return {
+        isExpired: diffDays <= 0,
+        daysRemaining: diffDays,
+        expFormatted: exp.toLocaleDateString(),
+        travelFormatted: travel.toLocaleDateString()
+      };
+    }
+    return null;
+  }, [lead?.passport_expiry_date, lead?.enquiry_data?.passport?.appointment_date, lead?.travel_start_date]);
 
   // Load users into shared context so all child tabs (AboutTab etc.) also benefit.
   useEffect(() => {
@@ -110,19 +204,33 @@ const LeadDetail = () => {
     }
   };
 
-  // Lost Confirm
+  // Lost Confirm with Seasonality Snooze
   const handleConfirmLost = async () => {
     setBusy(true);
     try {
-      const combinedReason = `${lostReason}${lostNotes ? ': ' + lostNotes.trim() : ''}`;
+      let finalSnoozeDate = null;
+      if (snoozeChoice === '3months') {
+        const d = new Date();
+        d.setMonth(d.getMonth() + 3);
+        finalSnoozeDate = d.toISOString().slice(0, 10);
+      } else if (snoozeChoice === 'diwali') {
+        finalSnoozeDate = '2026-10-25';
+      } else if (snoozeChoice === 'summer') {
+        finalSnoozeDate = '2027-04-15';
+      } else if (snoozeChoice === 'custom' && customSnoozeDate) {
+        finalSnoozeDate = customSnoozeDate;
+      }
+
+      const combinedReason = `${lostReason}${lostNotes ? ': ' + lostNotes.trim() : ''}${finalSnoozeDate ? ` (Snoozed until ${finalSnoozeDate})` : ''}`;
       const updated = await api.updateLead(id, {
         status: 'Lost',
         lost_reason: combinedReason,
-        qualification_reason: combinedReason
+        qualification_reason: combinedReason,
+        snooze_until: finalSnoozeDate || undefined
       });
       dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
       setShowLostModal(false);
-      addToast(`Lead marked as Lost (${lostReason})`, 'info');
+      addToast(finalSnoozeDate ? `Lead marked as Lost & snoozed until ${finalSnoozeDate}` : `Lead marked as Lost (${lostReason})`, 'info');
     } catch (err) {
       addToast(err.message || 'Failed to mark as lost', 'error');
     } finally {
@@ -260,10 +368,53 @@ const LeadDetail = () => {
                 <option>Other reason</option>
               </select>
             </div>
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                ⏰ Snooze / Re-engage for Next Season (Optional)
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${snoozeChoice === 'diwali' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setSnoozeChoice(snoozeChoice === 'diwali' ? 'none' : 'diwali')}
+                  style={{ fontSize: '0.75rem', padding: '5px' }}>
+                  🪔 Diwali Season (~Oct/Nov)
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${snoozeChoice === 'summer' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setSnoozeChoice(snoozeChoice === 'summer' ? 'none' : 'summer')}
+                  style={{ fontSize: '0.75rem', padding: '5px' }}>
+                  ☀️ Summer (~Apr/May)
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${snoozeChoice === '3months' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setSnoozeChoice(snoozeChoice === '3months' ? 'none' : '3months')}
+                  style={{ fontSize: '0.75rem', padding: '5px' }}>
+                  📅 In 3 Months
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${snoozeChoice === 'custom' ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setSnoozeChoice(snoozeChoice === 'custom' ? 'none' : 'custom')}
+                  style={{ fontSize: '0.75rem', padding: '5px' }}>
+                  ⚙️ Custom Date
+                </button>
+              </div>
+              {snoozeChoice === 'custom' && (
+                <input
+                  type="date"
+                  value={customSnoozeDate}
+                  onChange={(e) => setCustomSnoozeDate(e.target.value)}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.82rem' }}
+                />
+              )}
+            </div>
             <div className="form-group" style={{ marginBottom: 16 }}>
               <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>Additional Counselor Notes</label>
               <textarea
-                rows={3}
+                rows={2}
                 value={lostNotes}
                 onChange={(e) => setLostNotes(e.target.value)}
                 placeholder="e.g. Discussed with client, booked elsewhere for ₹10k less..."
@@ -281,6 +432,16 @@ const LeadDetail = () => {
       )}
 
       <div className="lead-detail-header">
+        {/* 6-Month Passport Expiry Guardrail Alert */}
+        {passportExpiryAlert && (
+          <div style={{ background: '#FFEBEE', border: '1px solid #EF5350', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FiAlertCircle color="#C62828" size={24} style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.84rem', color: '#B71C1C' }}>
+              <strong>⚠️ Critical 6-Month Passport Rule Alert:</strong> Traveler's passport expires on <strong>{passportExpiryAlert.expFormatted}</strong>, which is within 6 months of travel departure (<strong>{passportExpiryAlert.travelFormatted}</strong>). International airlines and immigration will deny boarding. Passport renewal assistance is urgently recommended.
+            </div>
+          </div>
+        )}
+
         <div className="header-top">
           <div className="lead-identity">
             <button className="btn-icon" onClick={() => navigate('/leads')} style={{ marginRight: '8px' }}>
@@ -296,9 +457,43 @@ const LeadDetail = () => {
             <h1>{lead.first_name} {lead.last_name || ''}</h1>
             <span className="lead-no">#{lead.lead_code || lead.id}</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 8 }}>{lead.destination} • {lead.no_adults}A {lead.no_children > 0 ? `${lead.no_children}C` : ''}</span>
+            {lead.add_on_services && lead.add_on_services.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                {lead.add_on_services.map(s => (
+                  <span key={s} style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: 4, background: 'rgba(0, 160, 227, 0.12)', color: 'var(--primary)', fontWeight: 600, border: '1px solid rgba(0, 160, 227, 0.3)' }}>
+                    + {s}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="header-actions">
-            <button className="btn btn-outline" onClick={() => setShowTemplates('WhatsApp')}><FiMessageCircle /> WhatsApp</button>
+            {/* 1-Click WhatsApp dropdown */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button 
+                className="btn btn-outline" 
+                style={{ color: '#009846', borderColor: '#009846', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => setShowWhatsAppMenu(!showWhatsAppMenu)}
+              >
+                <FiMessageCircle /> 1-Click WhatsApp ▾
+              </button>
+              {showWhatsAppMenu && (
+                <div className="card" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, width: '280px', padding: '8px 0', marginTop: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', borderRadius: 8 }}>
+                  <div style={{ padding: '6px 14px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Select WhatsApp Template</div>
+                  {WHATSAPP_TEMPLATES.map(tmpl => (
+                    <button
+                      key={tmpl.key}
+                      onClick={() => handleSendWhatsAppTemplate(tmpl)}
+                      style={{ width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.83rem', display: 'flex', alignItems: 'center', gap: 8 }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {tmpl.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="btn btn-outline" onClick={() => setShowTemplates('Email')}><FiMail /> Email</button>
             <button className="btn btn-outline" onClick={handleConvertToOpportunity}
               title={lead.opportunity_id ? 'Open the linked opportunity' : 'Create a pipeline opportunity from this lead'}>
@@ -319,7 +514,7 @@ const LeadDetail = () => {
 
         {/* Dedicated Quick Remarks Box (Requirement 9) */}
         <div className="card" style={{ padding: '12px 16px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 8, margin: '10px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-primary)' }}>
               <FiMessageSquare color="var(--primary)" /> Counselor Remarks &amp; Process Update
             </span>
@@ -329,6 +524,24 @@ const LeadDetail = () => {
               </span>
             )}
           </div>
+
+          {/* Quick Click Remark Tags */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Quick Tags:</span>
+            {QUICK_TAGS.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => handleAddQuickTag(tag)}
+                style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: 12, padding: '2px 8px', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <textarea
               value={quickRemarkText}

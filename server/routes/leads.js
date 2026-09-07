@@ -129,7 +129,8 @@ router.post('/', requireRole(1), async (req, res) => {
     assigned_to, travel_start_date, travel_end_date,
     budget_range, preferred_channel, do_not_contact, next_follow_up_date,
     region, language,
-    enquiry_types = [], enquiry_data = {}, notes, tags = [],
+    enquiry_types = [], add_on_services = [], passport_expiry_date, snooze_until,
+    enquiry_data = {}, notes, tags = [],
     utm_source, utm_medium, utm_campaign, referrer_url,
     auto_assign = true
   } = req.body;
@@ -159,7 +160,8 @@ router.post('/', requireRole(1), async (req, res) => {
       assigned_to: finalAssignedTo, owner: req.user.name, travel_start_date, travel_end_date,
       budget_range, preferred_channel, do_not_contact, next_follow_up_date,
       region, language,
-      enquiry_types, enquiry_data, notes, tags,
+      enquiry_types, add_on_services, passport_expiry_date, snooze_until,
+      enquiry_data, notes, tags,
       utm_source, utm_medium, utm_campaign, referrer_url,
       lead_score: initialScore,
       rating: ratingForScore(initialScore),
@@ -274,7 +276,8 @@ router.patch('/:id', requireRole(1), async (req, res) => {
       'budget_range','preferred_channel','do_not_contact','next_follow_up_date','region','language',
       'utm_source','utm_medium','utm_campaign','referrer_url',
       'qualification_status','qualification_reason','lost_reason','lead_score',
-      'pipeline_stage','gstin','place_of_supply'];
+      'pipeline_stage','gstin','place_of_supply',
+      'add_on_services','passport_expiry_date','snooze_until'];
 
     const updates = {};
     allowed.forEach(key => {

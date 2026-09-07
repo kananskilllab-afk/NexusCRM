@@ -83,6 +83,19 @@ const LeadList = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
+  // Inactivity SLA Helper (§6)
+  const getStaleness = (lead) => {
+    if (['Lost', 'Cancelled', 'Unqualified', 'Booked', 'Converted'].includes(lead.status)) return null;
+    const lastActive = new Date(lead.updated_at || lead.updatedAt || lead.created_at || lead.createdAt || Date.now());
+    if (isNaN(lastActive.getTime())) return null;
+    const diffHours = (Date.now() - lastActive.getTime()) / (1000 * 60 * 60);
+    if (diffHours >= 24) {
+      const days = Math.floor(diffHours / 24);
+      return { isStale: true, days, hours: Math.floor(diffHours) };
+    }
+    return null;
+  };
+
   // Robust Search Logic & Lost Inquiries Filter (Requirement 4)
   const filteredLeads = useMemo(() => {
     if (!state.leads) return [];
@@ -109,6 +122,9 @@ const LeadList = () => {
         matchesTab = !['Lost', 'Cancelled', 'Unqualified', 'Converted', 'Booked'].includes(lead.status);
       } else if (filters.statusFilterTab === 'Qualified') {
         matchesTab = lead.status === 'Qualified';
+      } else if (filters.statusFilterTab === 'Stale') {
+        const stale = getStaleness(lead);
+        matchesTab = !!stale?.isStale;
       } else if (filters.statusFilterTab === 'Booked') {
         matchesTab = ['Booked', 'Converted'].includes(lead.status);
       }
@@ -259,6 +275,7 @@ const LeadList = () => {
           { label: 'All Inquiries', value: 'All' },
           { label: 'Active Pipeline', value: 'Active' },
           { label: 'Qualified', value: 'Qualified' },
+          { label: '⏰ Stale (>24h)', value: 'Stale' },
           { label: '⚠️ Lost Inquiries', value: 'Lost' },
           { label: 'Won / Booked', value: 'Booked' }
         ].map(tab => (
@@ -332,12 +349,34 @@ const LeadList = () => {
                       <td className="contact-name">{lead.first_name} {lead.last_name}</td>
                       <td>{lead.mobile}</td>
                       <td>{lead.lead_source}</td>
-                      <td><span className="lead-status-pill" style={{ background: statusColors[lead.status] || '#6B7280' }}>{lead.status}</span></td>
-                      <td style={{ maxWidth: 180, fontSize: '0.78rem' }}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span className="lead-status-pill" style={{ background: statusColors[lead.status] || '#6B7280' }}>{lead.status}</span>
+                          {(() => {
+                            const stale = getStaleness(lead);
+                            if (stale?.isStale) {
+                              return (
+                                <span title={`No counselor activity for ${stale.hours} hours`} style={{ background: '#FFF3E0', color: '#E65100', border: '1px solid #FFE0B2', borderRadius: 10, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                  ⏰ {stale.days > 0 ? `${stale.days}d` : `${stale.hours}h`}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </td>
+                      <td style={{ maxWidth: 200, fontSize: '0.78rem' }}>
                         {['Lost', 'Cancelled', 'Unqualified'].includes(lead.status) ? (
-                          <span style={{ color: '#EF4444', fontWeight: 600 }}>
-                            {lead.lost_reason || lead.qualification_reason || 'Lost'}
-                          </span>
+                          <div>
+                            <span style={{ color: '#EF4444', fontWeight: 600 }}>
+                              {lead.lost_reason || lead.qualification_reason || 'Lost'}
+                            </span>
+                            {lead.snooze_until && (
+                              <div style={{ fontSize: '0.7rem', color: '#009846', fontWeight: 600, marginTop: 2 }}>
+                                ⏰ Snoozed until {new Date(lead.snooze_until).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>
                             {lead.notes ? (lead.notes.length > 30 ? lead.notes.slice(0, 30) + '...' : lead.notes) : '—'}

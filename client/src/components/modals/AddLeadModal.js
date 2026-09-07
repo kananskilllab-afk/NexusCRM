@@ -19,6 +19,7 @@ const FORM_ID = 'lead_create';
 
 const BUDGET_RANGES = ['<50k', '50k-1L', '1L-2L', '2L+'];
 const CONTACT_CHANNELS = ['Call', 'WhatsApp', 'Email'];
+const ADD_ON_OPTIONS = ['Visa', 'Passport Assistance', 'Travel Insurance', 'Forex', 'Airport Transfer'];
 
 const blankForm = (defaults = {}, currentUser = null) => ({
   first_name: '',
@@ -34,6 +35,8 @@ const blankForm = (defaults = {}, currentUser = null) => ({
   assigned_to: defaults.assigned_to || currentUser?.name || '',
   travel_start_date: '',
   travel_end_date: '',
+  passport_expiry_date: '',
+  add_on_services: [],
   budget_range: '',
   preferred_channel: '',
   next_follow_up_date: '',
@@ -98,8 +101,17 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const cleanMobile = (formData.mobile || '').replace(/[^0-9+]/g, '');
     if (!formData.first_name || !formData.mobile || (!['Visa', 'Passport Assistance'].includes(activeType) && !formData.destination)) {
       setError('First name, mobile, and destination are required.');
+      return;
+    }
+    if (cleanMobile.replace(/[^0-9]/g, '').length < 10) {
+      setError('Please enter a valid phone number (at least 10 digits).');
+      return;
+    }
+    if (formData.travel_start_date && formData.travel_end_date && formData.travel_start_date > formData.travel_end_date) {
+      setError('Travel return date cannot be before departure date.');
       return;
     }
     setError('');
@@ -176,7 +188,7 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
         )}
 
         {/* Enquiry Type Selector */}
-        <div className="enquiry-selector" style={{ display: 'flex', gap: '10px', marginBottom: '20px', padding: '10px', background: 'var(--bg-main)', borderRadius: '10px' }}>
+        <div className="enquiry-selector" style={{ display: 'flex', gap: '10px', marginBottom: '12px', padding: '10px', background: 'var(--bg-main)', borderRadius: '10px' }}>
           {ENQUIRY_OPTIONS.map(opt => (
             <button
               key={opt.id}
@@ -188,6 +200,35 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
               {opt.icon} {opt.id}
             </button>
           ))}
+        </div>
+
+        {/* Composite Add-on Services Multi-Select */}
+        <div style={{ marginBottom: '18px', padding: '10px 14px', background: 'rgba(0, 160, 227, 0.05)', borderRadius: '8px', border: '1px solid rgba(0, 160, 227, 0.2)' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+            + Add-on Services for this trip (Multi-Service Composite):
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {ADD_ON_OPTIONS.filter(o => o !== activeType).map(addon => {
+              const isChecked = (formData.add_on_services || []).includes(addon);
+              return (
+                <label key={addon} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', padding: '4px 10px', borderRadius: 6, background: isChecked ? 'var(--primary)' : 'white', color: isChecked ? 'white' : 'var(--text-primary)', border: isChecked ? '1px solid var(--primary)' : '1px solid var(--border-color)', cursor: 'pointer', transition: 'all 0.15s ease' }}>
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => {
+                      const cur = formData.add_on_services || [];
+                      setFormData({
+                        ...formData,
+                        add_on_services: e.target.checked ? [...cur, addon] : cur.filter(x => x !== addon)
+                      });
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                  {isChecked ? '✓ ' : '+ '}{addon}
+                </label>
+              );
+            })}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
@@ -297,6 +338,7 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
             <div className="form-row">
               <div className="form-group"><label>Travel Start</label><input type="date" value={formData.travel_start_date} onChange={e => setFormData({ ...formData, travel_start_date: e.target.value })} /></div>
               <div className="form-group"><label>Travel End</label><input type="date" value={formData.travel_end_date} onChange={e => setFormData({ ...formData, travel_end_date: e.target.value })} /></div>
+              <div className="form-group"><label>Passport Expiry</label><input type="date" title="Required for 6-month international validity check" value={formData.passport_expiry_date || ''} onChange={e => setFormData({ ...formData, passport_expiry_date: e.target.value })} /></div>
             </div>
 
             <div className="form-row" style={{ marginTop: 10 }}>
