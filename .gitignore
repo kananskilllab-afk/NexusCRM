@@ -40,5 +40,6 @@ walkthrough.md
 scratch/
 FIX_LOG.md
 nul
+*.xlsx
 server/uploads/*
 !server/uploads/.gitkeep

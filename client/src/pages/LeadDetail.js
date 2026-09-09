@@ -139,7 +139,7 @@ const LeadDetail = () => {
 
   // 6-Month Passport Expiry Guardrail
   const passportExpiryAlert = useMemo(() => {
-    const expDate = lead?.passport_expiry_date || lead?.enquiry_data?.passport?.appointment_date;
+    const expDate = lead?.passport_expiry_date || lead?.enquiry_data?.passport?.passport_expiry_date;
     const travelDate = lead?.travel_start_date;
     if (!expDate || !travelDate) return null;
     const exp = new Date(expDate);
@@ -155,7 +155,7 @@ const LeadDetail = () => {
       };
     }
     return null;
-  }, [lead?.passport_expiry_date, lead?.enquiry_data?.passport?.appointment_date, lead?.travel_start_date]);
+  }, [lead?.passport_expiry_date, lead?.enquiry_data?.passport?.passport_expiry_date, lead?.travel_start_date]);
 
   // Load users into shared context so all child tabs (AboutTab etc.) also benefit.
   useEffect(() => {

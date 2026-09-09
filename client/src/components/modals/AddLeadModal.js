@@ -102,8 +102,8 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const cleanMobile = (formData.mobile || '').replace(/[^0-9+]/g, '');
-    if (!formData.first_name || !formData.mobile || (!['Visa', 'Passport Assistance'].includes(activeType) && !formData.destination)) {
-      setError('First name, mobile, and destination are required.');
+    if (!formData.first_name || !formData.mobile || (activeType !== 'Passport Assistance' && !formData.destination)) {
+      setError(`First name, mobile, and ${activeType === 'Visa' ? 'destination country' : 'destination'} are required.`);
       return;
     }
     if (cleanMobile.replace(/[^0-9]/g, '').length < 10) {
@@ -258,7 +258,15 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
           <div className="form-section" style={{ marginTop: 20 }}>
             <h4><FiActivity style={{ marginRight: 8 }} /> Trip Specifics</h4>
             <div className="form-row">
-              <div className="form-group" style={{ flex: 2 }}><label>Destination*</label><input type="text" value={formData.destination} onChange={e => setFormData({ ...formData, destination: e.target.value })} /></div>
+              <div className="form-group" style={{ flex: 2 }}>
+                <label>{activeType === 'Visa' ? 'Destination Country*' : activeType === 'Passport Assistance' ? 'Destination (Optional)' : 'Destination*'}</label>
+                <input
+                  type="text"
+                  placeholder={activeType === 'Visa' ? 'e.g. United Kingdom, UAE, USA, Schengen' : activeType === 'Passport Assistance' ? 'e.g. India (Optional)' : 'e.g. Dubai, Bali, Paris'}
+                  value={formData.destination}
+                  onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                />
+              </div>
               <div className="form-group"><label>Lead Source</label>
                 <select value={formData.lead_source} onChange={e => setFormData({ ...formData, lead_source: e.target.value })}>
                   {SOURCE_OPTIONS.map(s => <option key={s}>{s}</option>)}
@@ -267,6 +275,34 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
             </div>
 
             {/* Dynamic Fields based on Type */}
+            {activeType === 'Visa' && (
+              <div className="dynamic-fields card" style={{ background: 'var(--bg-main)', border: '1px dashed var(--primary)', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
+                <div className="form-row">
+                  <div className="form-group"><label>Visa Category</label>
+                    <select value={formData.enquiry_data?.visa?.visa_type || 'Tourist Visa'} onChange={e => updateSubData('visa_type', e.target.value)}>
+                      <option>Tourist Visa</option>
+                      <option>Business Visa</option>
+                      <option>Student / Study Visa</option>
+                      <option>Transit Visa</option>
+                      <option>Work / Employment Visa</option>
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Entry Type</label>
+                    <select value={formData.enquiry_data?.visa?.entry_type || 'Single Entry'} onChange={e => updateSubData('entry_type', e.target.value)}>
+                      <option>Single Entry</option>
+                      <option>Multiple Entry</option>
+                      <option>Double Entry</option>
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Processing Priority</label>
+                    <select value={formData.enquiry_data?.visa?.processing_speed || 'Standard'} onChange={e => updateSubData('processing_speed', e.target.value)}>
+                      <option>Standard</option>
+                      <option>Express / Urgent</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
             {activeType === 'Flight' && (
               <div className="dynamic-fields card" style={{ background: 'var(--bg-main)', border: '1px dashed var(--primary)' }}>
                 <div className="form-row">

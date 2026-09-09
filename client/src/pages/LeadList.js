@@ -408,7 +408,7 @@ const LeadList = () => {
               {filteredLeads.map(lead => (
                 <div key={lead.id} className="mobile-lead-card" onClick={() => navigate(`/leads/${lead.id}`)}>
                   <div className="mobile-card-header">
-                    <span className="lead-no">{lead.id}</span>
+                    <span className="lead-no">{lead.lead_code || lead.id}</span>
                     <span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span>
                   </div>
                   <div className="mobile-card-body">
