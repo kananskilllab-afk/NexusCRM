@@ -53,6 +53,9 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   const [error, setError] = useState('');
   const [restoredDraft, setRestoredDraft] = useState(false);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -66,6 +69,8 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   useEffect(() => {
     if (!isOpen) return;
     setError('');
+    setAllowDuplicate(false);
+    setIsSubmitting(false);
     setRestoredDraft(false);
 
     const draft = loadDraft(FORM_ID);
@@ -99,7 +104,7 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanMobile = (formData.mobile || '').replace(/[^0-9+]/g, '');
     if (!formData.first_name || !formData.mobile || (activeType !== 'Passport Assistance' && !formData.destination)) {
@@ -115,32 +120,40 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
       return;
     }
     setError('');
+    setIsSubmitting(true);
 
-    // Remember stable defaults for next time, then drop the draft.
-    saveDefaults(FORM_ID, {
-      lead_source: formData.lead_source,
-      assigned_to: formData.assigned_to,
-      priority:    formData.priority,
-      activeType,
-    });
-    clearDraft(FORM_ID);
-
-    // Stage 1 — auto-capture UTM tags from current URL (if present)
-    let utm_source, utm_medium, utm_campaign;
     try {
-      const params = new URLSearchParams(window.location.search);
-      utm_source = params.get('utm_source') || undefined;
-      utm_medium = params.get('utm_medium') || undefined;
-      utm_campaign = params.get('utm_campaign') || undefined;
-    } catch (e) { /* ignore */ }
+      // Stage 1 — auto-capture UTM tags from current URL (if present)
+      let utm_source, utm_medium, utm_campaign;
+      try {
+        const params = new URLSearchParams(window.location.search);
+        utm_source = params.get('utm_source') || undefined;
+        utm_medium = params.get('utm_medium') || undefined;
+        utm_campaign = params.get('utm_campaign') || undefined;
+      } catch (err) { /* ignore */ }
 
-    onSave({
-      ...formData,
-      enquiry_types: [activeType],
-      utm_source, utm_medium, utm_campaign,
-      referrer_url: typeof document !== 'undefined' ? document.referrer : undefined
-    });
-    onClose();
+      await onSave({
+        ...formData,
+        enquiry_types: [activeType],
+        allow_duplicate: allowDuplicate,
+        utm_source, utm_medium, utm_campaign,
+        referrer_url: typeof document !== 'undefined' ? document.referrer : undefined
+      });
+
+      // Remember stable defaults for next time, then drop the draft.
+      saveDefaults(FORM_ID, {
+        lead_source: formData.lead_source,
+        assigned_to: formData.assigned_to,
+        priority:    formData.priority,
+        activeType,
+      });
+      clearDraft(FORM_ID);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to create lead');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClearDraft = () => {
@@ -232,7 +245,29 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
-          {error && <div style={{ background: 'var(--state-error-bg)', color: 'var(--state-error-text)', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: 15 }}>{error}</div>}
+          {error && (
+            <div style={{
+              background: error.toLowerCase().includes('duplicate') ? '#FFFBEB' : 'var(--state-error-bg)',
+              color: error.toLowerCase().includes('duplicate') ? '#92400E' : 'var(--state-error-text)',
+              border: error.toLowerCase().includes('duplicate') ? '1px solid #FCD34D' : 'none',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              marginBottom: 15
+            }}>
+              <div>{error}</div>
+              {error.toLowerCase().includes('duplicate') && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, cursor: 'pointer', fontWeight: 600, color: '#78350F' }}>
+                  <input
+                    type="checkbox"
+                    checked={allowDuplicate}
+                    onChange={(e) => setAllowDuplicate(e.target.checked)}
+                  />
+                  <span>I understand. Create a new separate inquiry for this traveler anyway.</span>
+                </label>
+              )}
+            </div>
+          )}
 
           <div className="form-section">
             <h4><FiUser style={{ marginRight: 8 }} /> Personal Details</h4>
@@ -421,8 +456,10 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
               <FiRotateCcw /> Clear
             </button>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn btn-primary"><FiSave /> Create {activeType} Lead</button>
+              <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                <FiSave /> {isSubmitting ? 'Creating...' : allowDuplicate ? `Confirm Duplicate ${activeType} Lead` : `Create ${activeType} Lead`}
+              </button>
             </div>
           </div>
         </form>

@@ -228,14 +228,10 @@ const LeadList = () => {
       </div>
 
       <AddLeadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={async (data) => {
-          try {
-            const newLead = await api.createLead(data);
-            dispatch({ type: 'ADD_LEAD', payload: newLead });
-            setIsModalOpen(false);
-            addToast(`Lead ${newLead.lead_code || newLead.id} created successfully!`, 'success');
-          } catch (e) {
-            addToast(e.message || 'Failed to create lead', 'error');
-          }
+        const newLead = await api.createLead(data);
+        dispatch({ type: 'ADD_LEAD', payload: newLead });
+        addToast(`Lead ${newLead.lead_code || newLead.id} created successfully!`, 'success');
+        return newLead;
       }} />
 
       {/* Advanced Filter Section */}

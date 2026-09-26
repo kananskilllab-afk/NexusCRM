@@ -38,18 +38,32 @@ export const api = {
   // Auth
   login: async (email, password) => {
     let res;
-    try {
-      res = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-    } catch (_) {
-      throw new Error('Cannot reach the server. Make sure the backend is running.');
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: (email || '').trim().toLowerCase(), password })
+        });
+        if (res.status === 503 && attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        break;
+      } catch (err) {
+        if (attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw new Error('Cannot reach the server. Make sure the backend is running.');
+      }
     }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || (res.status === 503 ? 'Server is starting up, please try again in a moment.' : 'Login failed'));
+      throw new Error(body.error || (res.status === 503 ? 'Server is warming up, please retry.' : 'Login failed'));
     }
     const data = await res.json();
     activeToken = data.token;
@@ -70,11 +84,21 @@ export const api = {
   },
 
   createLead: async (leadData) => {
-    const res = await fetch(`${API_URL}/leads`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(leadData)
-    });
+    let res;
+    let attempts = 0;
+    while (attempts < 2) {
+      attempts++;
+      res = await fetch(`${API_URL}/leads`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(leadData)
+      });
+      if (res.status === 503 && attempts < 2) {
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      break;
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to create lead');
@@ -590,6 +614,19 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to delete supplier');
+    }
+    return res.json();
+  },
+
+  assignSupplier: async (leadId, payload) => {
+    const res = await fetch(`${API_URL}/leads/${leadId}/assign-supplier`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to assign supplier');
     }
     return res.json();
   },

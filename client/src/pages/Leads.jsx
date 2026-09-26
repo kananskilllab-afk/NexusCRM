@@ -214,14 +214,17 @@ const Leads = () => {
   }, [state.leads]);
 
   // ── After add: save to API then prepend to list ──────────────
-  const handleLeadSaved = useCallback((formData) => {
-    api.createLead(formData)
-      .then(newLead => {
-        dispatch({ type: 'ADD_LEAD', payload: newLead });
-        toast('Lead created successfully', 'success');
-      })
-      .catch(err => toast('Failed to create lead: ' + err.message, 'error'));
-    setShowAddModal(false);
+  const handleLeadSaved = useCallback(async (formData) => {
+    try {
+      const newLead = await api.createLead(formData);
+      dispatch({ type: 'ADD_LEAD', payload: newLead });
+      toast('Lead created successfully', 'success');
+      setShowAddModal(false);
+      return newLead;
+    } catch (err) {
+      toast('Failed to create lead: ' + err.message, 'error');
+      throw err;
+    }
   }, [dispatch, toast]);
 
   return (

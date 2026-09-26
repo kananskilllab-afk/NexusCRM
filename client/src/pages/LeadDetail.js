@@ -54,9 +54,11 @@ const LeadDetail = () => {
   const [opp, setOpp] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Quick Remark state
+  // Quick Remark & Date-wise Remarks state
   const [quickRemarkText, setQuickRemarkText] = useState('');
   const [quickNextDate, setQuickNextDate] = useState('');
+  const [remarksList, setRemarksList] = useState([]);
+  const [loadingRemarks, setLoadingRemarks] = useState(false);
 
   // 1-Click WhatsApp state
   const [showWhatsAppMenu, setShowWhatsAppMenu] = useState(false);
@@ -178,23 +180,56 @@ const LeadDetail = () => {
     setShowConvert(true);
   };
 
+  // Fetch full lead details and date-wise remarks
+  const loadLeadDetailsAndRemarks = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoadingRemarks(true);
+      const data = await api.getLead(id);
+      if (data) {
+        dispatch({ type: 'UPDATE_LEAD', payload: { id, data } });
+        if (Array.isArray(data.followUps)) {
+          setRemarksList(data.followUps);
+        }
+      }
+    } catch (_) {
+      try {
+        const fus = await api.getFollowUps(id);
+        if (Array.isArray(fus)) setRemarksList(fus);
+      } catch (e) {}
+    } finally {
+      setLoadingRemarks(false);
+    }
+  }, [id, dispatch]);
+
+  useEffect(() => {
+    loadLeadDetailsAndRemarks();
+  }, [loadLeadDetailsAndRemarks]);
+
   // Quick Remark Save
   const handleSaveQuickRemark = async () => {
     if (!quickRemarkText.trim()) return;
     setBusy(true);
     try {
-      await api.addFollowUp(id, {
+      const res = await api.addFollowUp(id, {
         method: 'Phone',
         notes: quickRemarkText.trim(),
         outcome: 'Working',
         nextDate: quickNextDate || undefined
       });
-      const updated = await api.updateLead(id, {
+      const updated = res.lead || await api.updateLead(id, {
         notes: quickRemarkText.trim(),
         next_follow_up_date: quickNextDate || undefined
       });
       dispatch({ type: 'UPDATE_LEAD', payload: { id, data: updated } });
-      addToast('Remark saved and added to timeline!', 'success');
+      
+      if (res.followUp) {
+        setRemarksList(prev => [res.followUp, ...prev]);
+      } else {
+        await loadLeadDetailsAndRemarks();
+      }
+
+      addToast('Remark saved and added to date-wise history!', 'success');
       setQuickRemarkText('');
       setQuickNextDate('');
     } catch (err) {
@@ -572,6 +607,77 @@ const LeadDetail = () => {
               <strong>Latest Remark:</strong> {lead.notes}
             </div>
           )}
+
+          {/* Date-wise Remarks History Log */}
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                🕒 Date-wise Remarks History ({remarksList.length})
+              </span>
+              {loadingRemarks && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Refreshing...</span>}
+            </div>
+
+            {remarksList.length === 0 ? (
+              <div style={{ padding: '10px 12px', background: '#fff', border: '1px dashed var(--border-color)', borderRadius: 6, fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                No past remarks recorded yet. Add your first remark above to start the date-wise log.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '280px', overflowY: 'auto', paddingRight: 4 }}>
+                {remarksList.map((r, idx) => {
+                  const remarkDate = r.date || r.created_at || new Date().toISOString();
+                  let formattedDate = '';
+                  try {
+                    formattedDate = new Date(remarkDate).toLocaleString('en-IN', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', hour12: true
+                    });
+                  } catch (_) {
+                    formattedDate = String(remarkDate);
+                  }
+                  return (
+                    <div 
+                      key={r.id || idx} 
+                      style={{ 
+                        background: '#ffffff', 
+                        border: '1px solid var(--border-color)', 
+                        borderLeft: '4px solid var(--primary)', 
+                        borderRadius: 6, 
+                        padding: '9px 12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            👤 {r.created_by || 'Counselor'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: 10, background: 'var(--bg-main)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>
+                            {r.method || 'Note'}
+                          </span>
+                          {r.outcome && (
+                            <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: 10, background: 'rgba(0,160,227,0.1)', color: '#00A0E3', fontWeight: 600 }}>
+                              {r.outcome}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          📅 {formattedDate}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                        {r.notes || r.text || '—'}
+                      </div>
+                      {r.next_date && (
+                        <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600 }}>
+                          ⏰ Scheduled Next Follow-up: {new Date(r.next_date).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Accidental Qualified safeguard banner (Requirement 6) */}

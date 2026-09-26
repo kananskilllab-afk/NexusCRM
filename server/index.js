@@ -45,32 +45,53 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-let dbReady = false;
+let cachedConnPromise = null;
+let isSeeded = false;
 
-mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000 })
-  .then(async () => {
-    console.log('🍃 Connected to MongoDB Atlas successfully');
-    dbReady = true;
-    await seedDatabase();
-    await initializeDefaultTemplates();
-    startScheduler();
-  })
-  .catch(err => {
-    console.error('❌ Failed to connect to MongoDB Atlas:', err.message);
-  });
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (!cachedConnPromise) {
+    cachedConnPromise = mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      bufferCommands: true,
+      maxPoolSize: 10
+    }).then(async (conn) => {
+      console.log('🍃 Connected to MongoDB Atlas successfully');
+      // Only seed once on cold start in non-production
+      if (!isSeeded && process.env.NODE_ENV !== 'production') {
+        isSeeded = true;
+        seedDatabase().catch(e => console.error('Seed error:', e.message));
+        initializeDefaultTemplates().catch(e => console.error('Templates error:', e.message));
+        try { startScheduler(); } catch (_) {}
+      }
+      return conn;
+    }).catch(err => {
+      cachedConnPromise = null;
+      console.error('❌ Failed to connect to MongoDB Atlas:', err.message);
+      throw err;
+    });
+  }
+  return cachedConnPromise;
+};
+
+// Initiate immediate connection in background
+connectDB().catch(() => {});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Return 503 if DB is disconnected (not connected and not connecting)
-app.use((req, res, next) => {
-  const state = mongoose.connection.readyState;
-  if (state !== 1 && state !== 2 && req.path !== '/api/health') {
-    return res.status(503).json({ error: 'Database connection not ready. Check MONGODB_URI and Atlas network access.' });
+// Ensure DB is connected before handling API requests (prevents cold-start 503 errors)
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    return res.status(503).json({ error: 'Database connection failed: ' + err.message });
   }
-  next();
 });
 
 // Routes

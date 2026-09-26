@@ -4,9 +4,9 @@ const Supplier = require('../models/Supplier');
 const SupplierRate = require('../models/SupplierRate');
 const { authenticate, requireRole, auditLog, generateId } = require('../middleware/auth');
 
-// All routes require auth; level 3 (Ops Manager) required for suppliers.
+// All routes require auth; level 1 (staff/counselor/accountant) can read suppliers.
 router.use(authenticate);
-router.use(requireRole(2));
+router.use(requireRole(1));
 
 const preferredValue = (value) => (
   value === true || value === 1 || value === '1' || value === 'true' ? 1 : 0

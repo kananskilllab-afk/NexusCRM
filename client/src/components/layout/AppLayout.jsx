@@ -35,10 +35,11 @@ const AppLayout = ({ children, onQuickAdd }) => {
   const toggleMobile   = () => setIsMobileOpen((p) => !p);
   const closeMobile    = () => setIsMobileOpen(false);
   const handleQuickAdd = onQuickAdd ?? (() => setQuickAddOpen(true));
-  const handleSaveLead = (data) =>
-    api.createLead(data)
-      .then(newLead => dispatch({ type: 'ADD_LEAD', payload: newLead }))
-      .catch(console.error);
+  const handleSaveLead = async (data) => {
+    const newLead = await api.createLead(data);
+    dispatch({ type: 'ADD_LEAD', payload: newLead });
+    return newLead;
+  };
 
   return (
     <div className="app-layout">

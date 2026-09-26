@@ -10,6 +10,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // If already authenticated, redirect
   useEffect(() => {
@@ -19,12 +20,22 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    const cleanEmail = (formData.email || '').trim().toLowerCase();
+    const cleanPassword = formData.password;
+    if (!cleanEmail || !cleanPassword) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await api.login(formData.email, formData.password);
+      const response = await api.login(cleanEmail, cleanPassword);
       dispatch({ type: 'LOGIN', payload: response });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,7 +86,14 @@ const Login = () => {
             </button>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 600, marginBottom: '15px' }}>Sign In</button>
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            disabled={loading}
+            style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 600, marginBottom: '15px', opacity: loading ? 0.75 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
           
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => navigate('/forgot-password')}>Forgot Password?</span>

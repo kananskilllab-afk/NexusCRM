@@ -136,6 +136,23 @@ router.post('/', requireRole(1), async (req, res) => {
   } = req.body;
 
   try {
+    // Duplicate Lead Detection (Avoid adding same details twice)
+    const cleanMobile = (mobile || '').replace(/[^0-9]/g, '');
+    if (cleanMobile.length >= 10 && !req.body.allow_duplicate) {
+      const last10 = cleanMobile.slice(-10);
+      const existing = await Lead.findOne({
+        mobile: { $regex: last10 + '$' },
+        status: { $nin: ['Lost', 'Cancelled'] }
+      }).select('id lead_code first_name last_name mobile status assigned_to created_at').lean();
+
+      if (existing) {
+        return res.status(409).json({
+          error: `Duplicate inquiry detected: An active lead with phone ending in ${last10} already exists (#${existing.lead_code || existing.id} - ${existing.first_name} ${existing.last_name || ''}, Status: ${existing.status}, Assigned to: ${existing.assigned_to || 'Unassigned'}). Check "Allow Duplicate" if this is a separate trip.`,
+          duplicateLead: existing
+        });
+      }
+    }
+
     // Stage 2 — Lead Code (LD-100001)
     const lead_code = await Lead.nextLeadCode();
 
@@ -194,6 +211,20 @@ router.post('/', requireRole(1), async (req, res) => {
   }
 });
 
+// GET /api/leads/:id/followups - get all date-wise remarks/followups for a lead
+router.get('/:id/followups', requireRole(1), async (req, res) => {
+  const leadId = req.params.id;
+  try {
+    const followUps = await FollowUp.find({ lead_id: leadId })
+      .sort({ created_at: -1, date: -1 })
+      .lean();
+    res.json(followUps);
+  } catch (err) {
+    console.error('Fetch followups error:', err);
+    res.status(500).json({ error: 'Failed to fetch remarks/follow-ups' });
+  }
+});
+
 // POST /api/leads/:id/followups - save follow-up remark and update reminder date
 router.post('/:id/followups', requireRole(1), async (req, res) => {
   const leadId = req.params.id;
@@ -223,22 +254,23 @@ router.post('/:id/followups', requireRole(1), async (req, res) => {
       created_by: req.user.name
     });
 
-    // Update next_follow_up_date on the Lead if scheduled
+    // Update latest remark/notes and next_follow_up_date on the Lead
+    lead.notes = notes.trim();
     if (scheduledNext) {
       lead.next_follow_up_date = new Date(scheduledNext);
-      await lead.save();
     }
+    await lead.save();
 
     // Log Activity for lead timeline
     await Activity.create({
       id: generateId('act'),
       lead_id: leadId,
       type: 'Follow-Up',
-      text: `${method} follow-up: "${notes.trim().slice(0, 100)}" (Outcome: ${outcome || 'Done'})`,
+      text: `${method} remark: "${notes.trim().slice(0, 100)}" (Outcome: ${outcome || 'Done'})`,
       user_name: req.user.name
     });
 
-    auditLog(null, req, 'CREATE', 'followups', fuId, `Follow-up logged on lead ${lead.lead_code || leadId}`);
+    auditLog(null, req, 'CREATE', 'followups', fuId, `Remark logged on lead ${lead.lead_code || leadId}`);
 
     res.status(201).json({ success: true, followUp, lead });
   } catch (err) {
@@ -570,7 +602,7 @@ router.get('/:id/follow-ups', async (req, res) => {
 });
 
 // POST /api/leads/:id/assign-supplier
-router.post('/:id/assign-supplier', requireRole(2), async (req, res) => {
+router.post('/:id/assign-supplier', requireRole(1), async (req, res) => {
   const leadId = req.params.id;
   const id = generateId('as');
   const { supplier_name, service_type, rate, markup, currency, supplier_id } = req.body;
