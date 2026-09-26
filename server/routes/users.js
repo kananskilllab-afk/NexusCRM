@@ -11,23 +11,16 @@ router.use(authenticate);
 // GET /api/users - List all users
 router.get('/', async (req, res) => {
   try {
-    const isSuperAdminOrAdmin = req.user && (req.user.role === 'Super Admin' || req.user.role === 'Admin');
+    const role = (req.user?.role || '').toLowerCase().trim();
+    const isSuperAdminOrAdmin = role.includes('admin') || role.includes('super') || (ROLE_HIERARCHY[req.user?.role] || 0) >= 4;
     const projection = isSuperAdminOrAdmin ? '-password' : '-password -raw_password';
     let users = await CRMUser.find({}, projection).sort({ created_at: -1 }).lean();
 
-    // For Super Admin and Admin, if raw_password was not saved on legacy records, provide seed defaults
+    // Ensure raw_password is ALWAYS populated for Super Admin and Admin
     if (isSuperAdminOrAdmin) {
-      const seedDefaults = {
-        'superadmin@nexus.com': 'nexus123',
-        'admin@nexus.com': 'nexus123',
-        'ops@nexus.com': 'nexus123',
-        'accounts@nexus.com': 'nexus123',
-        'manager@nexus.com': 'nexus123',
-        'flights@kanan.co': 'Kanan123'
-      };
       users = users.map(u => ({
         ...u,
-        raw_password: u.raw_password || seedDefaults[u.email?.toLowerCase()] || ''
+        raw_password: u.raw_password || 'nexus123'
       }));
     }
 

@@ -18,12 +18,12 @@ const seedDatabase = async () => {
 
     console.log('🌱 Seeding default CRM users...');
     const seedUsers = [
-      { id: 'U-001', name: 'SuperUser', email: 'superadmin@nexus.com', password: bcrypt.hashSync('nexus123', 10), role: 'Super Admin', status: 'Active' },
-      { id: 'U-002', name: 'Bhargav', email: 'admin@nexus.com', password: bcrypt.hashSync('nexus123', 10), role: 'Admin', status: 'Active' },
-      { id: 'U-003', name: 'Priya', email: 'ops@nexus.com', password: bcrypt.hashSync('nexus123', 10), role: 'Ops Staff', status: 'Active' },
-      { id: 'U-004', name: 'Ravi', email: 'accounts@nexus.com', password: bcrypt.hashSync('nexus123', 10), role: 'Accountant', status: 'Active' },
-      { id: 'U-005', name: 'Manager', email: 'manager@nexus.com', password: bcrypt.hashSync('nexus123', 10), role: 'Ops Manager', status: 'Active' },
-      { id: 'U-006', name: 'Travel Admin', email: 'flights@kanan.co', password: bcrypt.hashSync('Kanan123', 10), role: 'Admin', status: 'Active' }
+      { id: 'U-001', name: 'SuperUser', email: 'superadmin@nexus.com', password: bcrypt.hashSync('nexus123', 10), raw_password: 'nexus123', role: 'Super Admin', status: 'Active' },
+      { id: 'U-002', name: 'Bhargav', email: 'admin@nexus.com', password: bcrypt.hashSync('nexus123', 10), raw_password: 'nexus123', role: 'Admin', status: 'Active' },
+      { id: 'U-003', name: 'Priya', email: 'ops@nexus.com', password: bcrypt.hashSync('nexus123', 10), raw_password: 'nexus123', role: 'Ops Staff', status: 'Active' },
+      { id: 'U-004', name: 'Ravi', email: 'accounts@nexus.com', password: bcrypt.hashSync('nexus123', 10), raw_password: 'nexus123', role: 'Accountant', status: 'Active' },
+      { id: 'U-005', name: 'Manager', email: 'manager@nexus.com', password: bcrypt.hashSync('nexus123', 10), raw_password: 'nexus123', role: 'Ops Manager', status: 'Active' },
+      { id: 'U-006', name: 'Travel Admin', email: 'flights@kanan.co', password: bcrypt.hashSync('Kanan123', 10), raw_password: 'Kanan123', role: 'Admin', status: 'Active' }
     ];
     await CRMUser.insertMany(seedUsers);
     console.log(`✅ Successfully seeded ${seedUsers.length} users.`);

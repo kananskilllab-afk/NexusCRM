@@ -16,6 +16,7 @@ const Users = () => {
   const [showAccountPass, setShowAccountPass] = useState(false);
   const [showAccountPassDetail, setShowAccountPassDetail] = useState(false);
   const [showTablePassId, setShowTablePassId] = useState(null);
+  const [showAllPasswords, setShowAllPasswords] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [showDetailsSmtpPass, setShowDetailsSmtpPass] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -134,7 +135,7 @@ const Users = () => {
       firstName: names[0] || '',
       lastName: names.slice(1).join(' ') || '',
       email: user.email || '',
-      password: user.raw_password || '', // Pre-fill current password for viewing and editing
+      password: user.raw_password || 'nexus123', // Pre-fill current password for viewing and editing
       role: user.role || 'Viewer',
       status: user.status || 'Active',
       mobile: user.mobile || '',
@@ -337,10 +338,10 @@ const Users = () => {
                    <div className="info-item"><label>Email Id</label><div>{selectedUser.email}</div></div>
                    <div className="info-item"><label>Mobile Number</label><div>{selectedUser.mobile || '—'}</div></div>
                    <div className="info-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                     <label>Account Password</label>
+                     <label>Password</label>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                        <span style={{ fontFamily: 'monospace', fontSize: '0.95rem', fontWeight: 600, background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: '4px' }}>
-                         {showAccountPassDetail ? (selectedUser.raw_password || '••••••••') : '••••••••'}
+                         {showAccountPassDetail ? (selectedUser.raw_password || 'nexus123') : '••••••••'}
                        </span>
                        <button 
                          type="button" 
@@ -383,26 +384,7 @@ const Users = () => {
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic', marginTop: '5px' }}>No photo configured.</div>
                       )}
                     </div>
-                    {selectedUser.smtp_user && (
-                      <>
-                        <div className="info-item"><label>SMTP Host</label><div>{selectedUser.smtp_host || '—'}</div></div>
-                        <div className="info-item"><label>SMTP Port</label><div>{selectedUser.smtp_port || '—'}</div></div>
-                        <div className="info-item"><label>SMTP User</label><div>{selectedUser.smtp_user || '—'}</div></div>
-                        <div className="info-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <label style={{ display: 'block', marginRight: '5px' }}>SMTP Password</label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>{showDetailsSmtpPass ? (selectedUser.smtp_pass || '—') : '••••••••••••'}</span>
-                            <button 
-                              type="button" 
-                              onClick={() => setShowDetailsSmtpPass(!showDetailsSmtpPass)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
-                            >
-                              {showDetailsSmtpPass ? <FiEyeOff size={16} /> : <FiEye size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    
                     <div className="info-item" style={{ gridColumn: 'span 2', marginTop: '10px' }}>
                       <label style={{ fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Email Signature</label>
                       <div 
@@ -531,7 +513,16 @@ const Users = () => {
           <h1>Users: Team Access Control</h1>
           <p className="text-secondary">{state.users?.length || 0} members in your organization</p>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+           <button 
+             type="button"
+             className="btn btn-outline" 
+             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+             onClick={() => setShowAllPasswords(!showAllPasswords)}
+           >
+             {showAllPasswords ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+             {showAllPasswords ? 'Hide Passwords' : 'Show All Passwords'}
+           </button>
            <button className="btn btn-primary" onClick={handleOpenAddModal}><FiPlus /> Add Identity</button>
         </div>
       </div>
@@ -574,32 +565,31 @@ const Users = () => {
                 <td>{user.email}</td>
                 <td onClick={e => e.stopPropagation()}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      {showTablePassId === user.id ? (user.raw_password || '—') : '••••••••'}
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.88rem', fontWeight: 600, color: (showAllPasswords || showTablePassId === user.id) ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      {(showAllPasswords || showTablePassId === user.id) ? (user.raw_password || 'nexus123') : '••••••••'}
                     </span>
                     <button 
                       type="button" 
                       className="btn-icon" 
                       style={{ padding: '2px', border: 'none', background: 'transparent' }}
-                      title={showTablePassId === user.id ? "Hide Password" : "Show Password"}
+                      title={(showAllPasswords || showTablePassId === user.id) ? "Hide Password" : "Show Password"}
                       onClick={() => setShowTablePassId(showTablePassId === user.id ? null : user.id)}
                     >
-                      {showTablePassId === user.id ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                      {(showAllPasswords || showTablePassId === user.id) ? <FiEyeOff size={14} /> : <FiEye size={14} />}
                     </button>
-                    {user.raw_password && (
-                      <button 
-                        type="button" 
-                        className="btn-icon" 
-                        style={{ padding: '2px', border: 'none', background: 'transparent', color: 'var(--primary)' }}
-                        title="Copy Password"
-                        onClick={() => {
-                          navigator.clipboard.writeText(user.raw_password);
-                          toast(`Password for ${user.name} copied!`, 'success');
-                        }}
-                      >
-                        <FiCopy size={13} />
-                      </button>
-                    )}
+                    <button 
+                      type="button" 
+                      className="btn-icon" 
+                      style={{ padding: '2px', border: 'none', background: 'transparent', color: 'var(--primary)' }}
+                      title="Copy Password"
+                      onClick={() => {
+                        const pass = user.raw_password || 'nexus123';
+                        navigator.clipboard.writeText(pass);
+                        toast(`Password for ${user.name} (${pass}) copied!`, 'success');
+                      }}
+                    >
+                      <FiCopy size={13} />
+                    </button>
                   </div>
                 </td>
                 <td><span className="role-chip">{user.role}</span></td>
@@ -657,7 +647,7 @@ const Users = () => {
 
                 <div className="form-group">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ margin: 0 }}>{isEditMode ? 'Account Password' : 'Account Password *'}</label>
+                    <label style={{ margin: 0 }}>{isEditMode ? 'Password' : 'Password *'}</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {formData.password && (
                         <button
