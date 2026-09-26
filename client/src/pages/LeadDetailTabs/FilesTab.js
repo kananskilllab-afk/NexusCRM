@@ -1,9 +1,11 @@
 import React from 'react';
 import { FiUpload, FiFile, FiTrash2, FiDownload } from 'react-icons/fi';
 import { useLeads } from '../../context/LeadContext';
+import { useToast } from '../../context/ToastContext';
 
 const FilesTab = ({ lead }) => {
   const { dispatch } = useLeads();
+  const toast = useToast();
   const files = lead.files || [];
 
   const handleUpload = (e) => {
@@ -46,7 +48,7 @@ const FilesTab = ({ lead }) => {
                   <p style={{ fontWeight: 500, fontSize: '0.9rem' }}>{f.name}</p>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{f.size} • Uploaded by {f.uploadedBy} on {new Date(f.uploadedAt).toLocaleDateString()}</span>
                 </div>
-                <button className="btn-icon" title="Download" onClick={() => alert('Download feature requires backend storage integration.')}><FiDownload /></button>
+                <button className="btn-icon" title="Download" onClick={() => toast('Download feature requires backend storage integration.', 'info')}><FiDownload /></button>
                 <button className="btn-icon text-muted" onClick={() => removeFile(f.id)} title="Delete"><FiTrash2 /></button>
               </div>
             ))}

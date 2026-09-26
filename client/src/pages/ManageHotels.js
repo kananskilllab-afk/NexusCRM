@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiHome, FiStar, FiMapPin, FiSearch, FiTrash2, FiEdit2, FiCheck, FiX } from 'react-icons/fi';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 const ManageHotels = () => {
+  const toast = useToast();
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +28,7 @@ const ManageHotels = () => {
   };
 
   const handleAdd = async () => {
-    if (!form.name || !form.city) return alert('Name and city are required.');
+    if (!form.name || !form.city) return toast('Name and city are required.', 'error');
     setSaving(true);
     try {
       await api.createHotel(form);
@@ -34,7 +36,7 @@ const ManageHotels = () => {
       setShowAdd(false);
       setForm({ name: '', city: '', star: '3', is_preferred: false });
     } catch (e) {
-      alert(e.message || 'Failed to add hotel');
+      toast(e.message || 'Failed to add hotel', 'error');
     } finally {
       setSaving(false);
     }
@@ -46,7 +48,7 @@ const ManageHotels = () => {
       await api.deleteHotel(id);
       setHotels(prev => prev.filter(h => h.id !== id));
     } catch (e) {
-      alert(e.message || 'Failed to delete');
+      toast(e.message || 'Failed to delete', 'error');
     }
   };
 
@@ -140,7 +142,7 @@ const ManageHotels = () => {
                 <td>{h.is_preferred ? <span className="badge new">Yes</span> : 'No'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-icon" onClick={() => alert('Edit not implemented')}><FiEdit2 /></button>
+                    <button className="btn-icon" onClick={() => toast('Edit not implemented', 'info')}><FiEdit2 /></button>
                     <button className="btn-icon text-danger" onClick={() => handleDelete(h.id)}><FiTrash2 /></button>
                   </div>
                 </td>

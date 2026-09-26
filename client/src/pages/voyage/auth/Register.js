@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck } from 'react-icons/fi';
+import { useToast } from '../../../context/ToastContext';
 
 const Register = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({});
 
@@ -15,7 +17,7 @@ const Register = () => {
 
   const handleRegister = () => {
     // Implement API call to register
-    alert('Agency Registration successful!');
+    toast('Agency Registration successful!', 'success');
     navigate('/login');
   };
 

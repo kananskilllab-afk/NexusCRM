@@ -3,10 +3,12 @@ import { FiPlus, FiTrash2, FiFileText, FiCalendar, FiPrinter, FiTruck, FiAward }
 import { TbCurrencyRupee } from 'react-icons/tb';
 import { useLeads } from '../../context/LeadContext';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import Receipt from '../../components/common/Receipt';
 
 const BillingTab = ({ lead, opp }) => {
   const { dispatch } = useLeads();
+  const toast = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -78,7 +80,7 @@ const BillingTab = ({ lead, opp }) => {
       setNewItem({ description: '', qty: 1, price: 0, tax: 5 });
       setIsAdding(false);
     } catch (err) {
-      alert(err.message || 'Failed to add billing item');
+      toast(err.message || 'Failed to add billing item', 'error');
     }
   };
 
@@ -88,7 +90,7 @@ const BillingTab = ({ lead, opp }) => {
       const updatedItems = items.filter(item => item.id !== itemId);
       dispatch({ type: 'UPDATE_BILLING', payload: { leadId: lead.id, billingData: { items: updatedItems } } });
     } catch (err) {
-      alert(err.message || 'Failed to delete billing item');
+      toast(err.message || 'Failed to delete billing item', 'error');
     }
   };
 
@@ -100,7 +102,7 @@ const BillingTab = ({ lead, opp }) => {
       setPayForm({ amount: '', method: 'Bank Transfer', reference: '', note: '' });
       setShowPayForm(false);
     } catch (err) {
-      alert(err.message || 'Failed to record payment');
+      toast(err.message || 'Failed to record payment', 'error');
     }
   };
 

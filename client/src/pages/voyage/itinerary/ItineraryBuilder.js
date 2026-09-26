@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { FiArrowLeft, FiSave, FiEye, FiSearch, FiMapPin, FiClock, FiPlus } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 
 const ItineraryBuilder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
 
   const [days, setDays] = useState([]);
@@ -37,10 +39,10 @@ const ItineraryBuilder = () => {
   const handleSave = async () => {
     try {
       await voyageApi.saveItinerary(id, { days, items });
-      alert('Itinerary saved to database!');
+      toast('Itinerary saved to database!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Failed to save');
+      toast('Failed to save itinerary', 'error');
     }
   };
 

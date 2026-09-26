@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLeads } from '../context/LeadContext';
 import { api } from '../services/api';
 import { voyageApi } from '../services/voyageApi';
+import { useToast } from '../context/ToastContext';
 import { 
   FiPlus, FiEdit2, FiPhone, FiMail, FiStar, FiTruck, FiSearch, 
   FiTrash2, FiUser, FiMapPin, FiBriefcase, FiX, FiCheckCircle 
@@ -9,6 +10,7 @@ import {
 
 const SendEmailModal = ({ onClose, supplier }) => {
   const { state } = useLeads();
+  const toast = useToast();
   const signature = state.currentUser?.email_signature;
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
@@ -63,7 +65,7 @@ const SendEmailModal = ({ onClose, supplier }) => {
   const handleSend = async (e) => {
     e.preventDefault();
     const finalTo = toEmail === 'custom' ? customTo : toEmail;
-    if (!finalTo) return alert('Recipient email is required');
+    if (!finalTo) return toast('Recipient email is required', 'error');
     
     // Combine checked CC options with any typed custom CC emails
     const allCc = [...ccEmails];
@@ -84,10 +86,10 @@ const SendEmailModal = ({ onClose, supplier }) => {
         custom_body: finalBody,
         template_id: selectedTemplate || undefined
       });
-      alert('Email sent successfully!');
+      toast('Email sent successfully!', 'success');
       onClose();
     } catch (err) {
-      alert(err.message || 'Failed to send email');
+      toast(err.message || 'Failed to send email', 'error');
     } finally {
       setSending(false);
     }
@@ -261,6 +263,7 @@ const SendEmailModal = ({ onClose, supplier }) => {
 };
 
 const SupplierModal = ({ onClose, onSave, supplier }) => {
+  const toast = useToast();
   const [form, setForm] = useState({
     name: '',
     product_name: '',
@@ -322,8 +325,8 @@ const SupplierModal = ({ onClose, onSave, supplier }) => {
   }, [supplier]);
 
   const addPhoneContact = () => {
-    if (!newPhoneContact.phone) return alert('Phone number is required');
-    if (form.phone_contacts.length >= 10) return alert('Maximum of 10 phone contacts reached');
+    if (!newPhoneContact.phone) return toast('Phone number is required', 'error');
+    if (form.phone_contacts.length >= 10) return toast('Maximum of 10 phone contacts reached', 'error');
     setForm({
       ...form,
       phone_contacts: [...form.phone_contacts, { ...newPhoneContact }]
@@ -339,8 +342,8 @@ const SupplierModal = ({ onClose, onSave, supplier }) => {
   };
 
   const addEmailContact = () => {
-    if (!newEmailContact.email) return alert('Email address is required');
-    if (form.email_contacts.length >= 10) return alert('Maximum of 10 email contacts reached');
+    if (!newEmailContact.email) return toast('Email address is required', 'error');
+    if (form.email_contacts.length >= 10) return toast('Maximum of 10 email contacts reached', 'error');
     setForm({
       ...form,
       email_contacts: [...form.email_contacts, { ...newEmailContact }]
@@ -366,7 +369,7 @@ const SupplierModal = ({ onClose, onSave, supplier }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.service_type) {
-      alert('Supplier Name and Service Type are required.');
+      toast('Supplier Name and Service Type are required.', 'error');
       return;
     }
 
@@ -567,6 +570,7 @@ const SupplierModal = ({ onClose, onSave, supplier }) => {
 
 const Suppliers = () => {
   const { state, dispatch } = useLeads();
+  const toast = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [emailingSupplier, setEmailingSupplier] = useState(null);
@@ -629,7 +633,7 @@ const Suppliers = () => {
       setShowModal(false);
       setEditingSupplier(null);
     } catch (err) {
-      alert(err.message || 'Failed to save supplier');
+      toast(err.message || 'Failed to save supplier', 'error');
     }
   };
 
@@ -639,7 +643,7 @@ const Suppliers = () => {
         await api.deleteSupplier(id);
         dispatch({ type: 'DELETE_SUPPLIER', payload: id });
       } catch (err) {
-        alert(err.message || 'Failed to delete supplier');
+        toast(err.message || 'Failed to delete supplier', 'error');
       }
     }
   };

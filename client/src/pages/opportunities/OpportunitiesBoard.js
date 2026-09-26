@@ -4,6 +4,7 @@ import {
   FiPlus, FiCalendar, FiUser, FiSearch, FiTrendingUp, FiTarget, FiAward, FiLayers,
 } from 'react-icons/fi';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import OpportunityModal from './OpportunityModal';
 import '../voyage/pipeline/PipelineBoard.css';
 
@@ -43,6 +44,7 @@ const priorityClass = (p) => `priority-${(p || 'Normal') === 'Hot' ? 'high' : (p
 
 const OpportunitiesBoard = () => {
   const location = useLocation();
+  const toast = useToast();
   const [stages, setStages] = useState([]);
   const [opps, setOpps] = useState([]);
   const [metrics, setMetrics] = useState(null);
@@ -126,7 +128,7 @@ const OpportunitiesBoard = () => {
       fetchBoard();
     } catch (err) {
       // Surface gating / validation messages (e.g. "add a line item before Quote Sent").
-      alert(err.message || 'Failed to move opportunity');
+      toast(err.message || 'Failed to move opportunity', 'error');
       fetchBoard(); // revert the optimistic move
     }
   };
@@ -165,7 +167,7 @@ const OpportunitiesBoard = () => {
       setModal({ open: false, mode: 'create', opp: null });
       await fetchBoard();
     } catch (err) {
-      alert(err.message);
+      toast(err.message, 'error');
     }
   };
 

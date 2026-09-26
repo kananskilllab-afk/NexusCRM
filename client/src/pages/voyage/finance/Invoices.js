@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEye } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 
 const Invoices = () => {
+  const toast = useToast();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +21,7 @@ const Invoices = () => {
           <h2 style={{ margin: 0 }}>Invoices</h2>
           <p style={{ color: 'var(--text-secondary)', margin: '5px 0 0 0' }}>Track payments and outstanding balances.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => alert('Opening Create Invoice Wizard...')}><FiPlus /> Create Invoice</button>
+        <button className="btn btn-primary" onClick={() => toast('Opening Create Invoice Wizard...', 'info')}><FiPlus /> Create Invoice</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
@@ -70,7 +72,7 @@ const Invoices = () => {
                 <td>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button className="btn btn-outline btn-sm"><FiEye /></button>
-                    <button className="btn btn-primary btn-sm" onClick={() => alert('Record Payment flow initializing...')}>Record Payment</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => toast('Record Payment flow initializing...', 'info')}>Record Payment</button>
                   </div>
                 </td>
               </tr>

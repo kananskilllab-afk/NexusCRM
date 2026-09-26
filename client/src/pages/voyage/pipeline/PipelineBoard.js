@@ -4,6 +4,7 @@ import {
   FiChevronLeft, FiChevronRight, FiSearch, FiTrendingUp, FiTarget, FiAward, FiLayers,
 } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 import EnquiryModal from './EnquiryModal';
 import StageModal from './StageModal';
 import './PipelineBoard.css';
@@ -23,6 +24,7 @@ const formatDate = (d) => {
 };
 
 const PipelineBoard = () => {
+  const toast = useToast();
   const [stages, setStages] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [metrics, setMetrics] = useState(null);
@@ -162,7 +164,7 @@ const PipelineBoard = () => {
       await voyageApi.deleteStage(stage.id);
       await fetchBoard();
     } catch (err) {
-      alert(err.message);
+      toast(err.message, 'error');
     }
   };
 
@@ -199,7 +201,7 @@ const PipelineBoard = () => {
       setEnquiryModal({ open: false, mode: 'create', booking: null });
       await fetchBoard();
     } catch (err) {
-      alert(err.message);
+      toast(err.message, 'error');
     }
   };
 

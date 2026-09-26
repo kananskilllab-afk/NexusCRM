@@ -3,6 +3,7 @@ import { FiPlus, FiTrash2, FiSend, FiMail, FiCheck, FiX, FiEye, FiEdit2, FiLayer
 import { voyageApi } from '../../../services/voyageApi';
 import { api } from '../../../services/api';
 import { useLeads, ROLE_HIERARCHY } from '../../../context/LeadContext';
+import { useToast } from '../../../context/ToastContext';
 
 const CATEGORY_COLORS = {
   confirmation: '#10b981', payment_reminder: '#f59e0b', itinerary: '#3b82f6',
@@ -11,6 +12,7 @@ const CATEGORY_COLORS = {
 
 const EmailManager = () => {
   const { state } = useLeads();
+  const toast = useToast();
   const userRole = state.currentUser?.role || 'Viewer';
   const userLevel = ROLE_HIERARCHY[userRole] || 0;
   const signature = state.currentUser?.email_signature;
@@ -59,14 +61,14 @@ const EmailManager = () => {
   }, [userLevel]);
 
   const handleCreateTemplate = async () => {
-    if (!form.name || !form.subject || !form.body_html) return alert('Name, Subject, and Body are required.');
+    if (!form.name || !form.subject || !form.body_html) return toast('Name, Subject, and Body are required.', 'error');
     try {
       await voyageApi.createEmailTemplate(form);
       const updated = await voyageApi.getEmailTemplates();
       setTemplates(updated);
       setShowAdd(false);
       setForm({ name: '', subject: '', body_html: '', category: 'other' });
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const handleDeleteTemplate = async (id) => {
@@ -74,11 +76,11 @@ const EmailManager = () => {
     try {
       await voyageApi.deleteEmailTemplate(id);
       setTemplates(prev => prev.filter(t => t.id !== id));
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const handleSendEmail = async () => {
-    if (!sendForm.to_email) return alert('Recipient email is required.');
+    if (!sendForm.to_email) return toast('Recipient email is required.', 'error');
     try {
       const result = await voyageApi.sendEmail({
         template_id: sendForm.template_id,
@@ -87,12 +89,12 @@ const EmailManager = () => {
         booking_id: sendForm.booking_id || undefined,
         include_signature: true
       });
-      alert(result.message);
+      toast(result.message, 'success');
       const updated = await voyageApi.getEmailHistory();
       setHistory(updated);
       setShowSend(false);
       setSendForm({ template_id: '', to_email: '', subject: '', booking_id: '' });
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const STATUS_BADGES = {

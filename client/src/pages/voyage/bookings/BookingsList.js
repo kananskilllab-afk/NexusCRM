@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiX, FiCheck, FiInfo } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 
 const BookingsList = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,7 +52,7 @@ const BookingsList = () => {
   const handleCreateBooking = async (e) => {
     e.preventDefault();
     if (!modalForm.destination) {
-      alert('Destination is required');
+      toast('Destination is required', 'error');
       return;
     }
 
@@ -76,7 +78,7 @@ const BookingsList = () => {
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to create booking: ' + err.message);
+      toast('Failed to create booking: ' + err.message, 'error');
     } finally {
       setModalLoading(false);
     }

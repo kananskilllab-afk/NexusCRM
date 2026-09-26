@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { FiMail, FiMessageCircle, FiTarget, FiAlertCircle, FiCheck } from 'react-icons/fi';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const money = (v = 0) => `₹${Math.round(v || 0).toLocaleString('en-IN')}`;
 
 const STAGE_ORDER = ['Qualification', 'Itinerary', 'Quote Sent', 'Negotiation', 'Verbal Confirm', 'Closed-Won', 'Closed-Lost'];
 
 const QuoteTab = ({ lead, opp, onQuoteSent }) => {
-  const [sending, setSending] = useState(null); // 'Email' | 'WhatsApp' | null
+  const [sending, setSending] = useState(null);
+  const toast = useToast();
 
   const hasOpp = !!opp;
   const hasLineItems = hasOpp && Array.isArray(opp.line_items) && opp.line_items.length > 0;
@@ -24,9 +26,9 @@ const QuoteTab = ({ lead, opp, onQuoteSent }) => {
         await api.moveOpportunityStage(opp.id, 'Quote Sent');
       }
       if (onQuoteSent) onQuoteSent();
-      alert(`Quotation sent via ${method}${!alreadySent ? ' — opportunity moved to Quote Sent.' : '.'}`);
+      toast(`Quotation sent via ${method}${!alreadySent ? ' — opportunity moved to Quote Sent.' : '.'}`, 'success');
     } catch (err) {
-      alert(err.message || `Failed to send via ${method}`);
+      toast(err.message || `Failed to send via ${method}`, 'error');
     } finally {
       setSending(null);
     }

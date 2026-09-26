@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiUpload, FiDownload, FiTrash2, FiFile, FiImage, FiFileText } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 
 const TYPE_ICONS = { passport: '🛂', visa: '📋', invoice: '🧾', ticket: '🎫', voucher: '🏷️', insurance: '🛡️', itinerary: '🗺️', contract: '📄', other: '📎' };
 const TYPE_COLORS = { passport: '#6366f1', visa: '#8b5cf6', invoice: '#f59e0b', ticket: '#10b981', voucher: '#ec4899', insurance: '#14b8a6', itinerary: '#3b82f6', contract: '#64748b', other: '#94a3b8' };
 
 const DocumentVault = () => {
+  const toast = useToast();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -30,7 +32,7 @@ const DocumentVault = () => {
       await voyageApi.uploadDocument(formData);
       const updated = await voyageApi.getDocuments();
       setDocuments(updated);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast(err.message, 'error'); }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -44,7 +46,7 @@ const DocumentVault = () => {
       a.download = doc.filename;
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast(err.message, 'error'); }
   };
 
   const handleDelete = async (id) => {
@@ -52,7 +54,7 @@ const DocumentVault = () => {
     try {
       await voyageApi.deleteDocument(id);
       setDocuments(prev => prev.filter(d => d.id !== id));
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast(err.message, 'error'); }
   };
 
   const getFileIcon = (mime) => {

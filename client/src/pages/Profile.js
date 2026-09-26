@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useLeads } from '../context/LeadContext';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import { 
   FiUser, FiMail, FiEye, FiEyeOff, FiCheck 
 } from 'react-icons/fi';
 
 const Profile = () => {
   const { state, dispatch } = useLeads();
+  const toast = useToast();
   const currentUser = state.currentUser;
   const isSuperAdmin = currentUser?.role === 'Super Admin';
 
@@ -154,10 +156,10 @@ const Profile = () => {
         localStorage.setItem('nexusCRM_State_v2', JSON.stringify(parsed));
       }
 
-      alert('Profile updated successfully');
+      toast('Profile updated successfully', 'success');
       setFormData(prev => ({ ...prev, password: '' }));
     } catch (err) {
-      alert(err.message);
+      toast(err.message, 'error');
     }
     setSaving(false);
   };
@@ -381,7 +383,7 @@ const Profile = () => {
                 className="btn btn-outline btn-sm"
                 onClick={async () => {
                   if (!formData.smtp_host || !formData.smtp_user || !formData.smtp_pass) {
-                    alert('Fill in SMTP Host, Username, and Password before testing.');
+                    toast('Fill in SMTP Host, Username, and Password before testing.', 'error');
                     return;
                   }
                   try {
@@ -391,9 +393,9 @@ const Profile = () => {
                       smtp_user: formData.smtp_user,
                       smtp_pass: formData.smtp_pass
                     });
-                    alert(result.ok ? `✅ ${result.message}` : `❌ ${result.error}`);
+                    toast(result.ok ? result.message : result.error, result.ok ? 'success' : 'error');
                   } catch (e) {
-                    alert('❌ Test failed: ' + e.message);
+                    toast('Test failed: ' + e.message, 'error');
                   }
                 }}
               >

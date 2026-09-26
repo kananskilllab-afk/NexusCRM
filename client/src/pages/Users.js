@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import { 
   FiPlus, FiUser, FiMail, FiShield, FiTrash2, FiEdit2, FiLock, 
   FiAlertTriangle, FiChevronDown, FiChevronUp, FiUsers, FiSettings,
@@ -10,6 +11,7 @@ import './Users.css';
 
 const Users = () => {
   const { state, dispatch } = useLeads();
+  const toast = useToast();
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showAccountPass, setShowAccountPass] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
@@ -41,9 +43,9 @@ const Users = () => {
       });
       dispatch({ type: 'UPDATE_USER', payload: { id: selectedUser.id, data: updated } });
       setIsEditingPermissions(false);
-      alert('Permissions saved successfully');
+      toast('Permissions saved successfully', 'success');
     } catch (err) {
-      alert(err.message || 'Failed to save permissions');
+      toast(err.message || 'Failed to save permissions', 'error');
     }
   };
 
@@ -155,11 +157,11 @@ const Users = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.firstName || !formData.email) {
-      alert('First Name and Email are required.');
+      toast('First Name and Email are required.', 'error');
       return;
     }
     if (!isEditMode && !formData.password) {
-      alert('Password is required for a new user.');
+      toast('Password is required for a new user.', 'error');
       return;
     }
 
@@ -231,22 +233,22 @@ const Users = () => {
       if (isEditMode) {
         const updated = await api.updateUser(editingUserId, payload);
         dispatch({ type: 'UPDATE_USER', payload: { id: editingUserId, data: updated } });
-        alert('User updated successfully');
+        toast('User updated successfully', 'success');
       } else {
         const created = await api.createUser(payload);
         dispatch({ type: 'ADD_USER', payload: created });
-        alert('User created successfully');
+        toast('User created successfully', 'success');
       }
       setShowModal(false);
     } catch (err) {
       dispatch({ type: 'FETCH_ERROR', payload: err.message });
-      alert(err.message);
+      toast(err.message, 'error');
     }
   };
 
   const handleDeleteUser = async (id) => {
     if (id === state.currentUser?.id) {
-      alert('You cannot delete your own account.');
+      toast('You cannot delete your own account.', 'error');
       return;
     }
     if (!window.confirm('Are you sure you want to delete this user identity? This action cannot be undone.')) {
@@ -257,10 +259,10 @@ const Users = () => {
       await api.deleteUser(id);
       dispatch({ type: 'DELETE_USER', payload: id });
       setSelectedUserId(null);
-      alert('User deleted successfully');
+      toast('User deleted successfully', 'success');
     } catch (err) {
       dispatch({ type: 'FETCH_ERROR', payload: err.message });
-      alert(err.message);
+      toast(err.message, 'error');
     }
   };
 
@@ -736,7 +738,7 @@ const Users = () => {
                       className="btn btn-outline btn-sm"
                       onClick={async () => {
                         if (!formData.smtp_host || !formData.smtp_user || !formData.smtp_pass) {
-                          alert('Fill in SMTP Host, Username, and Password before testing.');
+                          toast('Fill in SMTP Host, Username, and Password before testing.', 'error');
                           return;
                         }
                         try {
@@ -746,9 +748,9 @@ const Users = () => {
                             smtp_user: formData.smtp_user,
                             smtp_pass: formData.smtp_pass
                           });
-                          alert(result.ok ? `✅ ${result.message}` : `❌ ${result.error}`);
+                          toast(result.ok ? result.message : result.error, result.ok ? 'success' : 'error');
                         } catch (e) {
-                          alert('❌ Test failed: ' + e.message);
+                          toast('Test failed: ' + e.message, 'error');
                         }
                       }}
                     >

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLeads } from '../context/LeadContext';
+import { useToast } from '../context/ToastContext';
 import { 
   FiPlus, FiSearch, FiLayers, FiList, FiChevronDown, FiChevronUp, 
   FiMapPin, FiEye, FiEdit2, FiTrash2, FiClock, FiPhone, FiMessageCircle,
@@ -12,6 +13,7 @@ import './LeadList.css'; // Reusing established table styles
 
 const Customers = () => {
   const { state, dispatch } = useLeads();
+  const toast = useToast();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('view'); // 'view' | 'edit' | 'create'
@@ -70,7 +72,7 @@ const Customers = () => {
   }, [state.customers, filters.searchTable, filters.type]);
 
   const handleWhatsApp = (mobile) => {
-    if (!mobile) return alert('No mobile number available');
+    if (!mobile) return toast('No mobile number available', 'error');
     window.open(`https://wa.me/${mobile.replace(/\D/g, '')}`, '_blank');
   };
 
@@ -81,7 +83,7 @@ const Customers = () => {
         await api.deleteCustomer(id);
         dispatch({ type: 'DELETE_CUSTOMER', payload: id });
       } catch (error) {
-        alert(error.message || 'Failed to delete customer');
+        toast(error.message || 'Failed to delete customer', 'error');
       }
     }
   };
@@ -96,7 +98,7 @@ const Customers = () => {
         dispatch({ type: 'UPDATE_CUSTOMER', payload: { id: selectedCustomer.id, data: updated } });
       }
     } catch (err) {
-      alert(err.message || 'Failed to save customer data');
+      toast(err.message || 'Failed to save customer data', 'error');
     }
   };
 

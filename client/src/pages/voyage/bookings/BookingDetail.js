@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMap, FiPlus, FiTrash2, FiCheck, FiX, FiUsers, FiLayers } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
+import { useToast } from '../../../context/ToastContext';
 
 const SEGMENT_ICONS = { flight: '✈️', hotel: '🏨', transfer: '🚐', tour: '🗺️', cruise: '🚢', rail: '🚆', car_hire: '🚗', insurance: '🛡️', other: '📦' };
 const STATUS_COLORS = { pending: '#f59e0b', confirmed: '#10b981', cancelled: '#ef4444', on_request: '#6366f1', waitlisted: '#8b5cf6' };
 
 const BookingDetail = () => {
   const { id } = useParams();
+  const toast = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Segments');
   const [passengers, setPassengers] = useState([]);
@@ -40,7 +42,7 @@ const BookingDetail = () => {
       setPassengers(updated);
       setShowAddPassenger(false);
       setPassengerForm({ first_name: '', last_name: '', dob: '', passport_num: '', passport_expiry: '', nationality: '' });
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const handleDeletePassenger = async (passengerId) => {
@@ -48,7 +50,7 @@ const BookingDetail = () => {
     try {
       await voyageApi.deletePassenger(id, passengerId);
       setPassengers(prev => prev.filter(p => p.id !== passengerId));
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const handleAddSegment = async () => {
@@ -62,7 +64,7 @@ const BookingDetail = () => {
       setSegments(updated);
       setShowAddSegment(false);
       setSegmentForm({ segment_type: 'flight', start_at: '', end_at: '', cost_cents: '', sell_cents: '', confirmation_ref: '', status: 'pending' });
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const handleDeleteSegment = async (segmentId) => {
@@ -70,7 +72,7 @@ const BookingDetail = () => {
     try {
       await voyageApi.deleteSegment(id, segmentId);
       setSegments(prev => prev.filter(s => s.id !== segmentId));
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   const totalCost = segments.reduce((sum, s) => sum + (s.cost_cents || 0), 0);

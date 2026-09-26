@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiCheck, FiX, FiFileText, FiPercent } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
 import { api } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 
 const SupplierContracts = () => {
+  const toast = useToast();
   const [contracts, setContracts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +31,8 @@ const SupplierContracts = () => {
   }, []);
 
   const handleAdd = async () => {
-    if (!form.supplier_id) return alert('Please select a supplier.');
-    if (!form.name) return alert('Contract name is required.');
+    if (!form.supplier_id) return toast('Please select a supplier.', 'error');
+    if (!form.name) return toast('Contract name is required.', 'error');
     setSaving(true);
     try {
       await voyageApi.createContract({
@@ -44,7 +46,7 @@ const SupplierContracts = () => {
       setShowAdd(false);
       setForm({ supplier_id: '', name: '', net_rate_multiplier: '1.0', commission_override_pct: '', markup_floor_pct: '', valid_from: '', valid_until: '', notes: '' });
     } catch (e) {
-      alert(e.message || 'Failed to create contract');
+      toast(e.message || 'Failed to create contract', 'error');
     } finally {
       setSaving(false);
     }
@@ -55,7 +57,7 @@ const SupplierContracts = () => {
     try {
       await voyageApi.deleteContract(id);
       setContracts(prev => prev.filter(c => c.id !== id));
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
   };
 
   return (

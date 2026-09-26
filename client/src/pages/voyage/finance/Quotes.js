@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiDownload, FiSend, FiEye, FiX, FiTrash2 } from 'react-icons/fi';
 import { voyageApi } from '../../../services/voyageApi';
 import { api } from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 
 const Quotes = () => {
+  const toast = useToast();
   const [quotes, setQuotes] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,8 +53,8 @@ const Quotes = () => {
   };
 
   const handleCreate = async () => {
-    if (!form.lead_id) return alert('Please select a Lead / Opportunity.');
-    if (form.items.length === 0 || !form.items[0].desc) return alert('Add at least one line item with a description.');
+    if (!form.lead_id) return toast('Please select a Lead / Opportunity.', 'error');
+    if (form.items.length === 0 || !form.items[0].desc) return toast('Add at least one line item with a description.', 'error');
     setSaving(true);
     try {
       await api.createQuote({
@@ -74,7 +76,7 @@ const Quotes = () => {
       setShowCreate(false);
       setForm({ lead_id: '', discount_pct: 0, currency: 'INR', valid_until: '', terms: '', items: [{ desc: '', qty: 1, cost: 0, sell: 0 }] });
     } catch (err) {
-      alert(err.message || 'Failed to create quote');
+      toast(err.message || 'Failed to create quote', 'error');
     } finally {
       setSaving(false);
     }
@@ -251,8 +253,8 @@ const Quotes = () => {
                 <td>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button className="btn btn-outline btn-sm"><FiEye /></button>
-                    <button className="btn btn-outline btn-sm" title="Download PDF" onClick={() => alert('Downloading PDF...')}><FiDownload /></button>
-                    <button className="btn btn-primary btn-sm" title="Send to Client" onClick={() => alert('Opening Email sender...')}><FiSend /></button>
+                    <button className="btn btn-outline btn-sm" title="Download PDF" onClick={() => toast('Downloading PDF...', 'info')}><FiDownload /></button>
+                    <button className="btn btn-primary btn-sm" title="Send to Client" onClick={() => toast('Opening Email sender...', 'info')}><FiSend /></button>
                   </div>
                 </td>
               </tr>

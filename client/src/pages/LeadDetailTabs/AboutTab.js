@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useLeads } from '../../context/LeadContext';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { FiEdit2, FiSave, FiX } from 'react-icons/fi';
 
 const AboutTab = ({ lead }) => {
   const { state, dispatch } = useLeads();
+  const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -28,7 +30,7 @@ const AboutTab = ({ lead }) => {
       dispatch({ type: 'ADD_ACTIVITY', payload: { leadId: lead.id, activity: { text: 'Lead details updated', user: 'Admin' } } });
       setIsEditing(false);
     } catch (err) {
-      alert(err.message || 'Failed to save lead details');
+      toast(err.message || 'Failed to save lead details', 'error');
     } finally {
       setSaving(false);
     }

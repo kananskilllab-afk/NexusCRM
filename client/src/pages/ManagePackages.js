@@ -6,6 +6,7 @@ import {
   FiList, FiHome, FiCoffee, FiNavigation,
 } from 'react-icons/fi';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -675,6 +676,7 @@ const PackageCard = ({ pkg, onEdit, onDelete }) => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const ManagePackages = () => {
+  const toast = useToast();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -715,7 +717,7 @@ const ManagePackages = () => {
       await api.deletePackage(id);
       setPackages(prev => prev.filter(p => p.id !== id));
     } catch (e) {
-      alert(e.message || 'Failed to delete');
+      toast(e.message || 'Failed to delete', 'error');
     }
   };
 

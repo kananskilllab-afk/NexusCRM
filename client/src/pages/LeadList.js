@@ -166,7 +166,7 @@ const LeadList = () => {
   };
 
   const handleBulkAction = (action) => {
-    if (selectedLeads.length === 0) return alert('Please select at least one booking');
+    if (selectedLeads.length === 0) return addToast('Please select at least one booking', 'error');
     if (action === 'Email') {
       setShowBulkEmailModal(true);
       return;

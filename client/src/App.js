@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import { LeadProvider, useLeads, ROLE_HIERARCHY } from './context/LeadContext';
@@ -128,18 +128,28 @@ const SecurityWrapper = ({ children }) => {
     fetchLatestUser();
   }, []);
 
+  // Throttle session-reset so it fires at most once per 60s, not on every mouse pixel
+  const lastResetRef = useRef(0);
+
   useEffect(() => {
     if (!state.isAuthenticated) return;
 
     const TIMEOUT_MS = 30 * 60 * 1000;
+    const THROTTLE_MS = 60 * 1000; // only reset session once per minute
     const checkTimeout = () => {
       if (Date.now() - state.loginTimestamp > TIMEOUT_MS) handleLogout();
     };
 
     const interval = setInterval(checkTimeout, 60000);
-    const reset    = () => dispatch({ type: 'UPDATE_SESSION' });
+    const reset = () => {
+      const now = Date.now();
+      if (now - lastResetRef.current > THROTTLE_MS) {
+        lastResetRef.current = now;
+        dispatch({ type: 'UPDATE_SESSION' });
+      }
+    };
 
-    window.addEventListener('mousemove', reset);
+    window.addEventListener('mousemove', reset, { passive: true });
     window.addEventListener('keydown', reset);
 
     return () => {
