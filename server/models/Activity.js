@@ -11,4 +11,6 @@ const ActivitySchema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
 
+ActivitySchema.index({ lead_id: 1, created_at: -1 });
+
 module.exports = mongoose.models.Activity || mongoose.model('Activity', ActivitySchema);

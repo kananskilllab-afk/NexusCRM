@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { 
   FiPlus, FiUser, FiMail, FiShield, FiTrash2, FiEdit2, FiLock, 
   FiAlertTriangle, FiChevronDown, FiChevronUp, FiUsers, FiSettings,
-  FiFileText, FiCheckSquare, FiLogOut, FiEye, FiEyeOff, FiX
+  FiFileText, FiCheckSquare, FiLogOut, FiEye, FiEyeOff, FiX, FiCopy
 } from 'react-icons/fi';
 import './Users.css';
 
@@ -14,6 +14,8 @@ const Users = () => {
   const toast = useToast();
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showAccountPass, setShowAccountPass] = useState(false);
+  const [showAccountPassDetail, setShowAccountPassDetail] = useState(false);
+  const [showTablePassId, setShowTablePassId] = useState(null);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [showDetailsSmtpPass, setShowDetailsSmtpPass] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -89,6 +91,8 @@ const Users = () => {
   }, [dispatch]);
 
   const isSuperAdmin = state.currentUser?.role === 'Super Admin';
+  const isAdmin = state.currentUser?.role === 'Admin';
+  const canManageUsers = isSuperAdmin || isAdmin;
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -130,7 +134,7 @@ const Users = () => {
       firstName: names[0] || '',
       lastName: names.slice(1).join(' ') || '',
       email: user.email || '',
-      password: '',
+      password: user.raw_password || '', // Pre-fill current password for viewing and editing
       role: user.role || 'Viewer',
       status: user.status || 'Active',
       mobile: user.mobile || '',
@@ -232,12 +236,14 @@ const Users = () => {
     try {
       if (isEditMode) {
         const updated = await api.updateUser(editingUserId, payload);
-        dispatch({ type: 'UPDATE_USER', payload: { id: editingUserId, data: updated } });
-        toast('User updated successfully', 'success');
+        const mergedData = { ...updated, raw_password: formData.password || updated.raw_password };
+        dispatch({ type: 'UPDATE_USER', payload: { id: editingUserId, data: mergedData } });
+        toast('User updated successfully!', 'success');
       } else {
         const created = await api.createUser(payload);
-        dispatch({ type: 'ADD_USER', payload: created });
-        toast('User created successfully', 'success');
+        const mergedData = { ...created, raw_password: formData.password };
+        dispatch({ type: 'ADD_USER', payload: mergedData });
+        toast('User created successfully!', 'success');
       }
       setShowModal(false);
     } catch (err) {
@@ -266,13 +272,13 @@ const Users = () => {
     }
   };
 
-  if (!isSuperAdmin) {
+  if (!canManageUsers) {
     return (
       <div className="access-denied">
           <div className="card text-center">
             <FiAlertTriangle size={48} color="#FF5757" />
             <h2>Access Guarded</h2>
-            <p>Only a **Super Admin** can manage users. Please contact your system administrator.</p>
+            <p>Only an **Administrator** or **Super Admin** can manage users. Please contact your system administrator.</p>
           </div>
       </div>
     );
@@ -330,6 +336,35 @@ const Users = () => {
                    <div className="info-item"><label>Last Name</label><div>{selectedUser.name ? selectedUser.name.split(' ').slice(1).join(' ') || '—' : '—'}</div></div>
                    <div className="info-item"><label>Email Id</label><div>{selectedUser.email}</div></div>
                    <div className="info-item"><label>Mobile Number</label><div>{selectedUser.mobile || '—'}</div></div>
+                   <div className="info-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                     <label>Account Password</label>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <span style={{ fontFamily: 'monospace', fontSize: '0.95rem', fontWeight: 600, background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: '4px' }}>
+                         {showAccountPassDetail ? (selectedUser.raw_password || '••••••••') : '••••••••'}
+                       </span>
+                       <button 
+                         type="button" 
+                         onClick={() => setShowAccountPassDetail(!showAccountPassDetail)}
+                         title={showAccountPassDetail ? "Hide Password" : "Show Password"}
+                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                       >
+                         {showAccountPassDetail ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                       </button>
+                       {selectedUser.raw_password && (
+                         <button 
+                           type="button" 
+                           onClick={() => {
+                             navigator.clipboard.writeText(selectedUser.raw_password);
+                             toast('Password copied to clipboard!', 'success');
+                           }}
+                           title="Copy Password"
+                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
+                         >
+                           <FiCopy size={16} />
+                         </button>
+                       )}
+                     </div>
+                   </div>
                    <div className="info-item"><label>Role</label><div>{selectedUser.role}</div></div>
                    <div className="info-item"><label>Assign To</label><div>{selectedUser.assigned_to || '—'}</div></div>
                    <div className="info-item"><label>Area</label><div>{selectedUser.area || '—'}</div></div>
@@ -507,6 +542,7 @@ const Users = () => {
             <tr>
               <th>Name</th>
               <th>Email</th>
+              <th>Password</th>
               <th>Role</th>
               <th>Status</th>
               <th>Action</th>
@@ -536,12 +572,42 @@ const Users = () => {
                   </div>
                 </td>
                 <td>{user.email}</td>
+                <td onClick={e => e.stopPropagation()}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {showTablePassId === user.id ? (user.raw_password || '—') : '••••••••'}
+                    </span>
+                    <button 
+                      type="button" 
+                      className="btn-icon" 
+                      style={{ padding: '2px', border: 'none', background: 'transparent' }}
+                      title={showTablePassId === user.id ? "Hide Password" : "Show Password"}
+                      onClick={() => setShowTablePassId(showTablePassId === user.id ? null : user.id)}
+                    >
+                      {showTablePassId === user.id ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                    </button>
+                    {user.raw_password && (
+                      <button 
+                        type="button" 
+                        className="btn-icon" 
+                        style={{ padding: '2px', border: 'none', background: 'transparent', color: 'var(--primary)' }}
+                        title="Copy Password"
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.raw_password);
+                          toast(`Password for ${user.name} copied!`, 'success');
+                        }}
+                      >
+                        <FiCopy size={13} />
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td><span className="role-chip">{user.role}</span></td>
                 <td><span className={`status-dot ${user.status === 'Active' ? 'active' : 'inactive'}`}></span> {user.status}</td>
                 <td onClick={e => e.stopPropagation()}>
-                   <button className="btn-icon" onClick={() => setSelectedUserId(user.id)}><FiEye /></button>
-                   <button className="btn-icon" onClick={() => handleOpenEditModal(user)}><FiEdit2 /></button>
-                   <button className="btn-icon text-danger" onClick={() => handleDeleteUser(user.id)}><FiTrash2 /></button>
+                   <button className="btn-icon" title="View Details" onClick={() => setSelectedUserId(user.id)}><FiEye /></button>
+                   <button className="btn-icon" title="Edit User" onClick={() => handleOpenEditModal(user)}><FiEdit2 /></button>
+                   <button className="btn-icon text-danger" title="Delete User" onClick={() => handleDeleteUser(user.id)}><FiTrash2 /></button>
                 </td>
               </tr>
             ))}
@@ -590,7 +656,37 @@ const Users = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>{isEditMode ? 'Password (Leave blank to keep current)' : 'Password *'}</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ margin: 0 }}>{isEditMode ? 'Account Password' : 'Account Password *'}</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {formData.password && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(formData.password);
+                            toast('Password copied to clipboard!', 'success');
+                          }}
+                          style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                        >
+                          <FiCopy size={12} /> Copy
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#';
+                          let gen = '';
+                          for (let i = 0; i < 8; i++) gen += chars.charAt(Math.floor(Math.random() * chars.length));
+                          setFormData(prev => ({ ...prev, password: gen }));
+                          setShowAccountPass(true);
+                          toast(`Generated new password: ${gen}`, 'info');
+                        }}
+                        style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        Auto-Generate
+                      </button>
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                     <input 
                       type={showAccountPass ? "text" : "password"} 
@@ -598,11 +694,13 @@ const Users = () => {
                       value={formData.password} 
                       onChange={e => setFormData({ ...formData, password: e.target.value })} 
                       required={!isEditMode}
-                      style={{ width: '100%', paddingRight: '40px' }}
+                      placeholder={isEditMode ? "Enter new password or keep existing" : "Enter account password"}
+                      style={{ width: '100%', paddingRight: '40px', fontFamily: showAccountPass ? 'monospace' : 'inherit' }}
                     />
                     <button 
                       type="button" 
                       onClick={() => setShowAccountPass(!showAccountPass)}
+                      title={showAccountPass ? "Hide Password" : "Show Password"}
                       style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
                     >
                       {showAccountPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}

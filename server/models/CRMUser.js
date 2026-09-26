@@ -6,6 +6,7 @@ const CRMUserSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
+    raw_password: { type: String },
     role: { type: String, default: 'Viewer' },
     status: { type: String, default: 'Active' },
     area: { type: String },

@@ -12,4 +12,6 @@ const BillingItemSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
 
+BillingItemSchema.index({ lead_id: 1 });
+
 module.exports = mongoose.model('BillingItem', BillingItemSchema);

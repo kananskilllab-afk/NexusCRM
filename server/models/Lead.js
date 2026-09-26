@@ -77,6 +77,15 @@ const LeadSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
+// Performance indexes for fast listing, filtering, search, and sorting
+LeadSchema.index({ created_at: -1 });
+LeadSchema.index({ assigned_to: 1, created_at: -1 });
+LeadSchema.index({ status: 1 });
+LeadSchema.index({ mobile: 1 });
+LeadSchema.index({ email: 1 });
+LeadSchema.index({ pipeline_stage: 1 });
+LeadSchema.index({ destination: 1 });
+
 // Atomic auto-incrementing Lead Code: LD-100001, LD-100002, ...
 LeadSchema.statics.nextLeadCode = async function () {
   const Counter = require('./Counter');

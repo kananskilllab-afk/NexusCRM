@@ -11,7 +11,26 @@ router.use(authenticate);
 // GET /api/users - List all users
 router.get('/', async (req, res) => {
   try {
-    const users = await CRMUser.find({}, '-password').sort({ created_at: -1 }).lean();
+    const isSuperAdminOrAdmin = req.user && (req.user.role === 'Super Admin' || req.user.role === 'Admin');
+    const projection = isSuperAdminOrAdmin ? '-password' : '-password -raw_password';
+    let users = await CRMUser.find({}, projection).sort({ created_at: -1 }).lean();
+
+    // For Super Admin and Admin, if raw_password was not saved on legacy records, provide seed defaults
+    if (isSuperAdminOrAdmin) {
+      const seedDefaults = {
+        'superadmin@nexus.com': 'nexus123',
+        'admin@nexus.com': 'nexus123',
+        'ops@nexus.com': 'nexus123',
+        'accounts@nexus.com': 'nexus123',
+        'manager@nexus.com': 'nexus123',
+        'flights@kanan.co': 'Kanan123'
+      };
+      users = users.map(u => ({
+        ...u,
+        raw_password: u.raw_password || seedDefaults[u.email?.toLowerCase()] || ''
+      }));
+    }
+
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: 'Failed to list users' });
@@ -42,8 +61,8 @@ router.post('/test-smtp', async (req, res) => {
   }
 });
 
-// Modify user routes require Super Admin (level 5) role
-router.use(requireRole(5));
+// User management routes require Admin (level 4) or Super Admin (level 5) role
+router.use(requireRole(4));
 
 // POST /api/users - Create a new user
 router.post('/', async (req, res) => {
@@ -61,6 +80,7 @@ router.post('/', async (req, res) => {
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
+      raw_password: password, // Stored for Super Admin & Admin view and management
       role,
       status,
       area,
@@ -105,6 +125,9 @@ router.patch('/:id', async (req, res) => {
     if (email !== undefined) updates.email = email.toLowerCase();
     if (role !== undefined) {
       if (currentUser.role === 'Super Admin' && role !== 'Super Admin') {
+        if (req.user.role !== 'Super Admin') {
+          return res.status(403).json({ error: 'Only a Super Admin can modify a Super Admin account' });
+        }
         const superAdminsCount = await CRMUser.countDocuments({ role: 'Super Admin', status: 'Active' });
         if (superAdminsCount <= 1) {
           return res.status(400).json({ error: 'Cannot demote the last Active Super Admin' });
@@ -128,6 +151,7 @@ router.patch('/:id', async (req, res) => {
     
     if (password) {
       updates.password = bcrypt.hashSync(password, 10);
+      updates.raw_password = password; // Updated for Super Admin & Admin view
     }
 
     if (Object.keys(updates).length === 0) {
@@ -164,6 +188,9 @@ router.delete('/:id', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (user.role === 'Super Admin') {
+      if (req.user.role !== 'Super Admin') {
+        return res.status(403).json({ error: 'Only a Super Admin can delete a Super Admin account' });
+      }
       const superAdminsCount = await CRMUser.countDocuments({ role: 'Super Admin', status: 'Active' });
       if (superAdminsCount <= 1) {
         return res.status(400).json({ error: 'Cannot delete the last Super Admin' });

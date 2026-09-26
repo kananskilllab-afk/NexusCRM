@@ -128,36 +128,56 @@ const SecurityWrapper = ({ children }) => {
     fetchLatestUser();
   }, []);
 
-  // Throttle session-reset so it fires at most once per 60s, not on every mouse pixel
-  const lastResetRef = useRef(0);
+  // Inactivity tracking without causing React re-renders or state mutations
+  const lastActivityRef = useRef(Date.now());
 
   useEffect(() => {
     if (!state.isAuthenticated) return;
 
     const TIMEOUT_MS = 30 * 60 * 1000;
-    const THROTTLE_MS = 60 * 1000; // only reset session once per minute
-    const checkTimeout = () => {
-      if (Date.now() - state.loginTimestamp > TIMEOUT_MS) handleLogout();
-    };
+    lastActivityRef.current = Date.now();
+    try {
+      localStorage.setItem('nexusCRM_last_activity', String(Date.now()));
+    } catch (e) {}
 
-    const interval = setInterval(checkTimeout, 60000);
-    const reset = () => {
-      const now = Date.now();
-      if (now - lastResetRef.current > THROTTLE_MS) {
-        lastResetRef.current = now;
-        dispatch({ type: 'UPDATE_SESSION' });
+    const checkTimeout = () => {
+      let lastActive = lastActivityRef.current;
+      try {
+        const stored = parseInt(localStorage.getItem('nexusCRM_last_activity') || '0', 10);
+        if (stored > lastActive) lastActive = stored;
+      } catch (e) {}
+
+      if (Date.now() - lastActive > TIMEOUT_MS) {
+        handleLogout();
       }
     };
 
-    window.addEventListener('mousemove', reset, { passive: true });
-    window.addEventListener('keydown', reset);
+    const interval = setInterval(checkTimeout, 30000);
+
+    let lastRecord = 0;
+    const recordActivity = () => {
+      const now = Date.now();
+      lastActivityRef.current = now;
+      // Debounce localStorage write to once every 30s
+      if (now - lastRecord > 30000) {
+        lastRecord = now;
+        try {
+          localStorage.setItem('nexusCRM_last_activity', String(now));
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('mousemove', recordActivity, { passive: true });
+    window.addEventListener('keydown', recordActivity, { passive: true });
+    window.addEventListener('touchstart', recordActivity, { passive: true });
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('mousemove', reset);
-      window.removeEventListener('keydown', reset);
+      window.removeEventListener('mousemove', recordActivity);
+      window.removeEventListener('keydown', recordActivity);
+      window.removeEventListener('touchstart', recordActivity);
     };
-  }, [state.isAuthenticated, state.loginTimestamp, dispatch, handleLogout]);
+  }, [state.isAuthenticated, handleLogout]);
 
   return children;
 };

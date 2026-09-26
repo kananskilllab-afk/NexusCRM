@@ -15,4 +15,9 @@ const FollowUpSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: false } }
 );
 
+FollowUpSchema.index({ lead_id: 1, date: -1 });
+FollowUpSchema.index({ lead_id: 1 });
+FollowUpSchema.index({ date: 1 });
+FollowUpSchema.index({ status: 1 });
+
 module.exports = mongoose.model('FollowUp', FollowUpSchema);
