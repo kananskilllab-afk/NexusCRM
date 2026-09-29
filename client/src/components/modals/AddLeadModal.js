@@ -134,6 +134,7 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
 
       await onSave({
         ...formData,
+        destination: formData.destination || (activeType === 'Passport Assistance' ? 'Passport Assistance' : ''),
         enquiry_types: [activeType],
         allow_duplicate: allowDuplicate,
         utm_source, utm_medium, utm_campaign,
@@ -165,12 +166,13 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const updateSubData = (field, val) => {
+    const key = activeType === 'Passport Assistance' ? 'passport' : activeType.toLowerCase();
     setFormData(prev => ({
       ...prev,
       enquiry_data: {
         ...prev.enquiry_data,
-        [activeType.toLowerCase()]: {
-          ...(prev.enquiry_data?.[activeType.toLowerCase()] || {}),
+        [key]: {
+          ...(prev.enquiry_data?.[key] || {}),
           [field]: val,
         }
       }
@@ -388,6 +390,9 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
                 <div className="form-row" style={{ marginTop: 8 }}>
                   <div className="form-group"><label>Existing Passport No (If Renewal)</label>
                     <input type="text" placeholder="e.g. N1234567" value={formData.enquiry_data?.passport?.existing_passport_no || ''} onChange={e => updateSubData('existing_passport_no', e.target.value)} />
+                  </div>
+                  <div className="form-group"><label>Current Passport Expiry</label>
+                    <input type="date" value={formData.passport_expiry_date || ''} onChange={e => setFormData({ ...formData, passport_expiry_date: e.target.value })} />
                   </div>
                   <div className="form-group"><label>Target Appointment Date</label>
                     <input type="date" value={formData.enquiry_data?.passport?.appointment_date || ''} onChange={e => updateSubData('appointment_date', e.target.value)} />

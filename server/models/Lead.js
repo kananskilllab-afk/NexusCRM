@@ -42,6 +42,18 @@ const LeadSchema = new mongoose.Schema(
     passport_expiry_date: { type: Date },
     snooze_until: { type: Date },
     enquiry_data: { type: mongoose.Schema.Types.Mixed, default: {} },
+    travellers: {
+      type: [
+        {
+          id: { type: String },
+          name: { type: String },
+          type: { type: String, default: 'Adult' },
+          passport: { type: String },
+          dob: { type: String }
+        }
+      ],
+      default: []
+    },
     notes: { type: String },
     tags: { type: [String], default: [] },
     // Stage 1 — channel attribution
