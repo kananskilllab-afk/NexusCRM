@@ -369,14 +369,23 @@ router.patch('/:id', requireRole(1), async (req, res) => {
   }
 });
 
-// DELETE /api/leads/:id
+// DELETE /api/leads/:id (Super Admin level 5 and Admin level 4)
 router.delete('/:id', requireRole(4), async (req, res) => {
   const leadId = req.params.id;
 
   try {
-    await Lead.deleteOne({ id: leadId });
-    auditLog(null, req, 'DELETE', 'leads', leadId, 'Lead deleted');
-    res.json({ message: 'Lead deleted' });
+    const lead = await Lead.findOne({ $or: [{ id: leadId }, { lead_code: leadId }] });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const leadIds = [lead.id, lead.lead_code].filter(Boolean);
+    await Lead.deleteOne({ _id: lead._id });
+    await Activity.deleteMany({ lead_id: { $in: leadIds } });
+    await FollowUp.deleteMany({ lead_id: { $in: leadIds } });
+    await Payment.deleteMany({ lead_id: { $in: leadIds } });
+    await BillingItem.deleteMany({ lead_id: { $in: leadIds } });
+
+    auditLog(null, req, 'DELETE', 'leads', lead.lead_code || lead.id, `Lead deleted by ${req.user.name}`);
+    res.json({ message: 'Lead deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete lead' });
   }

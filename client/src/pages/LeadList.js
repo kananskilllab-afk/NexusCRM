@@ -284,10 +284,10 @@ const LeadList = () => {
   };
 
   const handleDeleteLead = async (id) => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
+    if (window.confirm('Are you sure you want to permanently delete this lead?')) {
       try {
         await api.deleteLead(id);
-        dispatch({ type: 'SET_LEADS', payload: state.leads.filter(l => l.id !== id) });
+        dispatch({ type: 'DELETE_LEAD', payload: id });
         addToast('Lead deleted successfully', 'info');
       } catch (err) {
         addToast('Failed to delete lead: ' + err.message, 'error');

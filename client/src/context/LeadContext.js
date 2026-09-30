@@ -103,7 +103,12 @@ function leadReducer(state, action) {
       };
     }
 
-    // ... other cases remain the same but use state.leads
+    case 'DELETE_LEAD':
+      return {
+        ...state,
+        leads: state.leads.filter(l => l.id !== action.payload && l.lead_code !== action.payload),
+        auditLog: [logAudit('DELETE', 'leads', action.payload, `Lead deleted`), ...state.auditLog]
+      };
 
     case 'UPDATE_LEAD_STATUS':
       const leadForStatus = state.leads.find(l => l.id === action.payload.id);

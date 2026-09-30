@@ -4,7 +4,7 @@ import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import { useToast } from '../context/ToastContext';
 import { 
   FiEdit2, FiMessageCircle, FiArrowLeft, FiAlertCircle, FiMail, 
-  FiTarget, FiUser, FiUserCheck, FiCheck, FiSave, FiRotateCcw, FiXCircle, FiMessageSquare
+  FiTarget, FiUser, FiUserCheck, FiCheck, FiSave, FiRotateCcw, FiXCircle, FiMessageSquare, FiTrash2
 } from 'react-icons/fi';
 import { api } from '../services/api';
 import TemplateSelector from '../components/common/TemplateSelector';
@@ -288,6 +288,22 @@ const LeadDetail = () => {
     }
   }, [id, dispatch, addToast]);
 
+  const handleDeleteLead = async () => {
+    if (window.confirm(`Are you sure you want to permanently delete lead ${lead.lead_code || lead.id}? This will remove all associated activities, billing, and follow-ups.`)) {
+      setBusy(true);
+      try {
+        await api.deleteLead(lead.id);
+        dispatch({ type: 'DELETE_LEAD', payload: lead.id });
+        addToast('Lead deleted successfully', 'info');
+        navigate('/leads');
+      } catch (err) {
+        addToast(err.message || 'Failed to delete lead', 'error');
+      } finally {
+        setBusy(false);
+      }
+    }
+  };
+
   const handleSendComm = (templateName, body) => {
     dispatch({ type: 'LOG_COMMUNICATION', payload: { leadId: id, comm: { id: Date.now(), type: showTemplates, template: templateName, status: 'Sent', sentAt: new Date().toISOString(), to: showTemplates === 'Email' ? lead.email : lead.mobile, body } } });
     dispatch({ type: 'ADD_ACTIVITY', payload: { leadId: id, activity: { id: Date.now(), date: new Date().toISOString(), text: `${showTemplates} sent: ${templateName}`, user: state.currentUser?.name } } });
@@ -550,6 +566,11 @@ const LeadDetail = () => {
             {canEdit && (
               <button className="btn btn-outline btn-danger" onClick={() => setShowLostModal(true)} style={{ color: '#E53935', borderColor: '#E53935' }}>
                 <FiXCircle /> Mark Lost
+              </button>
+            )}
+            {userLevel >= 4 && (
+              <button className="btn btn-outline btn-danger" onClick={handleDeleteLead} title="Permanently delete lead" style={{ color: '#DC2626', borderColor: '#DC2626' }}>
+                <FiTrash2 /> Delete
               </button>
             )}
           </div>

@@ -130,6 +130,18 @@ export const api = {
     return res.json();
   },
 
+  deleteLead: async (id) => {
+    const res = await fetch(`${API_URL}/leads/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete lead');
+    }
+    return res.json();
+  },
+
   addFollowUp: async (leadId, data) => {
     const res = await fetch(`${API_URL}/leads/${leadId}/followups`, {
       method: 'POST',
