@@ -482,7 +482,7 @@ const LeadList = () => {
                     <th>Category</th>
                     <th>Source</th>
                     <th>Status</th>
-                    <th>Lost Reason / Remarks</th>
+                    <th>Latest Remark / Discussion</th>
                     <th>Assigned To</th>
                     <th>Destination</th>
                     <th>Tour Start</th>
@@ -550,7 +550,7 @@ const LeadList = () => {
                           })()}
                         </div>
                       </td>
-                      <td style={{ maxWidth: 200, fontSize: '0.78rem' }}>
+                      <td style={{ maxWidth: 220, fontSize: '0.78rem' }}>
                         {['Lost', 'Cancelled', 'Unqualified'].includes(lead.status) ? (
                           <div>
                             <span style={{ color: '#EF4444', fontWeight: 600 }}>
@@ -562,10 +562,19 @@ const LeadList = () => {
                               </div>
                             )}
                           </div>
+                        ) : lead.notes ? (
+                          <div title={lead.notes}>
+                            <div style={{ color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.3 }}>
+                              💬 {lead.notes.length > 55 ? lead.notes.slice(0, 55) + '…' : lead.notes}
+                            </div>
+                            {lead.next_follow_up_date && (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--primary)', marginTop: 2 }}>
+                                ⏰ Next: {new Date(lead.next_follow_up_date).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>
-                            {lead.notes ? (lead.notes.length > 30 ? lead.notes.slice(0, 30) + '...' : lead.notes) : '—'}
-                          </span>
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
                         )}
                       </td>
                       <td>{lead.assigned_to}</td>
@@ -628,6 +637,12 @@ const LeadList = () => {
                       <span className="detail-label">Tour Start:</span>
                       <span className="detail-value">{lead.travel_start_date || '—'}</span>
                     </div>
+                    {lead.notes && (
+                      <div className="detail-row">
+                        <span className="detail-label">Last Talk:</span>
+                        <span className="detail-value" style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>💬 "{lead.notes}"</span>
+                      </div>
+                    )}
                   </div>
                   <div className="mobile-card-actions" onClick={e => e.stopPropagation()}>
                     <button className="btn btn-outline btn-sm" onClick={() => navigate(`/leads/${lead.id}`)}>View Details</button>
