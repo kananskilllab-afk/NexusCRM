@@ -363,21 +363,58 @@ const LeadDetail = () => {
     lead.owner, lead.assigned_to,
   ].filter(Boolean)));
 
-  const PersonPicker = ({ label, icon, value, field }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{icon}{label}</span>
-      {names.length > 0 ? (
-        <select value={value || ''} disabled={busy || isConverted || !canEdit}
-          onChange={(e) => handleAssign({ [field]: e.target.value })}
-          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.82rem', fontWeight: 600 }}>
-          <option value="">— Unassigned —</option>
-          {names.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
-      ) : (
-        <strong style={{ fontSize: '0.82rem' }}>{value || '—'}</strong>
-      )}
-    </div>
-  );
+  const isLeadCreatorOrOwner = lead && lead.owner === state.currentUser?.name;
+  const isCurrentAssignee = lead && lead.assigned_to === state.currentUser?.name;
+
+  const canEditPicker = (field) => {
+    if (busy) return false;
+    // Super Admin & Admin can override even on converted leads
+    if (isConverted) {
+      return userLevel >= 4;
+    }
+    // Owner field: ONLY Super Admin and Admin can change the lead creator / owner
+    if (field === 'owner') {
+      return userLevel >= 4;
+    }
+    // Assigned_to field: Lead Owner, current Assignee, or Manager/Admin (userLevel >= 3)
+    if (field === 'assigned_to') {
+      return userLevel >= 3 || isLeadCreatorOrOwner || isCurrentAssignee;
+    }
+    return canEdit;
+  };
+
+  const PersonPicker = ({ label, icon, value, field }) => {
+    const isEditable = canEditPicker(field);
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{icon}{label}</span>
+        {names.length > 0 && isEditable ? (
+          <select value={value || ''} disabled={busy}
+            onChange={(e) => handleAssign({ [field]: e.target.value })}
+            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.82rem', fontWeight: 600 }}>
+            <option value="">— Unassigned —</option>
+            {names.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        ) : (
+          <span style={{ 
+            fontSize: '0.82rem', 
+            fontWeight: 600, 
+            padding: '3px 8px', 
+            borderRadius: 6, 
+            background: 'var(--bg-main)', 
+            border: '1px solid var(--border-color)', 
+            color: 'var(--text-primary)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }} title={!isEditable ? (field === 'owner' ? 'Only Super Admin and Admin can change the lead owner' : isConverted ? 'Lead is converted (Super Admin only)' : 'Read-only access') : ''}>
+            {value || '—'}
+            {!isEditable && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>🔒</span>}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="lead-detail-container">

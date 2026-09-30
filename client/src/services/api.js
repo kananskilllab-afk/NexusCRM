@@ -2,32 +2,61 @@ const API_URL = process.env.REACT_APP_API_URL || (window.location.origin.include
 
 let activeToken = null;
 
-// Global fetch interceptor to handle 401 Unauthorized errors and force redirect to login
+export const getAuthToken = () => {
+  if (activeToken) return activeToken;
+  const directToken = localStorage.getItem('nexusCRM_token');
+  if (directToken) {
+    activeToken = directToken;
+    return directToken;
+  }
+  const stateStr = localStorage.getItem('nexusCRM_State_v2');
+  if (stateStr) {
+    try {
+      const state = JSON.parse(stateStr);
+      if (state.token) {
+        activeToken = state.token;
+        return state.token;
+      }
+    } catch (e) {}
+  }
+  return null;
+};
+
+// Global fetch interceptor to handle 401 Unauthorized errors safely
 const originalFetch = window.fetch;
 window.fetch = async function (...args) {
   const res = await originalFetch(...args);
-  if (res.status === 401 && !args[0].includes('/auth/login')) {
-    activeToken = null;
-    localStorage.removeItem('nexusCRM_State_v2');
-    if (!window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
+  if (res.status === 401) {
+    const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/api/public');
+    if (!isAuthRoute) {
+      // Check if this request actually had an authorization header
+      const headers = args[1]?.headers || (typeof args[0] === 'object' ? args[0]?.headers : null);
+      let hadAuth = false;
+      if (headers) {
+        if (headers instanceof Headers) {
+          hadAuth = !!headers.get('Authorization');
+        } else if (typeof headers === 'object') {
+          hadAuth = !!(headers['Authorization'] || headers['authorization']);
+        }
+      }
+      // Only force redirect if an authenticated call was rejected
+      if (hadAuth) {
+        activeToken = null;
+        localStorage.removeItem('nexusCRM_token');
+        localStorage.removeItem('nexusCRM_user');
+        localStorage.removeItem('nexusCRM_State_v2');
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
     }
   }
   return res;
 };
 
 const getHeaders = () => {
-  let token = activeToken;
-  if (!token) {
-    const stateStr = localStorage.getItem('nexusCRM_State_v2');
-    if (stateStr) {
-      try {
-        const state = JSON.parse(stateStr);
-        token = state.token;
-      } catch (e) {}
-    }
-  }
-  
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -67,7 +96,28 @@ export const api = {
     }
     const data = await res.json();
     activeToken = data.token;
+    localStorage.setItem('nexusCRM_token', data.token);
+    localStorage.setItem('nexusCRM_user', JSON.stringify(data.user));
+    // Synchronously mirror state to nexusCRM_State_v2 so immediate parallel requests have token
+    try {
+      const stateStr = localStorage.getItem('nexusCRM_State_v2');
+      const prevState = stateStr ? JSON.parse(stateStr) : {};
+      localStorage.setItem('nexusCRM_State_v2', JSON.stringify({
+        ...prevState,
+        isAuthenticated: true,
+        currentUser: data.user,
+        token: data.token,
+        loginTimestamp: Date.now()
+      }));
+    } catch (e) {}
     return data;
+  },
+
+  logout: () => {
+    activeToken = null;
+    localStorage.removeItem('nexusCRM_token');
+    localStorage.removeItem('nexusCRM_user');
+    localStorage.removeItem('nexusCRM_State_v2');
   },
   
   // Leads

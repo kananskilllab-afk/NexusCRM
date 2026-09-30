@@ -107,16 +107,17 @@ const SecurityWrapper = ({ children }) => {
         const stateStr = localStorage.getItem('nexusCRM_State_v2');
         if (stateStr) {
           const parsed = JSON.parse(stateStr);
-          if (parsed.token) {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5005/api';
+          const token = parsed.token || localStorage.getItem('nexusCRM_token');
+          if (token) {
+            const API_URL = process.env.REACT_APP_API_URL || (window.location.origin.includes('localhost') ? 'http://localhost:5005/api' : '/api');
             const res = await fetch(`${API_URL}/auth/me`, {
-              headers: { 'Authorization': `Bearer ${parsed.token}` }
+              headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
               const userData = await res.json();
               dispatch({ 
                 type: 'LOGIN', 
-                payload: { token: parsed.token, user: userData } 
+                payload: { token, user: userData } 
               });
             }
           }
@@ -126,7 +127,7 @@ const SecurityWrapper = ({ children }) => {
       }
     };
     fetchLatestUser();
-  }, []);
+  }, [state.isAuthenticated, dispatch]);
 
   // Inactivity tracking without causing React re-renders or state mutations
   const lastActivityRef = useRef(Date.now());
@@ -155,7 +156,13 @@ const SecurityWrapper = ({ children }) => {
     const interval = setInterval(checkTimeout, 30000);
 
     let lastRecord = 0;
+    let throttleTimer = null;
     const recordActivity = () => {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(() => {
+        throttleTimer = null;
+      }, 2000); // Throttle high-frequency events to once per 2s
+
       const now = Date.now();
       lastActivityRef.current = now;
       // Debounce localStorage write to once every 30s
@@ -173,6 +180,7 @@ const SecurityWrapper = ({ children }) => {
 
     return () => {
       clearInterval(interval);
+      if (throttleTimer) clearTimeout(throttleTimer);
       window.removeEventListener('mousemove', recordActivity);
       window.removeEventListener('keydown', recordActivity);
       window.removeEventListener('touchstart', recordActivity);

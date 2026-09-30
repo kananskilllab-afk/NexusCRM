@@ -85,12 +85,16 @@ const LeadList = () => {
     }
   }, [state.users, dispatch]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+
   const handleInputChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
     setFilters(initialFilters);
+    setCurrentPage(1);
   };
 
   // Distinct lists for dynamic dropdown filters
@@ -221,6 +225,13 @@ const LeadList = () => {
       return matchesSearch && matchesTab && matchesStatus && matchesPriority && matchesSource && matchesAssigned && matchesOwner && matchesCategory && matchesDestination && matchesDate;
     });
   }, [state.leads, filters]);
+
+  const limit = Number(filters.limit) || 25;
+  const totalPages = Math.ceil(filteredLeads.length / limit) || 1;
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * limit;
+    return filteredLeads.slice(start, start + limit);
+  }, [filteredLeads, currentPage, limit]);
 
   const statusColors = { 
     New: '#10B981', 
@@ -491,7 +502,7 @@ const LeadList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map(lead => (
+                  {paginatedLeads.map(lead => (
                     <tr key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className={`clickable-row ${selectedLeads.includes(lead.id) ? 'selected' : ''}`}>
                       <td onClick={e => toggleSelectLead(e, lead.id)}>
                         <input type="checkbox" checked={selectedLeads.includes(lead.id)} readOnly />
@@ -599,7 +610,7 @@ const LeadList = () => {
             </div>
 
             <div className="mobile-card-list">
-              {filteredLeads.map(lead => (
+              {paginatedLeads.map(lead => (
                 <div key={lead.id} className="mobile-lead-card" onClick={() => navigate(`/leads/${lead.id}`)}>
                   <div className="mobile-card-header">
                     <span className="lead-no">{lead.lead_code || lead.id}</span>
@@ -652,6 +663,43 @@ const LeadList = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Performance Pagination Controls */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '14px 20px',
+              borderTop: '1px solid var(--border-color)',
+              background: 'var(--bg-main)',
+              flexWrap: 'wrap',
+              gap: 12
+            }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Showing <strong>{filteredLeads.length === 0 ? 0 : (currentPage - 1) * limit + 1}</strong> to <strong>{Math.min(currentPage * limit, filteredLeads.length)}</strong> of <strong>{filteredLeads.length}</strong> inquiries
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  style={{ borderRadius: 6, padding: '5px 12px', fontSize: '0.82rem', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer' }}>
+                  Previous
+                </button>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, padding: '0 8px', color: 'var(--text-primary)' }}>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  style={{ borderRadius: 6, padding: '5px 12px', fontSize: '0.82rem', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer' }}>
+                  Next
+                </button>
+              </div>
             </div>
           </>
         ) : (

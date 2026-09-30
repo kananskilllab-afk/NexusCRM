@@ -300,8 +300,33 @@ router.patch('/:id', requireRole(1), async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
     // Check ownership for counselors (Ops Staff / level 2 and below)
-    const isOwner = lead.assigned_to === req.user?.name || lead.owner === req.user?.name;
-    if (userLevel < 3 && !isOwner) {
+    const isLeadCreatorOrOwner = lead.owner === req.user?.name;
+    const isCurrentAssignee = lead.assigned_to === req.user?.name;
+    const isLeadParty = isLeadCreatorOrOwner || isCurrentAssignee;
+
+    // RULE 1: Changing Owner
+    // ONLY Super Admin and Admin (userLevel >= 4) can change lead owner (intake / creator credit)
+    if (req.body.owner !== undefined && req.body.owner !== lead.owner) {
+      if (userLevel < 4) {
+        return res.status(403).json({ error: 'Only Super Admin and Admin can change the lead owner.' });
+      }
+    }
+
+    // RULE 2: Changing Assigned Counselor (assigned_to)
+    // Allowed if:
+    // - Super Admin / Admin / Ops Manager (userLevel >= 3)
+    // - Lead Owner (isLeadCreatorOrOwner)
+    // - Current Assignee (isCurrentAssignee)
+    if (req.body.assigned_to !== undefined && req.body.assigned_to !== lead.assigned_to) {
+      if (userLevel < 3 && !isLeadCreatorOrOwner && !isCurrentAssignee) {
+        return res.status(403).json({ 
+          error: `Lead is assigned to ${lead.assigned_to || lead.owner || 'another counselor'}. Only the Lead Owner, current Assignee, or a Manager/Admin can reassign this lead.` 
+        });
+      }
+    }
+
+    // RULE 3: Collaborative Peer Access vs Full Edit
+    if (userLevel < 3 && !isLeadParty) {
       // Allow updating ONLY notes or next_follow_up_date if adding remark from collaborative desk
       const nonRemarkKeys = Object.keys(req.body).filter(k => !['notes', 'next_follow_up_date'].includes(k));
       if (nonRemarkKeys.length > 0) {
@@ -311,9 +336,12 @@ router.patch('/:id', requireRole(1), async (req, res) => {
       }
     }
 
-    // §4.5 — once converted, the lead is read-only; the opportunity carries work forward.
+    // RULE 4: Converted Lead Lock & Super Admin / Admin Override
+    // Once converted, lead is locked for normal counselors. Super Admin and Admin (userLevel >= 4) can edit.
     if (lead.status === 'Converted') {
-      return res.status(409).json({ error: 'Lead is converted and read-only. Edit the linked opportunity instead.' });
+      if (userLevel < 4) {
+        return res.status(409).json({ error: 'Lead is converted and read-only. Edit the linked opportunity instead.' });
+      }
     }
 
     const allowed = ['first_name','last_name','email','mobile','alternate_phone','status','priority','destination',
@@ -344,6 +372,14 @@ router.patch('/:id', requireRole(1), async (req, res) => {
       { $set: updates },
       { new: true }
     );
+
+    // If assigned_to changed, sync to linked opportunity if present
+    if (updates.assigned_to && (lead.opportunity_id || lead.id)) {
+      await Opportunity.findOneAndUpdate(
+        { $or: [{ id: lead.opportunity_id }, { lead_id: lead.id }] },
+        { $set: { owner: updates.assigned_to } }
+      ).catch(() => {});
+    }
 
     // If status changed, log it
     if (req.body.status && req.body.status !== lead.status) {
@@ -731,11 +767,29 @@ router.post('/:id/auto-assign', requireRole(2), async (req, res) => {
 // ============================================================================
 router.post('/:id/assign', requireRole(1), async (req, res) => {
   const { assigned_to, owner } = req.body;
+  const userLevel = ROLE_HIERARCHY[req.user.role] || 0;
   try {
-    const lead = await Lead.findOne({ id: req.params.id });
+    const lead = await Lead.findOne({ $or: [{ id: req.params.id }, { lead_code: req.params.id }] });
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
-    if (lead.status === 'Converted') {
-      return res.status(409).json({ error: 'Lead is converted and read-only.' });
+
+    const isLeadCreatorOrOwner = lead.owner === req.user?.name;
+    const isCurrentAssignee = lead.assigned_to === req.user?.name;
+
+    // Check converted status: Super Admin and Admin (userLevel >= 4) can override
+    if (lead.status === 'Converted' && userLevel < 4) {
+      return res.status(409).json({ error: 'Lead is converted and read-only. Super Admin or Admin authorization required.' });
+    }
+
+    // Changing Owner: ONLY Super Admin & Admin
+    if (owner !== undefined && owner !== lead.owner && userLevel < 4) {
+      return res.status(403).json({ error: 'Only Super Admin and Admin can change the lead owner.' });
+    }
+
+    // Changing Assigned Counselor: Lead Owner, current Assignee, or Manager/Admin
+    if (assigned_to !== undefined && assigned_to !== lead.assigned_to) {
+      if (userLevel < 3 && !isLeadCreatorOrOwner && !isCurrentAssignee) {
+        return res.status(403).json({ error: 'Only the Lead Owner, current Assignee, or a Manager/Admin can reassign this lead.' });
+      }
     }
 
     const changes = [];
@@ -749,6 +803,14 @@ router.post('/:id/assign', requireRole(1), async (req, res) => {
     }
     if (changes.length === 0) return res.json(lead);
     await lead.save();
+
+    // Sync to linked Opportunity if present
+    if (assigned_to && (lead.opportunity_id || lead.id)) {
+      await Opportunity.findOneAndUpdate(
+        { $or: [{ id: lead.opportunity_id }, { lead_id: lead.id }] },
+        { $set: { owner: assigned_to } }
+      ).catch(() => {});
+    }
 
     await Activity.create({
       id: generateId('act'), lead_id: lead.id, type: 'Assignment',

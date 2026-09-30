@@ -1,16 +1,10 @@
+import { getAuthToken } from './api';
+
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.origin.includes('localhost') ? 'http://localhost:5005/api' : '/api');
 const API_URL = `${API_BASE_URL}/voyage`;
 
 const getHeaders = () => {
-  const stateStr = localStorage.getItem('nexusCRM_State_v2');
-  let token = null;
-  if(stateStr) {
-    try {
-      const state = JSON.parse(stateStr);
-      token = state.token;
-    } catch(e) {}
-  }
-  
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -18,11 +12,7 @@ const getHeaders = () => {
 };
 
 const getAuthHeader = () => {
-  const stateStr = localStorage.getItem('nexusCRM_State_v2');
-  let token = null;
-  if(stateStr) {
-    try { token = JSON.parse(stateStr).token; } catch(e) {}
-  }
+  const token = getAuthToken();
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
