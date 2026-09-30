@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLeads } from '../../context/LeadContext';
+import { useLeads, ROLE_HIERARCHY } from '../../context/LeadContext';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { FiEdit2, FiSave, FiX, FiFileText } from 'react-icons/fi';
@@ -7,6 +7,11 @@ import { FiEdit2, FiSave, FiX, FiFileText } from 'react-icons/fi';
 const AboutTab = ({ lead }) => {
   const { state, dispatch } = useLeads();
   const toast = useToast();
+  const userRole = state.currentUser?.role;
+  const userLevel = ROLE_HIERARCHY[userRole] || 0;
+  const isOwner = lead && (lead.assigned_to === state.currentUser?.name || lead.owner === state.currentUser?.name);
+  const canEdit = userLevel >= 3 || isOwner;
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -89,7 +94,11 @@ const AboutTab = ({ lead }) => {
         <div className="section-header">
           <h3>Lead Information — {lead.id}</h3>
           {!isEditing ? (
-            <button className="btn btn-outline btn-sm" onClick={() => setIsEditing(true)}><FiEdit2 /> Edit</button>
+            canEdit ? (
+              <button className="btn btn-outline btn-sm" onClick={() => setIsEditing(true)}><FiEdit2 /> Edit</button>
+            ) : (
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>🔒 Read-only view</span>
+            )
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}><FiSave /> {saving ? 'Saving…' : 'Save'}</button>
@@ -198,6 +207,33 @@ const AboutTab = ({ lead }) => {
               ) : (
                 <span>{lead.enquiry_data?.passport?.appointment_date || '—'}</span>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visa Enquiry Details */}
+      {(lead.enquiry_types?.includes('Visa') || lead.enquiry_data?.visa) && (
+        <div className="info-section card" style={{ marginTop: '16px' }}>
+          <div className="section-header">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🛂 Visa Requirements
+            </h3>
+          </div>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Visa Category</label>
+              <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                {lead.enquiry_data?.visa?.visa_type || 'Visitor / Tourist Visa'}
+              </span>
+            </div>
+            <div className="info-item">
+              <label>Entry Type</label>
+              <span>{lead.enquiry_data?.visa?.entry_type || 'Single Entry'}</span>
+            </div>
+            <div className="info-item">
+              <label>Processing Priority</label>
+              <span>{lead.enquiry_data?.visa?.processing_speed || 'Standard'}</span>
             </div>
           </div>
         </div>

@@ -27,12 +27,9 @@ router.get('/', async (req, res) => {
   
   try {
     let leads;
-    if (userLevel >= 3) {
-      // Ops Manager and above see all leads
+    if (userLevel >= 1) {
+      // Allow counselors and managers to view all agency leads for office-wide coordination
       leads = await Lead.find({}).sort({ created_at: -1 }).lean();
-    } else if (userLevel >= 1) {
-      // Ops Staff sees assigned leads only
-      leads = await Lead.find({ assigned_to: req.user.name }).sort({ created_at: -1 }).lean();
     } else {
       return res.status(403).json({ error: 'No lead access' });
     }
@@ -97,15 +94,16 @@ router.get('/:id', async (req, res) => {
   const leadId = req.params.id;
 
   try {
-    const lead = await Lead.findOne({ id: leadId }).lean();
+    const lead = await Lead.findOne({ $or: [{ id: leadId }, { lead_code: leadId }] }).lean();
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-    const activities = await Activity.find({ lead_id: leadId }).sort({ created_at: -1 }).lean();
-    const followUps = await FollowUp.find({ lead_id: leadId }).sort({ date: -1 }).lean();
-    const billingItems = await BillingItem.find({ lead_id: leadId }).lean();
-    const payments = await Payment.find({ lead_id: leadId }).sort({ date: -1 }).lean();
-    const assignedSuppliers = await AssignedSupplier.find({ lead_id: leadId }).lean();
-    const communications = await Communication.find({ lead_id: leadId }).sort({ sent_at: -1 }).lean();
+    const leadIds = [lead.id, lead.lead_code].filter(Boolean);
+    const activities = await Activity.find({ lead_id: { $in: leadIds } }).sort({ created_at: -1 }).lean();
+    const followUps = await FollowUp.find({ lead_id: { $in: leadIds } }).sort({ date: -1 }).lean();
+    const billingItems = await BillingItem.find({ lead_id: { $in: leadIds } }).lean();
+    const payments = await Payment.find({ lead_id: { $in: leadIds } }).sort({ date: -1 }).lean();
+    const assignedSuppliers = await AssignedSupplier.find({ lead_id: { $in: leadIds } }).lean();
+    const communications = await Communication.find({ lead_id: { $in: leadIds } }).sort({ sent_at: -1 }).lean();
 
     res.json({
       ...lead,
@@ -216,7 +214,9 @@ router.post('/', requireRole(1), async (req, res) => {
 router.get('/:id/followups', requireRole(1), async (req, res) => {
   const leadId = req.params.id;
   try {
-    const followUps = await FollowUp.find({ lead_id: leadId })
+    const lead = await Lead.findOne({ $or: [{ id: leadId }, { lead_code: leadId }] }).lean();
+    const leadIds = lead ? [lead.id, lead.lead_code].filter(Boolean) : [leadId];
+    const followUps = await FollowUp.find({ lead_id: { $in: leadIds } })
       .sort({ created_at: -1, date: -1 })
       .lean();
     res.json(followUps);
@@ -236,7 +236,7 @@ router.post('/:id/followups', requireRole(1), async (req, res) => {
   }
 
   try {
-    const lead = await Lead.findOne({ id: leadId });
+    const lead = await Lead.findOne({ $or: [{ id: leadId }, { lead_code: leadId }] });
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
     const fuId = generateId('fu');
@@ -245,7 +245,7 @@ router.post('/:id/followups', requireRole(1), async (req, res) => {
 
     const followUp = await FollowUp.create({
       id: fuId,
-      lead_id: leadId,
+      lead_id: lead.id,
       date: nowIso,
       method,
       notes: notes.trim(),
@@ -265,13 +265,13 @@ router.post('/:id/followups', requireRole(1), async (req, res) => {
     // Log Activity for lead timeline
     await Activity.create({
       id: generateId('act'),
-      lead_id: leadId,
+      lead_id: lead.id,
       type: 'Follow-Up',
       text: `${method} remark: "${notes.trim().slice(0, 100)}" (Outcome: ${outcome || 'Done'})`,
       user_name: req.user.name
     });
 
-    auditLog(null, req, 'CREATE', 'followups', fuId, `Remark logged on lead ${lead.lead_code || leadId}`);
+    auditLog(null, req, 'CREATE', 'followups', fuId, `Remark logged on lead ${lead.lead_code || lead.id}`);
 
     res.status(201).json({ success: true, followUp, lead });
   } catch (err) {
@@ -293,10 +293,23 @@ router.get('/:id/followups', async (req, res) => {
 // PATCH /api/leads/:id - update lead
 router.patch('/:id', requireRole(1), async (req, res) => {
   const leadId = req.params.id;
+  const userLevel = ROLE_HIERARCHY[req.user?.role] || 0;
 
   try {
-    const lead = await Lead.findOne({ id: leadId });
+    const lead = await Lead.findOne({ $or: [{ id: leadId }, { lead_code: leadId }] });
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Check ownership for counselors (Ops Staff / level 2 and below)
+    const isOwner = lead.assigned_to === req.user?.name || lead.owner === req.user?.name;
+    if (userLevel < 3 && !isOwner) {
+      // Allow updating ONLY notes or next_follow_up_date if adding remark from collaborative desk
+      const nonRemarkKeys = Object.keys(req.body).filter(k => !['notes', 'next_follow_up_date'].includes(k));
+      if (nonRemarkKeys.length > 0) {
+        return res.status(403).json({ 
+          error: `Lead is assigned to ${lead.assigned_to || lead.owner || 'another counselor'}. You have read-only access to protect lead ownership.` 
+        });
+      }
+    }
 
     // §4.5 — once converted, the lead is read-only; the opportunity carries work forward.
     if (lead.status === 'Converted') {
@@ -327,7 +340,7 @@ router.patch('/:id', requireRole(1), async (req, res) => {
     if (Object.keys(updates).length === 0) return res.json(lead);
 
     const updated = await Lead.findOneAndUpdate(
-      { id: leadId },
+      { _id: lead._id },
       { $set: updates },
       { new: true }
     );
@@ -337,7 +350,7 @@ router.patch('/:id', requireRole(1), async (req, res) => {
       const reasonSuffix = req.body.lost_reason ? ` (Reason: ${req.body.lost_reason})` : '';
       await Activity.create({
         id: generateId('act'),
-        lead_id: leadId,
+        lead_id: lead.id,
         type: 'Status',
         text: `Status changed: ${lead.status} → ${req.body.status}${reasonSuffix}`,
         user_name: req.user.name

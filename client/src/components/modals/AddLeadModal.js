@@ -315,14 +315,50 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
               <div className="dynamic-fields card" style={{ background: 'var(--bg-main)', border: '1px dashed var(--primary)', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
                 <div className="form-row">
                   <div className="form-group"><label>Visa Category</label>
-                    <select value={formData.enquiry_data?.visa?.visa_type || 'Tourist Visa'} onChange={e => updateSubData('visa_type', e.target.value)}>
-                      <option>Tourist Visa</option>
-                      <option>Business Visa</option>
-                      <option>Student / Study Visa</option>
-                      <option>Transit Visa</option>
-                      <option>Work / Employment Visa</option>
+                    <select
+                      value={
+                        formData.enquiry_data?.visa?.is_other_visa
+                          ? 'Other'
+                          : ['Tourist Visa', 'Visitor Visa', 'Business Visa', 'Student / Study Visa', 'Transit Visa', 'Work / Employment Visa'].includes(formData.enquiry_data?.visa?.visa_type)
+                            ? formData.enquiry_data?.visa?.visa_type
+                            : (formData.enquiry_data?.visa?.visa_type ? 'Other' : 'Tourist Visa')
+                      }
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === 'Other') {
+                          updateSubData('is_other_visa', true);
+                          updateSubData('visa_type', formData.enquiry_data?.visa?.custom_visa_type || 'Other');
+                        } else {
+                          updateSubData('is_other_visa', false);
+                          updateSubData('visa_type', val);
+                        }
+                      }}
+                    >
+                      <option value="Tourist Visa">Tourist Visa</option>
+                      <option value="Visitor Visa">Visitor Visa</option>
+                      <option value="Business Visa">Business Visa</option>
+                      <option value="Student / Study Visa">Student / Study Visa</option>
+                      <option value="Transit Visa">Transit Visa</option>
+                      <option value="Work / Employment Visa">Work / Employment Visa</option>
+                      <option value="Other">Other (Specify Custom)</option>
                     </select>
                   </div>
+                  {(formData.enquiry_data?.visa?.is_other_visa || (!['Tourist Visa', 'Visitor Visa', 'Business Visa', 'Student / Study Visa', 'Transit Visa', 'Work / Employment Visa'].includes(formData.enquiry_data?.visa?.visa_type) && formData.enquiry_data?.visa?.visa_type)) && (
+                    <div className="form-group" style={{ flex: '1 1 200px' }}>
+                      <label>Specify Custom Visa Type *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Spouse Visa, Medical Visa, Working Holiday"
+                        value={formData.enquiry_data?.visa?.custom_visa_type || (formData.enquiry_data?.visa?.visa_type !== 'Other' ? formData.enquiry_data?.visa?.visa_type : '')}
+                        onChange={e => {
+                          const customVal = e.target.value;
+                          updateSubData('custom_visa_type', customVal);
+                          updateSubData('visa_type', customVal || 'Other');
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                  )}
                   <div className="form-group"><label>Entry Type</label>
                     <select value={formData.enquiry_data?.visa?.entry_type || 'Single Entry'} onChange={e => updateSubData('entry_type', e.target.value)}>
                       <option>Single Entry</option>

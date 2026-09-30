@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FiPlus, FiSearch, FiLayers, FiList, FiChevronDown, FiChevronUp, 
   FiFilter, FiMapPin, FiEye, FiEdit2, FiTrash2, FiClock,
-  FiUserPlus, FiGrid, FiPrinter, FiX
+  FiUserPlus, FiGrid, FiPrinter, FiX, FiRotateCcw
 } from 'react-icons/fi';
 import { useLeads, ROLE_HIERARCHY } from '../context/LeadContext';
 import { useToast } from '../context/ToastContext';
@@ -43,25 +43,22 @@ const LeadList = () => {
     }
   }, [showBulkEmailModal, emailTemplates.length]);
 
-  // Massive Filter State
-  const [filters, setFilters] = useState({
+  const initialFilters = {
     from: '',
     to: '',
     priority: 'All',
     status: 'All',
-    subStatus: 'All',
     source: 'All',
     assignedTo: 'All',
-    enquiryType: '',
-    leadNumber: '',
-    firstName: '',
-    lastName: '',
-    mobileNumber: '',
-    emailId: '',
-    tags: 'All',
-    limit: 10,
+    owner: 'All',
+    enquiryType: 'All',
+    destination: '',
+    statusFilterTab: 'All',
+    limit: 25,
     searchTable: ''
-  });
+  };
+
+  const [filters, setFilters] = useState(initialFilters);
 
   // Fetch leads on mount if empty
   useEffect(() => {
@@ -79,9 +76,68 @@ const LeadList = () => {
     fetchLeads();
   }, [dispatch, state.leads.length]);
 
+  // Ensure users are loaded for counselor & owner dropdowns
+  useEffect(() => {
+    if ((state.users || []).length === 0) {
+      api.getUsers()
+        .then(u => { if (Array.isArray(u) && u.length > 0) dispatch({ type: 'SET_USERS', payload: u }); })
+        .catch(() => {});
+    }
+  }, [state.users, dispatch]);
+
   const handleInputChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleResetFilters = () => {
+    setFilters(initialFilters);
+  };
+
+  // Distinct lists for dynamic dropdown filters
+  const uniqueAssignedTo = useMemo(() => {
+    const s = new Set();
+    (state.leads || []).forEach(l => { if (l.assigned_to) s.add(l.assigned_to); });
+    (state.users || []).forEach(u => { if (u.name) s.add(u.name); });
+    return Array.from(s).sort();
+  }, [state.leads, state.users]);
+
+  const uniqueOwners = useMemo(() => {
+    const s = new Set();
+    (state.leads || []).forEach(l => { if (l.owner) s.add(l.owner); });
+    (state.users || []).forEach(u => { if (u.name) s.add(u.name); });
+    return Array.from(s).sort();
+  }, [state.leads, state.users]);
+
+  const uniqueSources = useMemo(() => {
+    const s = new Set(['Google Ad', 'Phone Call', 'Referral', 'Walk-in', 'WhatsApp', 'Other']);
+    (state.leads || []).forEach(l => { if (l.lead_source) s.add(l.lead_source); });
+    return Array.from(s).sort();
+  }, [state.leads]);
+
+  const ENQUIRY_CATEGORIES = ['Flight', 'Hotel', 'Visa', 'Package', 'Passport Assistance'];
+
+  const CATEGORY_STYLES = {
+    'Flight': { bg: '#E0F2FE', color: '#0369A1', border: '#BAE6FD', icon: '✈️' },
+    'Hotel': { bg: '#FEF3C7', color: '#B45309', border: '#FDE68A', icon: '🏨' },
+    'Visa': { bg: '#EDE9FE', color: '#6D28D9', border: '#DDD6FE', icon: '🛂' },
+    'Package': { bg: '#DCFCE7', color: '#15803D', border: '#BBF7D0', icon: '🎒' },
+    'Passport Assistance': { bg: '#E0E7FF', color: '#4338CA', border: '#C7D2FE', icon: '📘' },
+    'Custom': { bg: '#F3F4F6', color: '#374151', border: '#E5E7EB', icon: '📋' }
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.priority !== 'All') count++;
+    if (filters.status !== 'All') count++;
+    if (filters.source !== 'All') count++;
+    if (filters.assignedTo !== 'All') count++;
+    if (filters.owner !== 'All') count++;
+    if (filters.enquiryType !== 'All') count++;
+    if (filters.destination) count++;
+    if (filters.from) count++;
+    if (filters.to) count++;
+    return count;
+  }, [filters]);
 
   // Inactivity SLA Helper (§6)
   const getStaleness = (lead) => {
@@ -96,12 +152,12 @@ const LeadList = () => {
     return null;
   };
 
-  // Robust Search Logic & Lost Inquiries Filter (Requirement 4)
+  // Robust Search Logic & Multi-Dimensional Advanced Filters
   const filteredLeads = useMemo(() => {
     if (!state.leads) return [];
     
     return state.leads.filter(lead => {
-      const searchStr = filters.searchTable.toLowerCase();
+      const searchStr = (filters.searchTable || '').toLowerCase().trim();
       const matchesSearch = !searchStr || [
         lead.id,
         lead.lead_code,
@@ -111,10 +167,12 @@ const LeadList = () => {
         lead.mobile,
         lead.destination,
         lead.lost_reason,
-        lead.notes
+        lead.notes,
+        lead.assigned_to,
+        lead.owner
       ].some(val => val?.toLowerCase().includes(searchStr));
 
-      // Tab filter
+      // Quick Tab filter
       let matchesTab = true;
       if (filters.statusFilterTab === 'Lost') {
         matchesTab = ['Lost', 'Cancelled', 'Unqualified'].includes(lead.status);
@@ -129,12 +187,40 @@ const LeadList = () => {
         matchesTab = ['Booked', 'Converted'].includes(lead.status);
       }
 
+      // Dropdown filters
       const matchesStatus = filters.status === 'All' || lead.status === filters.status;
       const matchesPriority = filters.priority === 'All' || lead.priority === filters.priority;
+      const matchesSource = filters.source === 'All' || lead.lead_source === filters.source;
+      const matchesAssigned = filters.assignedTo === 'All' || lead.assigned_to === filters.assignedTo;
+      const matchesOwner = filters.owner === 'All' || lead.owner === filters.owner;
       
-      return matchesSearch && matchesTab && matchesStatus && matchesPriority;
+      const matchesCategory = filters.enquiryType === 'All' || (
+        Array.isArray(lead.enquiry_types)
+          ? lead.enquiry_types.includes(filters.enquiryType)
+          : (lead.category === filters.enquiryType)
+      );
+
+      const matchesDestination = !filters.destination || (lead.destination || '').toLowerCase().includes(filters.destination.toLowerCase().trim());
+
+      // Date Range filter (created_at)
+      let matchesDate = true;
+      if (filters.from || filters.to) {
+        const createdDate = new Date(lead.created_at || lead.createdAt || 0);
+        if (filters.from) {
+          const fromDate = new Date(filters.from);
+          fromDate.setHours(0, 0, 0, 0);
+          if (createdDate < fromDate) matchesDate = false;
+        }
+        if (filters.to && matchesDate) {
+          const toDate = new Date(filters.to);
+          toDate.setHours(23, 59, 59, 999);
+          if (createdDate > toDate) matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesTab && matchesStatus && matchesPriority && matchesSource && matchesAssigned && matchesOwner && matchesCategory && matchesDestination && matchesDate;
     });
-  }, [state.leads, filters.searchTable, filters.status, filters.priority, filters.statusFilterTab]);
+  }, [state.leads, filters]);
 
   const statusColors = { 
     New: '#10B981', 
@@ -214,16 +300,23 @@ const LeadList = () => {
       {/* Top Action Header */}
       <div className="lead-list-header card">
         <div className="header-title">
-          <FiRocket size={24} style={{ color: 'var(--primary)' }} />
+          <FiLayers size={24} style={{ color: 'var(--primary)' }} />
           <div>
             <h3>All Enquiries</h3>
             <p>Manage your travel enquiries and leads with real-time status updates.</p>
           </div>
         </div>
         <div className="header-actions">
-           <button className="btn btn-outline btn-icon-label" onClick={() => handleInputChange('searchTable', '')}><FiSearch /> Clear Filters</button>
-           <button className="btn btn-outline" onClick={() => setIsFilterExpanded(!isFilterExpanded)}><FiFilter /> {isFilterExpanded ? 'Hide' : 'Show'} Filters</button>
-           <button className="btn btn-outline btn-icon-label" onClick={() => setIsModalOpen(true)}><FiPlus /> New Enquiry</button>
+            <button className="btn btn-outline btn-icon-label" onClick={handleResetFilters}><FiRotateCcw /> Clear Filters</button>
+            <button className="btn btn-outline" onClick={() => setIsFilterExpanded(!isFilterExpanded)}>
+              <FiFilter /> {isFilterExpanded ? 'Hide Filters' : 'Filter by Counselor / Type'}
+              {activeFilterCount > 0 && (
+                <span style={{ marginLeft: 6, background: 'var(--primary)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: '0.72rem', fontWeight: 700 }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <button className="btn btn-outline btn-icon-label" onClick={() => setIsModalOpen(true)}><FiPlus /> New Enquiry</button>
         </div>
       </div>
 
@@ -236,32 +329,93 @@ const LeadList = () => {
 
       {/* Advanced Filter Section */}
       {isFilterExpanded && (
-        <div className="filter-section card">
-           <div className="filter-grid">
-              <div className="filter-item">
-                <label>From Date</label>
-                <input type="date" value={filters.from} onChange={e => handleInputChange('from', e.target.value)} />
-              </div>
-              <div className="filter-item">
-                <label>To Date</label>
-                <input type="date" value={filters.to} onChange={e => handleInputChange('to', e.target.value)} />
-              </div>
-              <div className="filter-item">
-                <label>Priority</label>
-                <select value={filters.priority} onChange={e => handleInputChange('priority', e.target.value)}>
-                  <option>All</option><option>Hot</option><option>Normal</option><option>Cold</option>
-                </select>
-              </div>
-              <div className="filter-item">
-                <label>Status</label>
-                <select value={filters.status} onChange={e => handleInputChange('status', e.target.value)}>
-                  <option>All</option><option>New</option><option>Working</option><option>Proposal Sent</option><option>Booked</option><option>Cancelled</option>
-                </select>
-              </div>
-              <div className="filter-actions" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-end' }}>
-                 <button className="btn btn-primary" onClick={() => setIsFilterExpanded(false)} style={{ width: '100%' }}>Apply Advanced Filters</button>
-              </div>
-           </div>
+        <div className="filter-section card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FiFilter color="var(--primary)" size={16} />
+              <strong style={{ fontSize: '0.9rem' }}>Advanced Inquiry Filters</strong>
+              {activeFilterCount > 0 && (
+                <span style={{ background: 'var(--primary)', color: 'white', borderRadius: 12, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>
+                  {activeFilterCount} Active
+                </span>
+              )}
+            </div>
+            {activeFilterCount > 0 && (
+              <button 
+                type="button" 
+                className="btn btn-sm btn-outline" 
+                onClick={handleResetFilters} 
+                style={{ fontSize: '0.75rem', padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <FiRotateCcw size={12} /> Reset All
+              </button>
+            )}
+          </div>
+          <div className="filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            <div className="filter-item">
+              <label>Inquiry Category / Service</label>
+              <select value={filters.enquiryType} onChange={e => handleInputChange('enquiryType', e.target.value)}>
+                <option value="All">All Categories</option>
+                {ENQUIRY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Assigned Counselor</label>
+              <select value={filters.assignedTo} onChange={e => handleInputChange('assignedTo', e.target.value)}>
+                <option value="All">All Counselors</option>
+                {uniqueAssignedTo.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Created By (Owner)</label>
+              <select value={filters.owner} onChange={e => handleInputChange('owner', e.target.value)}>
+                <option value="All">All Owners</option>
+                {uniqueOwners.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Lead Source</label>
+              <select value={filters.source} onChange={e => handleInputChange('source', e.target.value)}>
+                <option value="All">All Sources</option>
+                {uniqueSources.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Priority</label>
+              <select value={filters.priority} onChange={e => handleInputChange('priority', e.target.value)}>
+                <option value="All">All Priorities</option>
+                <option value="Hot">Hot</option>
+                <option value="Normal">Normal</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Stage / Status</label>
+              <select value={filters.status} onChange={e => handleInputChange('status', e.target.value)}>
+                <option value="All">All Statuses</option>
+                {['New', 'Attempting Contact', 'Working', 'Qualified', 'Proposal Sent', 'Negotiating', 'Booked', 'Converted', 'Lost', 'Cancelled', 'Unqualified'].map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-item">
+              <label>Destination / Country</label>
+              <input 
+                type="text" 
+                placeholder="e.g. Dubai, Canada..." 
+                value={filters.destination} 
+                onChange={e => handleInputChange('destination', e.target.value)} 
+              />
+            </div>
+            <div className="filter-item">
+              <label>Created From Date</label>
+              <input type="date" value={filters.from} onChange={e => handleInputChange('from', e.target.value)} />
+            </div>
+            <div className="filter-item">
+              <label>Created To Date</label>
+              <input type="date" value={filters.to} onChange={e => handleInputChange('to', e.target.value)} />
+            </div>
+          </div>
         </div>
       )}
 
@@ -325,6 +479,7 @@ const LeadList = () => {
                     <th>Lead ID</th>
                     <th>Customer</th>
                     <th>Phone</th>
+                    <th>Category</th>
                     <th>Source</th>
                     <th>Status</th>
                     <th>Lost Reason / Remarks</th>
@@ -344,6 +499,40 @@ const LeadList = () => {
                       <td className="lead-no">{lead.lead_code || lead.id}</td>
                       <td className="contact-name">{lead.first_name} {lead.last_name}</td>
                       <td>{lead.mobile}</td>
+                      <td>
+                        {(() => {
+                          const cats = Array.isArray(lead.enquiry_types) && lead.enquiry_types.length > 0 
+                            ? lead.enquiry_types 
+                            : [lead.category || 'Package'];
+                          return (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {cats.map(c => {
+                                const style = CATEGORY_STYLES[c] || CATEGORY_STYLES['Custom'];
+                                return (
+                                  <span
+                                    key={c}
+                                    style={{
+                                      background: style.bg,
+                                      color: style.color,
+                                      border: `1px solid ${style.border}`,
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    <span>{style.icon}</span> {c}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td>{lead.lead_source}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -405,12 +594,23 @@ const LeadList = () => {
                 <div key={lead.id} className="mobile-lead-card" onClick={() => navigate(`/leads/${lead.id}`)}>
                   <div className="mobile-card-header">
                     <span className="lead-no">{lead.lead_code || lead.id}</span>
-                    <span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {lead.enquiry_types && lead.enquiry_types[0] && (
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: (CATEGORY_STYLES[lead.enquiry_types[0]] || CATEGORY_STYLES['Custom']).color }}>
+                          {(CATEGORY_STYLES[lead.enquiry_types[0]] || CATEGORY_STYLES['Custom']).icon} {lead.enquiry_types[0]}
+                        </span>
+                      )}
+                      <span className="lead-status-pill" style={{ background: statusColors[lead.status] }}>{lead.status}</span>
+                    </div>
                   </div>
                   <div className="mobile-card-body">
                     <div className="detail-row">
                       <span className="detail-label">Customer:</span>
                       <span className="detail-value">{lead.first_name} {lead.last_name}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Category:</span>
+                      <span className="detail-value">{lead.enquiry_types?.join(', ') || lead.category || 'Package'}</span>
                     </div>
                     <div className="detail-row">
                       <span className="detail-label">Phone:</span>

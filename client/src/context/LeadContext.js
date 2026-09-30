@@ -89,12 +89,19 @@ function leadReducer(state, action) {
         auditLog: [logAudit('CREATE', 'leads', action.payload.id, `Lead created`), ...state.auditLog]
       };
     
-    case 'UPDATE_LEAD':
+    case 'UPDATE_LEAD': {
+      const targetId = action.payload.id;
+      const targetCode = action.payload.data?.lead_code;
+      const exists = state.leads.some(l => l.id === targetId || (targetCode && l.lead_code === targetCode) || (action.payload.data?.id && l.id === action.payload.data.id));
+      const updatedLeads = exists
+        ? state.leads.map(l => (l.id === targetId || (targetCode && l.lead_code === targetCode) || (action.payload.data?.id && l.id === action.payload.data.id)) ? { ...l, ...action.payload.data } : l)
+        : (action.payload.data ? [action.payload.data, ...state.leads] : state.leads);
       return {
         ...state,
-        leads: state.leads.map(l => l.id === action.payload.id ? { ...l, ...action.payload.data } : l),
-        auditLog: [logAudit('UPDATE', 'leads', action.payload.id, `Lead data updated`), ...state.auditLog]
+        leads: updatedLeads,
+        auditLog: [logAudit('UPDATE', 'leads', targetId, `Lead data updated`), ...state.auditLog]
       };
+    }
 
     // ... other cases remain the same but use state.leads
 

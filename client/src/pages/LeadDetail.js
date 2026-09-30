@@ -38,15 +38,16 @@ const LeadDetail = () => {
   const navigate = useNavigate();
   const { state, dispatch } = useLeads();
 
-  const lead = state.leads.find(l => l.id === id);
+  const lead = state.leads.find(l => l.id === id || l.lead_code === id);
   const userRole = state.currentUser?.role;
   const userLevel = ROLE_HIERARCHY[userRole] || 0;
 
   const isAccountant = userRole === 'Accountant';
 
-  // Security: Enforce lead ownership for Ops Staff
+  // Security: Counselors and staff can view all agency leads for office coordination
   const isOwner = lead && (lead.assigned_to === state.currentUser?.name || lead.owner === state.currentUser?.name);
-  const hasAccess = userLevel > 2 || isOwner || userRole === 'Admin' || userRole === 'Super Admin' || userRole === 'Accountant';
+  const hasAccess = userLevel >= 1 || isOwner;
+  const canEdit = userLevel >= 3 || isOwner;
 
   const addToast = useToast();
   const [showTemplates, setShowTemplates] = useState(null); // 'WhatsApp' or 'Email'
@@ -350,7 +351,7 @@ const LeadDetail = () => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{icon}{label}</span>
       {names.length > 0 ? (
-        <select value={value || ''} disabled={busy || isConverted}
+        <select value={value || ''} disabled={busy || isConverted || !canEdit}
           onChange={(e) => handleAssign({ [field]: e.target.value })}
           style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-color)', fontSize: '0.82rem', fontWeight: 600 }}>
           <option value="">— Unassigned —</option>
@@ -467,6 +468,16 @@ const LeadDetail = () => {
       )}
 
       <div className="lead-detail-header">
+        {/* Collaborative View Banner for Peers */}
+        {!canEdit && (
+          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FiUserCheck color="#1D4ED8" size={22} style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.84rem', color: '#1E40AF' }}>
+              <strong>👁️ Collaborative View:</strong> This lead is assigned to <strong>{lead.assigned_to || lead.owner || 'another counselor'}</strong>. You can review all details, customer requirements, and add date-wise follow-up remarks below, while core assignment and stage changes are restricted to the assigned counselor and managers.
+            </div>
+          </div>
+        )}
+
         {/* 6-Month Passport Expiry Guardrail Alert */}
         {passportExpiryAlert && (
           <div style={{ background: '#FFEBEE', border: '1px solid #EF5350', borderRadius: 8, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -530,13 +541,17 @@ const LeadDetail = () => {
               )}
             </div>
             <button className="btn btn-outline" onClick={() => setShowTemplates('Email')}><FiMail /> Email</button>
-            <button className="btn btn-outline" onClick={handleConvertToOpportunity}
-              title={lead.opportunity_id ? 'Open the linked opportunity' : 'Create a pipeline opportunity from this lead'}>
-              <FiTarget /> {lead.opportunity_id ? 'View Opportunity' : 'Convert to Opportunity'}
-            </button>
-            <button className="btn btn-outline btn-danger" onClick={() => setShowLostModal(true)} style={{ color: '#E53935', borderColor: '#E53935' }}>
-              <FiXCircle /> Mark Lost
-            </button>
+            {(lead.opportunity_id || canEdit) && (
+              <button className="btn btn-outline" onClick={handleConvertToOpportunity}
+                title={lead.opportunity_id ? 'Open the linked opportunity' : 'Create a pipeline opportunity from this lead'}>
+                <FiTarget /> {lead.opportunity_id ? 'View Opportunity' : 'Convert to Opportunity'}
+              </button>
+            )}
+            {canEdit && (
+              <button className="btn btn-outline btn-danger" onClick={() => setShowLostModal(true)} style={{ color: '#E53935', borderColor: '#E53935' }}>
+                <FiXCircle /> Mark Lost
+              </button>
+            )}
           </div>
         </div>
 
@@ -705,12 +720,12 @@ const LeadDetail = () => {
           {LIFECYCLE.map((status, index) => {
             const isActive = index === currentIndex;
             const isCompleted = currentIndex >= 0 && index < currentIndex;
-            const isAllowed = allowedNext.includes(status);
+            const isAllowed = canEdit && allowedNext.includes(status);
             return (
               <div key={status}
                 className={`status-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                 onClick={() => isAllowed && !busy && changeStatus(status)}
-                title={isAllowed ? `Move to ${status}` : isActive ? 'Current status' : `Not allowed from ${lead.status}`}
+                title={!canEdit ? 'Lead stage can only be edited by assigned counselor or manager' : isAllowed ? `Move to ${status}` : isActive ? 'Current status' : `Not allowed from ${lead.status}`}
                 style={{ cursor: isAllowed && !busy ? 'pointer' : isActive ? 'default' : 'not-allowed', opacity: !isAllowed && !isActive && !isCompleted ? 0.45 : 1 }}>
                 <div className="step-dot">{isCompleted ? <FiCheck size={11} /> : null}</div>
                 <span className="status-label">{status}</span>
@@ -724,11 +739,11 @@ const LeadDetail = () => {
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           {BRANCHES.map((b) => {
             const isCurrent = lead.status === b;
-            const isAllowed = allowedNext.includes(b);
+            const isAllowed = canEdit && allowedNext.includes(b);
             return (
-              <button key={b} disabled={!isAllowed && !isCurrent}
+              <button key={b} disabled={!canEdit || (!isAllowed && !isCurrent)}
                 onClick={() => isAllowed && changeStatus(b)}
-                title={isAllowed ? `Move to ${b}` : isCurrent ? 'Current status' : `Not allowed from ${lead.status}`}
+                title={!canEdit ? 'Only assigned counselor or manager can change status' : isAllowed ? `Move to ${b}` : isCurrent ? 'Current status' : `Not allowed from ${lead.status}`}
                 style={{
                   padding: '4px 12px', borderRadius: 14, fontSize: '0.75rem', fontWeight: 600,
                   border: `1px solid ${b === 'Unqualified' ? '#E53935' : '#E19D19'}`,
