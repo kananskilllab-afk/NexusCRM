@@ -156,9 +156,10 @@ router.post('/', requireRole(1), async (req, res) => {
     // Stage 2 — Lead Code (LD-100001)
     const lead_code = await Lead.nextLeadCode();
 
-    // Stage 3 — Round-robin if no explicit owner
+    // Stage 3 — Lead Assignment (Round-robin disabled by default)
     let finalAssignedTo = assigned_to || null;
-    if (!finalAssignedTo && auto_assign) {
+    const isRoundRobinOn = process.env.ROUND_ROBIN_ENABLED === 'true';
+    if (!finalAssignedTo && auto_assign && isRoundRobinOn) {
       const agent = await pickAgent({ enquiry_types, region, language });
       finalAssignedTo = agent ? agent.name : req.user.name;
     } else if (!finalAssignedTo) {

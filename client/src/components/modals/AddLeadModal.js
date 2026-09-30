@@ -144,7 +144,6 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
       // Remember stable defaults for next time, then drop the draft.
       saveDefaults(FORM_ID, {
         lead_source: formData.lead_source,
-        assigned_to: formData.assigned_to,
         priority:    formData.priority,
         activeType,
       });
@@ -433,10 +432,9 @@ const AddLeadModal = ({ isOpen, onClose, onSave }) => {
                 <label>Assign To</label>
                 <select value={formData.assigned_to} onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}>
                   <option value="">— Unassigned —</option>
-                  {Array.from(new Set([
-                    ...(state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name),
-                    ...(formData.assigned_to ? [formData.assigned_to] : [])
-                  ])).map(n => <option key={n} value={n}>{n}</option>)}
+                  {Array.from(new Set(
+                    (state.users || []).filter(u => !u.status || u.status === 'Active').map(u => u.name)
+                  )).map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
             </div>
